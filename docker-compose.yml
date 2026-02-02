@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: iso_user
       POSTGRES_PASSWORD: iso_pass
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -17,24 +17,31 @@ services:
 
   api:
     build: .
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+psycopg://iso_user:iso_pass@postgres:5432/iso_mw
       FLARE_RPC_URL: ${FLARE_RPC_URL:-https://flare-api.flare.network/ext/C/rpc}
       ANCHOR_CONTRACT_ADDR: ${ANCHOR_CONTRACT_ADDR}
       ANCHOR_PRIVATE_KEY: ${ANCHOR_PRIVATE_KEY}
       ANCHOR_ABI_PATH: contracts/EvidenceAnchor.abi.json
-      # Comma-separated list of allowed browser origins (web-alt)
-      ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+
+      ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://localhost:8501
       ARTIFACTS_DIR: artifacts
+
       SERVICE_PRIVATE_KEY: ${SERVICE_PRIVATE_KEY:-.keys/service_sk.hex}
       SERVICE_PUBLIC_KEY: ${SERVICE_PUBLIC_KEY:-.keys/service_pk.pem}
-      # Queue
+
       REDIS_URL: redis://redis:6379/0
-      # Migration settings
+
       RUN_MIGRATIONS: "1"
       AUTO_CREATE_DB: "0"
+
+      # Auth (comma-separated). Use a long random value in real deployments.
+      API_KEYS: ${API_KEYS:-dev-admin-key-1}
+
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
@@ -46,20 +53,28 @@ services:
 
   worker:
     build: .
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+psycopg://iso_user:iso_pass@postgres:5432/iso_mw
       FLARE_RPC_URL: ${FLARE_RPC_URL:-https://flare-api.flare.network/ext/C/rpc}
       ANCHOR_CONTRACT_ADDR: ${ANCHOR_CONTRACT_ADDR}
       ANCHOR_PRIVATE_KEY: ${ANCHOR_PRIVATE_KEY}
       ANCHOR_ABI_PATH: contracts/EvidenceAnchor.abi.json
+
       ARTIFACTS_DIR: artifacts
       SERVICE_PRIVATE_KEY: ${SERVICE_PRIVATE_KEY:-.keys/service_sk.hex}
       SERVICE_PUBLIC_KEY: ${SERVICE_PUBLIC_KEY:-.keys/service_pk.pem}
+
       REDIS_URL: redis://redis:6379/0
       RQ_QUEUES: default
-      # Worker should not run migrations (api does it)
+
       RUN_MIGRATIONS: "0"
       AUTO_CREATE_DB: "0"
+
+      # Keep consistent with api
+      API_KEYS: ${API_KEYS:-dev-admin-key-1}
+
     volumes:
       - ./:/app
     command: python worker.py
@@ -72,7 +87,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

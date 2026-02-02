@@ -29,7 +29,12 @@ from .iso_messages import pain002 as iso_pain002  # type: ignore
 from .iso_messages import remt001 as iso_remt001  # type: ignore
 from .sse import hub
 
+import logging
+import traceback
+
 ARTIFACTS_DIR = os.getenv("ARTIFACTS_DIR", "artifacts")
+
+logger = logging.getLogger("middleware.jobs")
 
 
 def _ensure_dir_for_receipt(rid: str) -> Path:
@@ -360,21 +365,43 @@ def process_receipt_job(
 
         from . import anchor as anchor_py  # type: ignore
 
-        for ch in chains_src:
-            try:
-                rpc_url = (
-                    (ch.get("rpc_url") if isinstance(ch, dict) else None)
-                    or getattr(getattr(cfg, "ledger", None), "rpc_url", None)
-                    or os.getenv("FLARE_RPC_URL")
-                )
-                contract_addr = (
-                    (ch.get("contract") if isinstance(ch, dict) else None)
-                    or os.getenv("ANCHOR_CONTRACT_ADDR")
-                    or "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8"
-                )
-                chain_name = (ch.get("name") if isinstance(ch, dict) else None) or "unknown"
+        logger.info(
+            "anchoring_start rid=%s exec_mode=%s chain=%s pk_set=%s chains=%s",
+            str(rec.id),
+            exec_mode,
+            rec.chain,
+            bool(pk),
+            [c.get("name") for c in chains_src if isinstance(c, dict)],
+        )
 
-                txid, _block = anchor_py.anchor_bundle(
+
+        last_anchor_err: Optional[str] = None
+
+        for ch in chains_src:
+            chain_name = (ch.get("name") if isinstance(ch, dict) else None) or "unknown"
+            rpc_url = (
+                (ch.get("rpc_url") if isinstance(ch, dict) else None)
+                or getattr(getattr(cfg, "ledger", None), "rpc_url", None)
+                or os.getenv("FLARE_RPC_URL")
+            )
+            contract_addr = (
+                (ch.get("contract") if isinstance(ch, dict) else None)
+                or os.getenv("ANCHOR_CONTRACT_ADDR")
+                or "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8"
+            )
+
+            try:
+                logger.info(
+                    "anchoring_try rid=%s chain=%s rpc=%s contract=%s pk_set=%s bundle_hash=%s",
+                    str(rec.id),
+                    str(chain_name),
+                    str(rpc_url),
+                    str(contract_addr),
+                    bool(pk),
+                    str(bundle_hash),
+                )
+
+                txid, block_no = anchor_py.anchor_bundle(
                     bundle_hash,
                     rpc_url=rpc_url,
                     contract_addr=contract_addr,
@@ -384,19 +411,37 @@ def process_receipt_job(
                 )
 
                 now = datetime.utcnow()
+
                 if not rec.flare_txid:
                     rec.flare_txid = txid
                 if not rec.anchored_at:
                     rec.anchored_at = now
 
-                session.add(
-                    models.ChainAnchor(receipt_id=str(rec.id), chain=str(chain_name), txid=txid, anchored_at=now)
-                )
+                session.add(models.ChainAnchor(receipt_id=str(rec.id), chain=str(chain_name), txid=txid, anchored_at=now))
                 session.commit()
 
+                logger.info(
+                    "anchoring_success rid=%s chain=%s txid=%s block=%s",
+                    str(rec.id),
+                    str(chain_name),
+                    str(txid),
+                    str(block_no),
+                )
+
                 successes += 1
-            except Exception:
+
+            except Exception as e:
                 session.rollback()
+
+                last_anchor_err = f"{type(e).__name__}: {str(e)[:500]}"
+                logger.error(
+                    "anchoring_failed rid=%s chain=%s err=%s",
+                    str(rec.id),
+                    str(chain_name),
+                    last_anchor_err,
+                )
+                logger.debug("anchoring_failed_trace rid=%s trace=%s", str(rec.id), traceback.format_exc())
+
 
         if successes > 0:
             rec.status = "anchored"
@@ -405,6 +450,15 @@ def process_receipt_job(
         else:
             rec.status = "failed"
             session.commit()
+
+        try:
+            if last_anchor_err:
+                if hasattr(rec, "last_error"):
+                    rec.last_error = f"anchor:{last_anchor_err}"
+                elif hasattr(rec, "error"):
+                    rec.error = f"anchor:{last_anchor_err}"
+        except Exception:
+            pass
 
         # Status/extra ISO artifacts
         try:

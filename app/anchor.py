@@ -163,7 +163,7 @@ def anchor_bundle(
         try:
             tx = _build_tx_anchor(w3, contract, acct.address, bundle_hash32)
             signed = acct.sign_transaction(tx)
-            tx_hash = w3.eth.send_raw_transaction(signed.rawTransaction)
+            tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
             if receipt and receipt.get("status", 1) == 1:
                 return tx_hash.hex(), int(receipt["blockNumber"])
