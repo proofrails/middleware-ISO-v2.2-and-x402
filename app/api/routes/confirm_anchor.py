@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import json
+import os
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,6 +13,37 @@ from app.api.deps import get_session
 from app.auth import Principal, resolve_principal
 
 router = APIRouter(tags=["iso-write"])
+
+ARTIFACTS_DIR = os.getenv("ARTIFACTS_DIR", "artifacts")
+
+
+def _write_status_json(rec: models.Receipt) -> None:
+    """Write current receipt status to status.json file.
+    
+    This provides an up-to-date status file that gets updated after anchoring,
+    while evidence.zip remains immutable with the original snapshot.
+    """
+    try:
+        out_dir = Path(ARTIFACTS_DIR) / str(rec.id)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        status_file = out_dir / "status.json"
+        
+        status_data = {
+            "receipt_id": str(rec.id),
+            "status": rec.status,
+            "bundle_hash": rec.bundle_hash,
+            "flare_txid": rec.flare_txid,
+            "anchored_at": rec.anchored_at.isoformat() if rec.anchored_at else None,
+            "created_at": rec.created_at.isoformat() if rec.created_at else None,
+            "last_updated": datetime.utcnow().isoformat(),
+        }
+        
+        status_file.write_text(
+            json.dumps(status_data, indent=2, separators=(",", ": "), default=str)
+        )
+    except Exception:
+        # Best-effort; don't fail the endpoint
+        pass
 
 
 def _require_same_project_or_admin(principal: Principal, rec: models.Receipt) -> None:
@@ -146,6 +180,9 @@ def confirm_anchor(
         rec.status = "awaiting_anchor"
 
     session.commit()
+    
+    # Write current status to status.json
+    _write_status_json(rec)
 
     return schemas.ConfirmAnchorResponse(
         receipt_id=str(rec.id),
