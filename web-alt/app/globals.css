@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base typographic rhythm and colors to match the sample look */
+:root {
+  --bg-start: #f8fafc; /* slate-50 */
+  --bg-end: #ffffff;
+  --text: #0f172a; /* slate-900 */
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  color: var(--text);
+  background: linear-gradient(to bottom, var(--bg-start), var(--bg-end));
+}
+
+/* Helper shadows and rounded corners */
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-slate-200;
+}
+.badge {
+  @apply inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600;
+}

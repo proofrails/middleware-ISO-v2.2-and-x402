@@ -1,0 +1,26 @@
+{
+  "name": "iso-x402-agent",
+  "version": "1.0.0",
+  "description": "XMTP agent for ISO 20022 Middleware with x402 payment protocol",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["xmtp", "x402", "iso20022", "agent", "ai"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@xmtp/xmtp-js": "^11.0.0",
+    "ethers": "^6.9.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0"
+  }
+}

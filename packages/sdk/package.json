@@ -1,0 +1,42 @@
+{
+  "name": "@iso-middleware/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for ISO 20022 Middleware Platform",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"(no tests)\""
+  },
+  "keywords": ["iso20022", "payments", "middleware", "flare", "blockchain", "verifiable-credentials"],
+  "author": "ISO Middleware Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2/issues"
+  },
+  "homepage": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "middleware-iso20022-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "web-alt",
+    "packages/sdk"
+  ],
+  "scripts": {
+    "deploy": "node scripts/deploy.js",
+    "build": "npm -ws run build",
+    "clean": "npm -ws run clean || echo",
+    "test": "npm -ws run test || echo"
+  },
+  "dependencies": {
+    "ethers": "^6.13.1",
+    "solc": "^0.8.21"
+  }
+}

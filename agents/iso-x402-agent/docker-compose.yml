@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  agent:
+    build: .
+    container_name: iso-x402-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - iso-network
+
+networks:
+  iso-network:
+    driver: bridge

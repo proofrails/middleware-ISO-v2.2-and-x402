@@ -1,0 +1,55 @@
+{
+  "name": "iso-x402-agent",
+  "description": "XMTP Agent for ISO 20022 Middleware with x402 payment protocol",
+  "repository": "https://github.com/your-repo/iso-middleware",
+  "keywords": ["xmtp", "x402", "iso20022", "agent", "payments"],
+  "env": {
+    "XMTP_ENV": {
+      "description": "XMTP environment (dev or production)",
+      "value": "dev"
+    },
+    "WALLET_PRIVATE_KEY": {
+      "description": "Ethereum wallet private key for the agent",
+      "required": true
+    },
+    "ISO_MW_API_URL": {
+      "description": "ISO Middleware API URL",
+      "required": true
+    },
+    "ISO_MW_API_KEY": {
+      "description": "ISO Middleware API key",
+      "required": false
+    },
+    "X402_RECIPIENT": {
+      "description": "Payment recipient address",
+      "value": "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8"
+    },
+    "CHAIN_RPC_URL": {
+      "description": "Base chain RPC URL",
+      "value": "https://mainnet.base.org"
+    },
+    "USDC_CONTRACT": {
+      "description": "USDC contract address on Base",
+      "value": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    },
+    "AGENT_NAME": {
+      "description": "Agent display name",
+      "value": "ISO Middleware Agent"
+    },
+    "LOG_LEVEL": {
+      "description": "Logging level",
+      "value": "info"
+    }
+  },
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+Alembic migration environment.
+
+- env.py reads DATABASE_URL the same way app/db.py does.
+- Models metadata is taken from app.models.Base.
+
+Usage:
+  alembic revision --autogenerate -m "init"
+  alembic upgrade head
