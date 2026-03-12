@@ -306,14 +306,11 @@ def process_receipt_job(
         except Exception:
             pass
 
-        anchored = False
-
         # Tenant mode: stop after evidence generation, wait for tenant to confirm anchoring
         exec_mode = _project_execution_mode(session, rec)
         if exec_mode == "tenant":
             rec.status = "awaiting_anchor"
             session.commit()
-            # SSE notify
             try:
                 evt_payload = {
                     "receipt_id": str(rec.id),
@@ -330,9 +327,7 @@ def process_receipt_job(
                 pass
             return
 
-        # Platform mode anchoring:
-        # - Prefer per-project chains (project override) when present
-        # - Else fall back to org config chains
+        # Platform mode: resolve chain config, then enqueue to anchor queue
         proj_chains = _project_anchoring_chains(session, rec)
         org_chains = list(getattr(getattr(cfg, "anchoring", None), "chains", []) or [])
 
@@ -351,7 +346,6 @@ def process_receipt_job(
                 )
 
         if not chains_src:
-            # Last resort (keeps backwards compatibility)
             chains_src = [
                 {
                     "name": rec.chain or "flare",
@@ -360,28 +354,80 @@ def process_receipt_job(
                 }
             ]
 
-        successes = 0
         pk = _resolve_anchor_pk(cfg)
 
-        from . import anchor as anchor_py  # type: ignore
+        # Persist artifact paths now (before anchor)
+        rec.xml_path = f"{ARTIFACTS_DIR}/{rec.id}/pain001.xml"
+        rec.bundle_path = f"{ARTIFACTS_DIR}/{rec.id}/evidence.zip"
+        rec.status = "awaiting_anchor"
+        session.commit()
 
         logger.info(
-            "anchoring_start rid=%s exec_mode=%s chain=%s pk_set=%s chains=%s",
+            "prep_done rid=%s enqueuing_anchor chains=%s",
             str(rec.id),
-            exec_mode,
-            rec.chain,
-            bool(pk),
             [c.get("name") for c in chains_src if isinstance(c, dict)],
         )
 
+        # Enqueue to anchor queue for fire-and-forget sending
+        from .queue import get_queue
+        anchor_q = get_queue("anchor")
+        anchor_q.enqueue(
+            anchor_receipt_job,
+            receipt_id=str(rec.id),
+            bundle_hash=bundle_hash,
+            chains=chains_src,
+            private_key=pk,
+            callback_url=callback_url,
+            job_timeout=int(os.getenv("RQ_JOB_TIMEOUT", "600")),
+        )
 
-        last_anchor_err: Optional[str] = None
+    except Exception:
+        if rec is not None:
+            try:
+                rec.status = "failed"
+                session.commit()
+            except Exception:
+                pass
+        raise
+    finally:
+        session.close()
 
-        for ch in chains_src:
+
+def anchor_receipt_job(
+    receipt_id: str,
+    bundle_hash: str,
+    chains: list[dict],
+    private_key: Optional[str] = None,
+    callback_url: Optional[str] = None,
+) -> None:
+    """Send anchor transactions without waiting for confirmations.
+
+    The AnchorPoller background thread handles confirmation polling.
+    Runs on the 'anchor' queue processed by the anchor worker.
+    """
+    from . import anchor as anchor_py  # type: ignore
+    from .anchor_poller import get_poller
+    from .nonce_manager import NonceManager
+
+    poller = get_poller()
+
+    session = db.SessionLocal()
+    try:
+        rec = session.get(models.Receipt, receipt_id)
+        if not rec:
+            logger.warning("anchor_job_receipt_missing rid=%s", receipt_id)
+            return
+
+        pk = private_key or os.getenv("ANCHOR_PRIVATE_KEY")
+        if not pk:
+            rec.status = "failed"
+            session.commit()
+            raise RuntimeError("ANCHOR_PRIVATE_KEY is not set")
+
+        for ch in chains:
             chain_name = (ch.get("name") if isinstance(ch, dict) else None) or "unknown"
             rpc_url = (
                 (ch.get("rpc_url") if isinstance(ch, dict) else None)
-                or getattr(getattr(cfg, "ledger", None), "rpc_url", None)
                 or os.getenv("FLARE_RPC_URL")
             )
             contract_addr = (
@@ -391,74 +437,115 @@ def process_receipt_job(
             )
 
             try:
+                # Get nonce from the anchor worker's NonceManager (if available)
+                # Otherwise fall back to querying the chain
+                from web3 import Web3  # type: ignore
+                w3 = Web3(Web3.HTTPProvider(rpc_url or "https://flare-api.flare.network/ext/C/rpc"))
+                acct = w3.eth.account.from_key(pk)
+
+                # Use the global nonce manager if the poller has one, else query chain
+                nonce_mgr = poller._nonce_manager if poller else None
+                if nonce_mgr:
+                    nonce = nonce_mgr.next()
+                else:
+                    nonce = w3.eth.get_transaction_count(acct.address, "pending")
+
                 logger.info(
-                    "anchoring_try rid=%s chain=%s rpc=%s contract=%s pk_set=%s bundle_hash=%s",
-                    str(rec.id),
-                    str(chain_name),
-                    str(rpc_url),
-                    str(contract_addr),
-                    bool(pk),
-                    str(bundle_hash),
+                    "anchor_send_start rid=%s chain=%s nonce=%s contract=%s",
+                    receipt_id, chain_name, nonce, contract_addr,
                 )
 
-                txid, block_no = anchor_py.anchor_bundle(
+                txid, nonce_used = anchor_py.anchor_send(
                     bundle_hash,
+                    nonce=nonce,
                     rpc_url=rpc_url,
                     contract_addr=contract_addr,
                     private_key=pk,
                     abi_path=os.getenv("ANCHOR_ABI_PATH"),
-                    lookback_blocks=int(os.getenv("ANCHOR_LOOKBACK_BLOCKS", "50000")),
                 )
 
-                now = datetime.utcnow()
-
+                # Store tx hash on receipt so Provn sync can see it even before confirmation
                 if not rec.flare_txid:
                     rec.flare_txid = txid
-                if not rec.anchored_at:
-                    rec.anchored_at = now
-
-                session.add(models.ChainAnchor(receipt_id=str(rec.id), chain=str(chain_name), txid=txid, anchored_at=now))
                 session.commit()
 
-                logger.info(
-                    "anchoring_success rid=%s chain=%s txid=%s block=%s",
-                    str(rec.id),
-                    str(chain_name),
-                    str(txid),
-                    str(block_no),
-                )
+                # Register with poller for async confirmation
+                if poller:
+                    poller.track(receipt_id, txid, chain_name, rpc_url=rpc_url)
+                else:
+                    # Fallback: no poller running, confirm synchronously
+                    logger.warning("anchor_job_no_poller rid=%s falling_back_to_sync", receipt_id)
+                    _sync_confirm_fallback(session, rec, txid, chain_name, rpc_url, callback_url)
 
-                successes += 1
+                logger.info("anchor_send_done rid=%s txid=%s nonce=%s", receipt_id, txid, nonce_used)
 
             except Exception as e:
                 session.rollback()
-
-                last_anchor_err = f"{type(e).__name__}: {str(e)[:500]}"
+                # If send failed, nonce was NOT consumed — don't increment
+                if nonce_mgr:
+                    nonce_mgr.reset()
                 logger.error(
-                    "anchoring_failed rid=%s chain=%s err=%s",
-                    str(rec.id),
-                    str(chain_name),
-                    last_anchor_err,
+                    "anchor_send_failed rid=%s chain=%s err=%s",
+                    receipt_id, chain_name, repr(e),
                 )
-                logger.debug("anchoring_failed_trace rid=%s trace=%s", str(rec.id), traceback.format_exc())
+                logger.debug("anchor_send_failed_trace rid=%s trace=%s", receipt_id, traceback.format_exc())
+                # Mark failed if this was the only/last chain
+                rec.status = "failed"
+                session.commit()
+
+    except Exception:
+        logger.exception("anchor_receipt_job_error rid=%s", receipt_id)
+        raise
+    finally:
+        session.close()
 
 
-        if successes > 0:
-            rec.status = "anchored"
-            session.commit()
-            anchored = True
-        else:
-            rec.status = "failed"
-            session.commit()
+def _sync_confirm_fallback(
+    session, rec, txid: str, chain_name: str, rpc_url: Optional[str], callback_url: Optional[str]
+) -> None:
+    """Synchronous confirmation fallback when no AnchorPoller is running."""
+    from . import anchor as anchor_py  # type: ignore
+    from web3 import Web3  # type: ignore
 
-        try:
-            if last_anchor_err:
-                if hasattr(rec, "last_error"):
-                    rec.last_error = f"anchor:{last_anchor_err}"
-                elif hasattr(rec, "error"):
-                    rec.error = f"anchor:{last_anchor_err}"
-        except Exception:
-            pass
+    w3 = Web3(Web3.HTTPProvider(rpc_url or "https://flare-api.flare.network/ext/C/rpc"))
+    receipt = w3.eth.wait_for_transaction_receipt(txid, timeout=180)
+
+    status = int(receipt.get("status", 0) or 0)
+    blk_no = int(receipt.get("blockNumber") or 0)
+
+    if status == 1:
+        now = datetime.utcnow()
+        rec.status = "anchored"
+        if not rec.anchored_at:
+            rec.anchored_at = now
+        session.add(models.ChainAnchor(receipt_id=str(rec.id), chain=chain_name, txid=txid, anchored_at=now))
+        session.commit()
+        finalize_receipt(str(rec.id), session=session, callback_url=callback_url)
+    else:
+        rec.status = "failed"
+        session.commit()
+
+
+def finalize_receipt(
+    receipt_id: str,
+    *,
+    session=None,
+    callback_url: Optional[str] = None,
+) -> None:
+    """Generate post-anchor ISO artifacts, SSE notify, and fire callback.
+
+    Called by the AnchorPoller after a transaction is confirmed on-chain.
+    """
+    own_session = session is None
+    if own_session:
+        session = db.SessionLocal()
+
+    try:
+        rec = session.get(models.Receipt, receipt_id)
+        if not rec:
+            return
+
+        cfg = load_config(session)
 
         # Status/extra ISO artifacts
         try:
@@ -485,15 +572,12 @@ def process_receipt_job(
                     _write_iso_artifact(session, str(rec.id), "pacs.002", "pacs002.xml", p2i)
                 except Exception:
                     pass
-            if anchored:
+            if rec.status == "anchored":
                 c054_bytes = iso_camt054.generate_camt054(payload2)
                 _write_iso_artifact(session, str(rec.id), "camt.054", "camt054.xml", c054_bytes)
         except Exception:
-            pass
+            logger.debug("finalize_artifact_error rid=%s", receipt_id, exc_info=True)
 
-        # Persist primary artifact paths
-        rec.xml_path = f"{ARTIFACTS_DIR}/{rec.id}/pain001.xml"
-        rec.bundle_path = f"{ARTIFACTS_DIR}/{rec.id}/evidence.zip"
         session.commit()
 
         # SSE notify (best-effort)
@@ -536,12 +620,7 @@ def process_receipt_job(
                 pass
 
     except Exception:
-        if rec is not None:
-            try:
-                rec.status = "failed"
-                session.commit()
-            except Exception:
-                pass
-        raise
+        logger.exception("finalize_receipt_error rid=%s", receipt_id)
     finally:
-        session.close()
+        if own_session:
+            session.close()

@@ -10,6 +10,7 @@ All functions accept explicit parameters, but still default to env vars for conv
 """
 
 import json
+import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -22,6 +23,8 @@ from web3 import Web3  # type: ignore
 from web3.contract import Contract  # type: ignore
 
 from .schemas import ChainMatch
+
+logger = logging.getLogger(__name__)
 
 # Default to Flare mainnet if not configured.
 DEFAULT_RPC_URL = os.getenv("FLARE_RPC_URL", "https://flare-api.flare.network/ext/C/rpc")
@@ -54,6 +57,14 @@ FALLBACK_ABI = [
 ]
 
 
+def _short_hex(s: Optional[str], *, keep: int = 10) -> str:
+    if not s or not isinstance(s, str):
+        return ""
+    if len(s) <= keep * 2:
+        return s
+    return f"{s[:keep]}…{s[-keep:]}"
+
+
 def _hex32_from_prefixed(hex_str: str) -> bytes:
     if not isinstance(hex_str, str) or not hex_str.startswith("0x"):
         raise ValueError("bundle_hash must be 0x-prefixed hex string")
@@ -65,13 +76,32 @@ def _hex32_from_prefixed(hex_str: str) -> bytes:
 
 def _load_abi(abi_path: Optional[str]) -> List[Dict[str, Any]]:
     p = abi_path or DEFAULT_ABI_PATH
-    if p and Path(p).exists():
-        return json.loads(Path(p).read_text(encoding="utf-8"))
-    return FALLBACK_ABI
+    try:
+        if p and Path(p).exists():
+            txt = Path(p).read_text(encoding="utf-8")
+            abi = json.loads(txt)
+            logger.debug("anchor_abi_loaded path=%s entries=%s", p, len(abi) if isinstance(abi, list) else "n/a")
+            return abi
+        logger.debug("anchor_abi_fallback path=%s", p)
+        return FALLBACK_ABI
+    except Exception:
+        logger.exception("anchor_abi_load_failed path=%s", p)
+        return FALLBACK_ABI
 
 
 def _load_web3(rpc_url: Optional[str]) -> Web3:
-    return Web3(Web3.HTTPProvider(rpc_url or DEFAULT_RPC_URL))
+    url = rpc_url or DEFAULT_RPC_URL
+    try:
+        w3 = Web3(Web3.HTTPProvider(url))
+        try:
+            ok = bool(w3.is_connected())
+        except Exception:
+            ok = False
+        logger.debug("anchor_web3_loaded url=%s connected=%s", url, ok)
+        return w3
+    except Exception:
+        logger.exception("anchor_web3_load_failed url=%s", url)
+        raise
 
 
 def _load_contract(
@@ -80,10 +110,23 @@ def _load_contract(
     w3 = _load_web3(rpc_url)
     addr = contract_addr or DEFAULT_CONTRACT_ADDR
     if not addr:
+        logger.error("anchor_contract_addr_missing")
         raise RuntimeError("ANCHOR_CONTRACT_ADDR is not set")
+
     abi = _load_abi(abi_path)
-    contract = w3.eth.contract(address=to_checksum_address(addr), abi=abi)
-    return w3, contract
+    try:
+        caddr = to_checksum_address(addr)
+    except Exception:
+        logger.exception("anchor_contract_addr_invalid addr=%s", addr)
+        raise
+
+    try:
+        contract = w3.eth.contract(address=caddr, abi=abi)
+        logger.debug("anchor_contract_loaded addr=%s", caddr)
+        return w3, contract
+    except Exception:
+        logger.exception("anchor_contract_load_failed addr=%s", addr)
+        raise
 
 
 def _estimate_fees_eip1559(w3: Web3) -> Optional[Tuple[int, int]]:
@@ -97,20 +140,35 @@ def _estimate_fees_eip1559(w3: Web3) -> Optional[Tuple[int, int]]:
             if prio and prio[-1]:
                 tip = max(tip, int(prio[-1][1]))
         except Exception:
-            pass
+            logger.debug("anchor_fee_history_reward_parse_failed", exc_info=True)
+
         max_priority = tip
         max_fee = base * 2 + max_priority
+        logger.debug("anchor_fees_eip1559 base=%s max_fee=%s max_prio=%s", base, max_fee, max_priority)
         return max_fee, max_priority
     except Exception:
+        logger.debug("anchor_fees_eip1559_unavailable", exc_info=True)
         return None
 
 
 def _build_tx_anchor(w3: Web3, contract: Contract, from_addr: str, bundle_hash32: bytes) -> Dict[str, Any]:
     func = contract.functions.anchorEvidence(bundle_hash32)
+    try:
+        nonce = w3.eth.get_transaction_count(from_addr, "pending")
+    except Exception:
+        logger.exception("anchor_get_nonce_failed from=%s", from_addr)
+        raise
+
+    try:
+        chain_id = w3.eth.chain_id
+    except Exception:
+        logger.exception("anchor_get_chain_id_failed")
+        raise
+
     tx: Dict[str, Any] = {
         "from": from_addr,
-        "nonce": w3.eth.get_transaction_count(from_addr, "pending"),
-        "chainId": w3.eth.chain_id,
+        "nonce": nonce,
+        "chainId": chain_id,
     }
 
     fees = _estimate_fees_eip1559(w3)
@@ -118,16 +176,38 @@ def _build_tx_anchor(w3: Web3, contract: Contract, from_addr: str, bundle_hash32
         max_fee, max_priority = fees
         tx.update({"type": 2, "maxFeePerGas": max_fee, "maxPriorityFeePerGas": max_priority})
     else:
-        tx.update({"gasPrice": w3.eth.gas_price})
+        try:
+            gp = w3.eth.gas_price
+            tx.update({"gasPrice": gp})
+            logger.debug("anchor_gas_price_legacy gasPrice=%s", int(gp))
+        except Exception:
+            logger.exception("anchor_gas_price_failed")
+            raise
 
     try:
         gas_est = func.estimate_gas({"from": from_addr})
-        gas_est = int(gas_est * 1.2)
+        gas_est = int(int(gas_est) * 1.2)
+        logger.debug("anchor_gas_estimated gas=%s", gas_est)
     except Exception:
         gas_est = 200_000
+        logger.warning("anchor_gas_estimate_failed using_default=%s", gas_est, exc_info=True)
 
     tx.update({"gas": gas_est})
-    return func.build_transaction(tx)
+
+    try:
+        built = func.build_transaction(tx)
+        logger.debug(
+            "anchor_tx_built from=%s nonce=%s chainId=%s gas=%s type=%s",
+            from_addr,
+            nonce,
+            chain_id,
+            built.get("gas"),
+            built.get("type", "legacy"),
+        )
+        return built
+    except Exception:
+        logger.exception("anchor_tx_build_failed from=%s nonce=%s", from_addr, nonce)
+        raise
 
 
 def anchor_bundle(
@@ -146,33 +226,162 @@ def anchor_bundle(
     Notes:
     - `lookback_blocks` is accepted for interface symmetry (used by find_anchor).
     """
-
     _ = lookback_blocks
 
+    pk = private_key or os.getenv("ANCHOR_PRIVATE_KEY")
+    if not pk:
+        logger.error("anchor_private_key_missing")
+        raise RuntimeError("ANCHOR_PRIVATE_KEY is not set")
+
+    logger.info(
+        "anchor_bundle_start bundle=%s rpc_url=%s contract=%s",
+        _short_hex(bundle_hash_hex),
+        rpc_url or DEFAULT_RPC_URL,
+        contract_addr or DEFAULT_CONTRACT_ADDR,
+    )
+
+    w3, contract = _load_contract(rpc_url=rpc_url, contract_addr=contract_addr, abi_path=abi_path)
+
+    try:
+        acct = w3.eth.account.from_key(pk)
+    except Exception:
+        logger.exception("anchor_account_from_key_failed")
+        raise
+
+    try:
+        bundle_hash32 = _hex32_from_prefixed(bundle_hash_hex)
+    except Exception:
+        logger.exception("anchor_bundle_hash_invalid bundle=%s", bundle_hash_hex)
+        raise
+
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            logger.info("anchor_send_try attempt=%s from=%s", attempt + 1, acct.address)
+            tx = _build_tx_anchor(w3, contract, acct.address, bundle_hash32)
+
+            try:
+                signed = acct.sign_transaction(tx)
+            except Exception:
+                logger.exception("anchor_sign_failed attempt=%s from=%s", attempt + 1, acct.address)
+                raise
+
+            try:
+                tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+            except Exception:
+                logger.exception("anchor_send_raw_failed attempt=%s from=%s", attempt + 1, acct.address)
+                raise
+
+            txid = tx_hash.hex()
+            logger.info("anchor_tx_sent attempt=%s txid=%s", attempt + 1, txid)
+
+            try:
+                receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
+            except Exception:
+                logger.exception("anchor_wait_receipt_failed attempt=%s txid=%s", attempt + 1, txid)
+                raise
+
+            status = int(receipt.get("status", 1) or 0) if receipt else 0
+            blk_no = int(receipt.get("blockNumber") or 0) if receipt else 0
+
+            if receipt and status == 1:
+                logger.info("anchor_success txid=%s block=%s", txid, blk_no)
+                return txid, blk_no
+
+            last_err = RuntimeError(f"Transaction failed with status={status}")
+            logger.error("anchor_failed_status txid=%s block=%s status=%s", txid, blk_no, status)
+        except Exception as e:
+            last_err = e
+            logger.warning("anchor_attempt_failed attempt=%s err=%s", attempt + 1, repr(e), exc_info=True)
+            time.sleep(1 + attempt)
+
+    logger.error("anchor_bundle_failed_final bundle=%s err=%s", _short_hex(bundle_hash_hex), repr(last_err))
+    raise last_err or RuntimeError("Unknown error anchoring bundle")
+
+
+def anchor_send(
+    bundle_hash_hex: str,
+    *,
+    nonce: int,
+    rpc_url: Optional[str] = None,
+    contract_addr: Optional[str] = None,
+    private_key: Optional[str] = None,
+    abi_path: Optional[str] = None,
+) -> Tuple[str, int]:
+    """Send an anchor transaction without waiting for confirmation.
+
+    Returns: (tx_hash_hex, nonce_used)
+    """
     pk = private_key or os.getenv("ANCHOR_PRIVATE_KEY")
     if not pk:
         raise RuntimeError("ANCHOR_PRIVATE_KEY is not set")
 
     w3, contract = _load_contract(rpc_url=rpc_url, contract_addr=contract_addr, abi_path=abi_path)
     acct = w3.eth.account.from_key(pk)
-
     bundle_hash32 = _hex32_from_prefixed(bundle_hash_hex)
 
-    last_err: Optional[Exception] = None
-    for attempt in range(3):
-        try:
-            tx = _build_tx_anchor(w3, contract, acct.address, bundle_hash32)
-            signed = acct.sign_transaction(tx)
-            tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
-            receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
-            if receipt and receipt.get("status", 1) == 1:
-                return tx_hash.hex(), int(receipt["blockNumber"])
-            last_err = RuntimeError("Transaction failed with status != 1")
-        except Exception as e:
-            last_err = e
-            time.sleep(1 + attempt)
+    # Build transaction with the provided nonce (bypass _build_tx_anchor's nonce fetch)
+    func = contract.functions.anchorEvidence(bundle_hash32)
 
-    raise last_err or RuntimeError("Unknown error anchoring bundle")
+    try:
+        chain_id = w3.eth.chain_id
+    except Exception:
+        logger.exception("anchor_send_get_chain_id_failed")
+        raise
+
+    tx: Dict[str, Any] = {
+        "from": acct.address,
+        "nonce": nonce,
+        "chainId": chain_id,
+    }
+
+    fees = _estimate_fees_eip1559(w3)
+    if fees:
+        max_fee, max_priority = fees
+        tx.update({"type": 2, "maxFeePerGas": max_fee, "maxPriorityFeePerGas": max_priority})
+    else:
+        gp = w3.eth.gas_price
+        tx.update({"gasPrice": gp})
+
+    try:
+        gas_est = func.estimate_gas({"from": acct.address})
+        gas_est = int(int(gas_est) * 1.2)
+    except Exception:
+        gas_est = 200_000
+
+    tx["gas"] = gas_est
+    built = func.build_transaction(tx)
+
+    signed = acct.sign_transaction(built)
+    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    txid = tx_hash.hex()
+
+    logger.info("anchor_send_ok txid=%s nonce=%s bundle=%s", txid, nonce, _short_hex(bundle_hash_hex))
+    return txid, nonce
+
+
+def anchor_confirm(
+    tx_hash_hex: str,
+    *,
+    rpc_url: Optional[str] = None,
+) -> Optional[Tuple[bool, int, int]]:
+    """Check if a transaction has been confirmed.
+
+    Returns: (success, status_int, block_number) or None if still pending.
+    """
+    w3 = _load_web3(rpc_url)
+    try:
+        receipt = w3.eth.get_transaction_receipt(tx_hash_hex)
+    except Exception:
+        # Transaction not yet mined or RPC error
+        return None
+
+    if receipt is None:
+        return None
+
+    status = int(receipt.get("status", 0) or 0)
+    blk_no = int(receipt.get("blockNumber") or 0)
+    return (status == 1, status, blk_no)
 
 
 def find_anchor(
@@ -184,23 +393,36 @@ def find_anchor(
     lookback_blocks: Optional[int] = None,
 ) -> ChainMatch:
     """Find EvidenceAnchored event for a given bundle hash."""
+    logger.debug(
+        "find_anchor_start bundle=%s rpc_url=%s contract=%s lookback=%s",
+        _short_hex(bundle_hash_hex),
+        rpc_url or DEFAULT_RPC_URL,
+        contract_addr or DEFAULT_CONTRACT_ADDR,
+        lookback_blocks if lookback_blocks is not None else DEFAULT_LOOKBACK_BLOCKS,
+    )
 
     try:
         w3, contract = _load_contract(rpc_url=rpc_url, contract_addr=contract_addr, abi_path=abi_path)
     except Exception:
+        logger.warning("find_anchor_contract_load_failed bundle=%s", _short_hex(bundle_hash_hex), exc_info=True)
         return ChainMatch(matches=False)
 
     try:
         bundle_hash32 = _hex32_from_prefixed(bundle_hash_hex)
     except Exception:
+        logger.warning("find_anchor_invalid_bundle_hash bundle=%s", bundle_hash_hex, exc_info=True)
         return ChainMatch(matches=False)
 
     lb = int(lookback_blocks if lookback_blocks is not None else DEFAULT_LOOKBACK_BLOCKS)
 
-    latest = w3.eth.block_number
+    try:
+        latest = w3.eth.block_number
+    except Exception:
+        logger.warning("find_anchor_block_number_failed", exc_info=True)
+        return ChainMatch(matches=False)
+
     from_block = max(0, latest - lb)
 
-    # Filter by event signature only; bundleHash may not be indexed.
     try:
         event = contract.events.EvidenceAnchored()  # type: ignore
         topic0 = event._get_event_topic()  # type: ignore
@@ -212,11 +434,15 @@ def find_anchor(
                 "topics": [topic0],
             }
         )
+        logger.debug("find_anchor_logs_fetched method=get_logs count=%s", len(logs))
     except Exception:
+        logger.debug("find_anchor_get_logs_failed trying_filter", exc_info=True)
         try:
             evt_filter = contract.events.EvidenceAnchored().create_filter(fromBlock=from_block, toBlock=latest)  # type: ignore
             logs = evt_filter.get_all_entries()  # type: ignore
+            logger.debug("find_anchor_logs_fetched method=filter count=%s", len(logs))
         except Exception:
+            logger.warning("find_anchor_logs_failed bundle=%s", _short_hex(bundle_hash_hex), exc_info=True)
             logs = []
 
     for log in reversed(logs):
@@ -226,15 +452,25 @@ def find_anchor(
             ev_hash: bytes = args.get("bundleHash", b"")
             if isinstance(ev_hash, HexBytes):
                 ev_hash = bytes(ev_hash)
+
             if ev_hash == bundle_hash32:
                 tx_hash = log["transactionHash"].hex()
-                blk = w3.eth.get_block(log["blockNumber"])
-                ts = blk.get("timestamp")
-                anchored_at = datetime.fromtimestamp(ts, tz=timezone.utc) if isinstance(ts, int) else None
+                blk_no = int(log["blockNumber"])
+                anchored_at: Optional[datetime] = None
+                try:
+                    blk = w3.eth.get_block(blk_no)
+                    ts = blk.get("timestamp")
+                    anchored_at = datetime.fromtimestamp(ts, tz=timezone.utc) if isinstance(ts, int) else None
+                except Exception:
+                    logger.debug("find_anchor_get_block_failed block=%s", blk_no, exc_info=True)
+
+                logger.info("find_anchor_match bundle=%s txid=%s block=%s", _short_hex(bundle_hash_hex), tx_hash, blk_no)
                 return ChainMatch(matches=True, txid=tx_hash, anchored_at=anchored_at)
         except Exception:
+            logger.debug("find_anchor_log_decode_failed", exc_info=True)
             continue
 
+    logger.info("find_anchor_no_match bundle=%s from_block=%s to_block=%s", _short_hex(bundle_hash_hex), from_block, latest)
     return ChainMatch(matches=False)
 
 
@@ -257,26 +493,41 @@ def verify_anchor_tx(
 
     Returns: (matches, block_number, anchored_at)
     """
+    logger.debug(
+        "verify_anchor_tx_start txid=%s expected_bundle=%s rpc_url=%s contract=%s",
+        _short_hex(txid),
+        _short_hex(expected_bundle_hash_hex),
+        rpc_url or DEFAULT_RPC_URL,
+        contract_addr or DEFAULT_CONTRACT_ADDR,
+    )
 
     if not txid or not isinstance(txid, str) or not txid.startswith("0x"):
+        logger.warning("verify_anchor_tx_invalid_txid txid=%r", txid)
         return False, None, None
 
     try:
         expected = _hex32_from_prefixed(expected_bundle_hash_hex)
     except Exception:
+        logger.warning("verify_anchor_tx_invalid_expected_bundle expected=%r", expected_bundle_hash_hex, exc_info=True)
         return False, None, None
 
     try:
         w3 = _load_web3(rpc_url)
         receipt = w3.eth.get_transaction_receipt(txid)
         if not receipt:
+            logger.info("verify_anchor_tx_no_receipt txid=%s", txid)
             return False, None, None
-        if int(receipt.get("status", 1) or 0) != 1:
-            return False, int(receipt.get("blockNumber") or 0), None
+
+        status = int(receipt.get("status", 1) or 0)
+        blk_no = int(receipt.get("blockNumber") or 0)
+        if status != 1:
+            logger.info("verify_anchor_tx_failed_status txid=%s block=%s status=%s", txid, blk_no, status)
+            return False, blk_no, None
 
         caddr = contract_addr or DEFAULT_CONTRACT_ADDR
         if not caddr:
-            return False, int(receipt.get("blockNumber") or 0), None
+            logger.warning("verify_anchor_tx_contract_addr_missing txid=%s", txid)
+            return False, blk_no, None
         caddr = to_checksum_address(caddr)
 
         logs = receipt.get("logs") or []
@@ -307,9 +558,6 @@ def verify_anchor_tx(
                 else:
                     continue
 
-                # Non-indexed args are ABI-encoded in data:
-                # - bundleHash (bytes32) at offset 0
-                # - ts (uint256) at offset 32
                 if len(data_bytes) < 64:
                     continue
 
@@ -317,7 +565,6 @@ def verify_anchor_tx(
                 if bundle_hash32 != expected:
                     continue
 
-                blk_no = int(receipt.get("blockNumber") or 0)
                 anchored_at: Optional[datetime] = None
                 try:
                     blk = w3.eth.get_block(blk_no)
@@ -325,12 +572,17 @@ def verify_anchor_tx(
                     if isinstance(ts, int):
                         anchored_at = datetime.fromtimestamp(ts, tz=timezone.utc)
                 except Exception:
+                    logger.debug("verify_anchor_tx_get_block_failed block=%s", blk_no, exc_info=True)
                     anchored_at = None
 
+                logger.info("verify_anchor_tx_match txid=%s block=%s", txid, blk_no)
                 return True, blk_no, anchored_at
             except Exception:
+                logger.debug("verify_anchor_tx_log_parse_failed txid=%s", txid, exc_info=True)
                 continue
 
-        return False, int(receipt.get("blockNumber") or 0), None
+        logger.info("verify_anchor_tx_no_match txid=%s block=%s", txid, blk_no)
+        return False, blk_no, None
     except Exception:
+        logger.warning("verify_anchor_tx_exception txid=%s", txid, exc_info=True)
         return False, None, None
