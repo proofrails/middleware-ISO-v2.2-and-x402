@@ -60,14 +60,18 @@ def list_receipts(
 
     return schemas.ReceiptsPage(items=items, total=total, page=page, page_size=page_size)
 
-
+import logging
+logger = logging.getLogger(__name__)
 @router.get("/v1/iso/receipts/{rid}", response_model=schemas.ReceiptResponse)
 def get_receipt(rid: str, session=Depends(get_session)):
+    logger.info("get_receipt_called rid=%s", rid)
+
     rec: Optional[models.Receipt] = session.get(models.Receipt, rid)
     if not rec:
+        logger.warning("get_receipt_not_found rid=%s", rid)
         raise HTTPException(status_code=404, detail="Receipt not found")
 
-    return schemas.ReceiptResponse(
+    out = schemas.ReceiptResponse(
         id=str(rec.id),
         status=rec.status,
         bundle_hash=rec.bundle_hash,
@@ -77,3 +81,18 @@ def get_receipt(rid: str, session=Depends(get_session)):
         created_at=rec.created_at,
         anchored_at=rec.anchored_at,
     )
+
+    logger.info(
+        "get_receipt_return "
+        "id=%s status=%s bundle_hash=%s flare_txid=%s xml_url=%s bundle_url=%s created_at=%s anchored_at=%s",
+        out.id,
+        out.status,
+        out.bundle_hash,
+        out.flare_txid,
+        out.xml_url,
+        out.bundle_url,
+        out.created_at,
+        out.anchored_at,
+    )
+
+    return out
