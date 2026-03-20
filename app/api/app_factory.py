@@ -21,6 +21,7 @@ from .routes.config import router as config_router
 from .routes.confirm_anchor import router as confirm_anchor_router
 from .routes.debug import router as debug_router
 from .routes.events import router as events_router
+from .routes.fi_messages import router as fi_messages_router
 from .routes.health import router as health_router
 from .routes.iso_messages import router as iso_messages_router
 from .routes.iso_write import router as iso_write_router
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(receipts_router)
     app.include_router(verify_router)
     app.include_router(iso_messages_router)
+    app.include_router(fi_messages_router)
     app.include_router(refunds_router)
     app.include_router(sdk_router)
     app.include_router(ai_router)

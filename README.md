@@ -352,7 +352,7 @@ Agent Anchoring allows AI agents to automatically or manually anchor payment dat
 
 Choose your preferred method:
 
-### 🖥️ Option 1: Web UI (60 seconds)
+### 🖥️ Option 1: Web UI 
 
 ```bash
 # 1. Start the middleware
@@ -367,7 +367,7 @@ open http://localhost:3000/agents
 
 **Result**: Configure anchoring with toggles and buttons
 
-### 💻 Option 2: SDK (5 lines of code)
+### 💻 Option 2: SDK 
 
 ```typescript
 import IsoMiddlewareClient from 'iso-middleware-sdk';
@@ -381,7 +381,7 @@ await client.updateAgentAnchoringConfig('agent-id', {
 
 **Result**: Anchoring enabled programmatically
 
-### 🤖 Option 3: AI Agent (Auto-anchor on payments)
+### 🤖 Option 3: AI Agent 
 
 ```bash
 # 1. Configure agent
@@ -480,7 +480,7 @@ Before starting, ensure:
 
 4. **Set dedicated wallet (optional):**
    - Click in the **"Anchor Wallet"** text field
-   - Paste your Ethereum address: `0x1234567890123456789012345678901234567890`
+   - Paste your Flare address: `0x1234567890123456789012345678901234567890`
    - This wallet will pay gas fees for anchoring
 
 5. **Save your configuration:**
@@ -601,7 +601,7 @@ Before starting, ensure:
 1. **Validate JSON**: Use [JSONLint](https://jsonlint.com/)
 2. **Check format**: Must be valid JSON object `{...}`
 3. **Remove comments**: JSON doesn't support `//` comments
-4. **Check wallet balance**: Ensure anchor wallet has ETH for gas
+4. **Check wallet balance**: Ensure anchor wallet has FLR for gas
 
 ---
 
@@ -1519,14 +1519,6 @@ const anchors = await client.batchAnchorAgentData(agentId, [
 // More efficient: single transaction, multiple hashes
 ```
 
-### Gas Optimization
-
-Tips for reducing gas costs:
-
-1. **Use Layer 2**: Deploy on Base/Optimism instead of Ethereum mainnet
-2. **Batch anchors**: Combine multiple anchors into single transaction
-3. **Monitor gas prices**: Anchor during low-traffic periods
-4. **Use dedicated wallet**: Separate anchor wallet with appropriate gas budget
 
 ### Anchor Worker Configuration
 
@@ -1599,10 +1591,7 @@ docker compose exec redis redis-cli del anchor:retries:<receipt_id>
    - API endpoints use standard authentication
    - Anchor verification is publicly accessible
 
-4. **Gas Management**
-   - Monitor anchor wallet balance
-   - Set gas limits to prevent excessive spending
-   - Alert on low balance
+
 
 ### Audit Trail
 
@@ -1619,27 +1608,6 @@ Anyone can verify:
 
 ---
 
-## FAQ
-
-**Q: How much does anchoring cost?**
-A: Gas fees vary by network. Base: ~$0.01, Ethereum: ~$1-5, Optimism: ~$0.05
-
-**Q: Can I anchor private data?**
-A: Yes, only the hash goes on-chain. Original data stays private in your database.
-
-**Q: How long until anchor is confirmed?**
-A: 15 seconds on Base, 12 seconds on Ethereum, 2 seconds on Optimism (average).
-
-**Q: What if anchoring fails?**
-A: Anchor record shows "failed" status. Check logs for details. Common causes: insufficient gas, invalid data.
-
-**Q: Can I delete an anchor?**
-A: No, blockchain records are immutable. You can mark as inactive in your database.
-
-**Q: Do I need my own blockchain node?**
-A: No, uses public RPC endpoints by default. You can configure custom RPC if desired.
-
----
 
 ## Resources
 
@@ -1654,11 +1622,6 @@ A: No, uses public RPC endpoints by default. You can configure custom RPC if des
 - [Python SDK Examples](../packages/sdk-python/README.md)
 - [Agent Templates](../agents/)
 
-### Tools
-- [Etherscan](https://etherscan.io) - Ethereum block explorer
-- [BaseScan](https://basescan.org) - Base block explorer
-- [JSONLint](https://jsonlint.com) - JSON validator
-- [web3.storage](https://web3.storage) - IPFS storage
 
-
-**Built with ❤️ for ISO 20022 compliance and blockchain immutability**
+---
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/proofrails/middleware-ISO-v2.2-and-x402)

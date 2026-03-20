@@ -64,6 +64,34 @@ def _write_iso_artifact(session, receipt_id: str, type_str: str, filename: str, 
     return str(file_path), sha
 
 
+def _write_status_json(rec: models.Receipt) -> None:
+    """Write current receipt status to status.json file.
+    
+    This provides an up-to-date status file that gets updated after anchoring,
+    while evidence.zip remains immutable with the original snapshot.
+    """
+    try:
+        out_dir = _ensure_dir_for_receipt(str(rec.id))
+        status_file = out_dir / "status.json"
+        
+        status_data = {
+            "receipt_id": str(rec.id),
+            "status": rec.status,
+            "bundle_hash": rec.bundle_hash,
+            "flare_txid": rec.flare_txid,
+            "anchored_at": rec.anchored_at.isoformat() if rec.anchored_at else None,
+            "created_at": rec.created_at.isoformat() if rec.created_at else None,
+            "last_updated": datetime.utcnow().isoformat(),
+        }
+        
+        status_file.write_text(
+            json.dumps(status_data, indent=2, separators=(",", ": "), default=str)
+        )
+    except Exception as e:
+        # Best-effort; log but don't fail the job
+        logger.warning("Failed to write status.json for %s: %s", rec.id, str(e))
+
+
 def _resolve_anchor_pk(cfg) -> Optional[str]:
     try:
         sec = getattr(cfg, "security", None)

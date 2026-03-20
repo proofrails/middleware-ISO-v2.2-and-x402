@@ -229,3 +229,15 @@ class ConfirmAnchorResponse(BaseModel):
     status: Status
     flare_txid: Optional[str] = None
     anchored_at: Optional[datetime] = None
+
+
+class FIMessageRequest(BaseModel):
+    reason_code: Optional[str] = Field(None, description="ISO reason code (e.g., 'CUST', 'TECH')")
+    resolution_code: Optional[str] = Field(None, description="ISO resolution code (e.g., 'APPR', 'RJCT')")
+
+
+class FIMessageResponse(BaseModel):
+    message_id: str = Field(..., description="Generated message ID")
+    type: str = Field(..., description="Message type (e.g., 'camt.056', 'pacs.009')")
+    receipt_id: str = Field(..., description="Original receipt ID")
+    url: str = Field(..., description="URL to download the generated XML")

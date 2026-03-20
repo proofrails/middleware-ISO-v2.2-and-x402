@@ -1,0 +1,21 @@
+# vscode
+.vscode
+
+# hardhat
+artifacts
+cache
+deployments
+node_modules
+typechain-types
+
+# build
+dist
+
+# env
+.env
+
+# OS
+.DS_Store
+
+# yarn
+yarn-error.log
