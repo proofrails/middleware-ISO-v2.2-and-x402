@@ -21,6 +21,8 @@ logger = logging.getLogger("middleware.anchor_poller")
 
 POLL_INTERVAL = float(os.getenv("ANCHOR_POLL_INTERVAL", "3"))
 CONFIRM_TIMEOUT = float(os.getenv("ANCHOR_CONFIRM_TIMEOUT", "180"))
+# How often (in seconds) to check for unsent receipts that need re-enqueue
+RETRY_UNSENT_INTERVAL = float(os.getenv("ANCHOR_RETRY_INTERVAL", "30"))
 
 
 class _PendingTx:
@@ -43,6 +45,7 @@ class AnchorPoller:
         self._nonce_manager = nonce_manager
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._last_retry_check: float = 0.0
 
     # -- public API (called from anchor jobs) --
 
@@ -96,9 +99,12 @@ class AnchorPoller:
             if rows:
                 logger.info("poller_recovered count=%s", len(rows))
         finally:
+            session.rollback()
             session.close()
 
     def _run(self) -> None:
+        db.engine.dispose()  # Fresh connections for this thread
+        logger.info("poller_thread_started")
         while not self._stop.is_set():
             try:
                 self._poll_once()
@@ -121,6 +127,7 @@ class AnchorPoller:
                 )
                 .all()
             )
+            picked = 0
             for r in rows:
                 rid = str(r.id)
                 if rid not in tracked_ids:
@@ -133,18 +140,122 @@ class AnchorPoller:
                             sent_at=time.monotonic(),
                             rpc_url=rpc_url,
                         ))
-                    logger.info("poller_pickup rid=%s tx=%s", rid, r.flare_txid)
+                    picked += 1
+                    logger.debug("poller_pickup rid=%s tx=%s", rid, r.flare_txid)
+            if picked:
+                logger.info("poller_pickup_batch count=%d total_pending=%d", picked, len(self._pending))
+        except Exception:
+            raise
+        finally:
+            session.rollback()
+            session.close()
+
+    def _retry_unsent_receipts(self) -> None:
+        """Re-enqueue awaiting_anchor receipts that have no txid (send never happened).
+
+        Runs at most once every RETRY_UNSENT_INTERVAL seconds.
+        Uses a Redis set to track which receipt IDs already have a queued job,
+        preventing duplicate enqueues. Caps queue size and stops retrying
+        receipts that have failed too many times.
+        """
+        now = time.monotonic()
+        if (now - self._last_retry_check) < RETRY_UNSENT_INTERVAL:
+            return
+        self._last_retry_check = now
+
+        MAX_ANCHOR_RETRIES = 5
+        MAX_QUEUE_SIZE = 300
+
+        session = db.SessionLocal()
+        try:
+            rows = (
+                session.query(models.Receipt)
+                .filter(
+                    models.Receipt.status.in_(["awaiting_anchor", "failed"]),
+                    models.Receipt.bundle_hash.isnot(None),
+                    models.Receipt.flare_txid.is_(None),
+                )
+                .all()
+            )
+            if not rows:
+                return
+
+            from .queue import get_queue, get_redis
+            anchor_q = get_queue("anchor")
+            redis = get_redis()
+            dedup_key = "anchor:retry:enqueued"
+
+            # cap queue size
+            queue_len = int(redis.llen("rq:queue:anchor") or 0)
+            if queue_len >= MAX_QUEUE_SIZE:
+                logger.info("poller_retry_unsent skipped: queue_len=%d >= max=%d", queue_len, MAX_QUEUE_SIZE)
+                return
+
+            count = 0
+            skipped_max = 0
+            for r in rows:
+                rid = str(r.id)
+
+                retry_key = f"anchor:retries:{rid}"
+                retries = int(redis.get(retry_key) or 0)
+                if retries >= MAX_ANCHOR_RETRIES:
+                    # max retries exceeded
+                    if r.status != "failed":
+                        r.status = "failed"
+                        r.last_error = f"anchor_failed: max retries ({MAX_ANCHOR_RETRIES}) exceeded"
+                    skipped_max += 1
+                    continue
+
+                # Skip if already enqueued (SADD returns 0 if member exists)
+                if not redis.sadd(dedup_key, rid):
+                    continue
+                redis.expire(dedup_key, 600)
+
+                r.status = "awaiting_anchor"
+                chains = [
+                    {
+                        "name": r.chain or "flare",
+                        "contract": os.getenv(
+                            "ANCHOR_CONTRACT_ADDR",
+                            "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8",
+                        ),
+                        "rpc_url": os.getenv("FLARE_RPC_URL"),
+                    }
+                ]
+                from .jobs import anchor_receipt_job
+                anchor_q.enqueue(
+                    anchor_receipt_job,
+                    receipt_id=rid,
+                    bundle_hash=r.bundle_hash,
+                    chains=chains,
+                    job_timeout=int(os.getenv("ANCHOR_JOB_TIMEOUT", "120")),
+                )
+                count += 1
+
+                if count + queue_len >= MAX_QUEUE_SIZE:
+                    break
+
+            session.commit()
+            if count or skipped_max:
+                logger.info("poller_retry_unsent enqueued=%d skipped_max_retries=%d total_unsent=%d queue=%d",
+                            count, skipped_max, len(rows), queue_len)
+        except Exception:
+            session.rollback()
+            logger.exception("poller_retry_unsent_error")
         finally:
             session.close()
 
     def _poll_once(self) -> None:
         self._pick_up_new_from_db()
+        self._retry_unsent_receipts()
         with self._lock:
             snapshot = list(self._pending)
         if not snapshot:
             return
 
         done_ids: set[str] = set()
+        anchored_count = 0
+        failed_count = 0
 
         for ptx in snapshot:
             try:
@@ -157,11 +268,14 @@ class AnchorPoller:
                 success, status_int, blk_no = result
                 if success:
                     self._finalise(ptx, blk_no)
+                    anchored_count += 1
                 else:
                     self._mark_failed(ptx, f"tx reverted status={status_int}")
+                    failed_count += 1
                 done_ids.add(ptx.receipt_id)
             elif (time.monotonic() - ptx.sent_at) > CONFIRM_TIMEOUT:
                 self._mark_failed(ptx, "confirmation timeout")
+                failed_count += 1
                 if self._nonce_manager:
                     self._nonce_manager.reset()
                 done_ids.add(ptx.receipt_id)
@@ -169,6 +283,10 @@ class AnchorPoller:
         if done_ids:
             with self._lock:
                 self._pending = [p for p in self._pending if p.receipt_id not in done_ids]
+            logger.info(
+                "poller_cycle confirmed=%d failed=%d pending=%d",
+                anchored_count, failed_count, len(self._pending),
+            )
 
     def _finalise(self, ptx: _PendingTx, blk_no: int) -> None:
         session = db.SessionLocal()
@@ -187,20 +305,26 @@ class AnchorPoller:
             ))
             session.commit()
 
-            logger.info("poller_anchored rid=%s tx=%s block=%s", ptx.receipt_id, ptx.tx_hash, blk_no)
-
-            # Generate post-anchor artifacts (best-effort)
-            try:
-                from .jobs import finalize_receipt
-                finalize_receipt(str(rec.id), session=session)
-            except Exception:
-                logger.exception("poller_finalize_error rid=%s", ptx.receipt_id)
+            logger.debug("poller_anchored rid=%s tx=%s block=%s", ptx.receipt_id, ptx.tx_hash, blk_no)
 
         except Exception:
             session.rollback()
             logger.exception("poller_finalise_error rid=%s", ptx.receipt_id)
         finally:
+            session.rollback()
             session.close()
+
+        # Generate post-anchor artifacts (best-effort, separate session)
+        try:
+            from .jobs import finalize_receipt
+            fin_session = db.SessionLocal()
+            try:
+                finalize_receipt(str(ptx.receipt_id), session=fin_session)
+            finally:
+                fin_session.rollback()
+                fin_session.close()
+        except Exception:
+            logger.exception("poller_finalize_error rid=%s", ptx.receipt_id)
 
     def _mark_failed(self, ptx: _PendingTx, reason: str) -> None:
         session = db.SessionLocal()
@@ -215,6 +339,7 @@ class AnchorPoller:
             session.rollback()
             logger.exception("poller_mark_failed_error rid=%s", ptx.receipt_id)
         finally:
+            session.rollback()
             session.close()
 
 

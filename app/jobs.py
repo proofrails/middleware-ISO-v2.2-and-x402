@@ -140,7 +140,7 @@ def process_receipt_job(
     """Main background pipeline for a receipt.
 
     Runs in an RQ worker.
-    
+
     Args:
         receipt_id: Receipt UUID
         callback_url: Optional callback URL to notify on completion
@@ -148,11 +148,18 @@ def process_receipt_job(
         is_refund: If True, generates pacs.004 instead of pain.001
     """
 
-    session = db.SessionLocal()
+    # Create a fresh engine+session to avoid stale connections from RQ fork
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    _eng = create_engine(db.DATABASE_URL, pool_pre_ping=True, pool_size=1, future=True)
+    _Session = sessionmaker(bind=_eng, autoflush=False, autocommit=False, future=True)
+
+    session = _Session()
     rec: Optional[models.Receipt] = None
     try:
         rec = session.get(models.Receipt, receipt_id)
         if not rec:
+            _eng.dispose()
             return
 
         cfg = load_config(session)
@@ -376,7 +383,6 @@ def process_receipt_job(
             receipt_id=str(rec.id),
             bundle_hash=bundle_hash,
             chains=chains_src,
-            private_key=pk,
             callback_url=callback_url,
             job_timeout=int(os.getenv("RQ_JOB_TIMEOUT", "600")),
         )
@@ -391,13 +397,24 @@ def process_receipt_job(
         raise
     finally:
         session.close()
+        _eng.dispose()
+
+
+def _is_public_rpc() -> bool:
+    """Return True only when FLARE_RPC_URL is not set (using default public RPC)."""
+    return not (os.getenv("FLARE_RPC_URL") or "").strip()
+
+def _anchor_batch_size() -> int:
+    """Number of anchor sends before pausing."""
+    if _is_public_rpc():
+        return int(os.getenv("ANCHOR_PUBLIC_BATCH_SIZE", "10"))
+    return int(os.getenv("ANCHOR_LOCAL_BATCH_SIZE", "50"))
 
 
 def anchor_receipt_job(
     receipt_id: str,
     bundle_hash: str,
     chains: list[dict],
-    private_key: Optional[str] = None,
     callback_url: Optional[str] = None,
 ) -> None:
     """Send anchor transactions without waiting for confirmations.
@@ -405,20 +422,53 @@ def anchor_receipt_job(
     The AnchorPoller background thread handles confirmation polling.
     Runs on the 'anchor' queue processed by the anchor worker.
     """
+    import time as _time
     from . import anchor as anchor_py  # type: ignore
     from .anchor_poller import get_poller
     from .nonce_manager import NonceManager
 
+    # Throttle anchor sends to avoid RPC rate limiting.
+    # Use Redis counter so it persists across RQ worker forks.
+    from .queue import get_redis
+    _redis = get_redis()
+    count = _redis.incr("anchor_send_count")
+    # Auto-expire the counter after 10 minutes of inactivity
+    _redis.expire("anchor_send_count", 600)
+    batch = _anchor_batch_size()
+    if count % batch == 0:
+        logger.info("anchor_throttle: pausing 15s after %d sends (batch=%d)", count, batch)
+        _time.sleep(15)
+
+    # Create a fresh engine+session to avoid stale connections from RQ fork
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    _eng = create_engine(db.DATABASE_URL, pool_pre_ping=True, pool_size=1, future=True)
+    _Session = sessionmaker(bind=_eng, autoflush=False, autocommit=False, future=True)
+
     poller = get_poller()
 
-    session = db.SessionLocal()
+    session = _Session()
     try:
         rec = session.get(models.Receipt, receipt_id)
         if not rec:
             logger.warning("anchor_job_receipt_missing rid=%s", receipt_id)
             return
 
-        pk = private_key or os.getenv("ANCHOR_PRIVATE_KEY")
+        # already done
+        if rec.status == "anchored":
+            logger.debug("anchor_job_already_anchored rid=%s, skipping", receipt_id)
+            return
+        if rec.flare_txid:
+            logger.debug("anchor_job_tx_already_sent rid=%s txid=%s, skipping", receipt_id, rec.flare_txid)
+            return
+
+        remaining = session.query(models.Receipt).filter(
+            models.Receipt.status.in_(["awaiting_anchor", "pending"]),
+            models.Receipt.flare_txid.is_(None),
+            models.Receipt.bundle_hash.isnot(None),
+        ).count()
+
+        pk = os.getenv("ANCHOR_PRIVATE_KEY")
         if not pk:
             rec.status = "failed"
             session.commit()
@@ -439,8 +489,8 @@ def anchor_receipt_job(
             try:
                 # Get nonce from the anchor worker's NonceManager (if available)
                 # Otherwise fall back to querying the chain
-                from web3 import Web3  # type: ignore
-                w3 = Web3(Web3.HTTPProvider(rpc_url or "https://flare-api.flare.network/ext/C/rpc"))
+                from . import anchor as _anchor_mod  # type: ignore
+                w3 = _anchor_mod._load_web3(rpc_url)
                 acct = w3.eth.account.from_key(pk)
 
                 # Use the global nonce manager if the poller has one, else query chain
@@ -450,7 +500,7 @@ def anchor_receipt_job(
                 else:
                     nonce = w3.eth.get_transaction_count(acct.address, "pending")
 
-                logger.info(
+                logger.debug(
                     "anchor_send_start rid=%s chain=%s nonce=%s contract=%s",
                     receipt_id, chain_name, nonce, contract_addr,
                 )
@@ -469,6 +519,14 @@ def anchor_receipt_job(
                     rec.flare_txid = txid
                 session.commit()
 
+                try:
+                    from .queue import get_redis as _get_redis
+                    _r = _get_redis()
+                    _r.delete(f"anchor:retries:{receipt_id}")
+                    _r.srem("anchor:retry:enqueued", receipt_id)
+                except Exception:
+                    pass
+
                 # Register with poller for async confirmation
                 if poller:
                     poller.track(receipt_id, txid, chain_name, rpc_url=rpc_url)
@@ -477,27 +535,41 @@ def anchor_receipt_job(
                     logger.warning("anchor_job_no_poller rid=%s falling_back_to_sync", receipt_id)
                     _sync_confirm_fallback(session, rec, txid, chain_name, rpc_url, callback_url)
 
-                logger.info("anchor_send_done rid=%s txid=%s nonce=%s", receipt_id, txid, nonce_used)
+                logger.info("anchor_send_done rid=%s txid=%s nonce=%s remaining=%d", receipt_id, txid, nonce_used, remaining)
 
             except Exception as e:
                 session.rollback()
                 # If send failed, nonce was NOT consumed — don't increment
                 if nonce_mgr:
-                    nonce_mgr.reset()
+                    nonce_mgr.reset(error=e)
                 logger.error(
                     "anchor_send_failed rid=%s chain=%s err=%s",
                     receipt_id, chain_name, repr(e),
                 )
                 logger.debug("anchor_send_failed_trace rid=%s trace=%s", receipt_id, traceback.format_exc())
-                # Mark failed if this was the only/last chain
-                rec.status = "failed"
-                session.commit()
+
+                try:
+                    from .queue import get_redis as _get_redis
+                    _r = _get_redis()
+                    retry_key = f"anchor:retries:{receipt_id}"
+                    retries = _r.incr(retry_key)
+                    _r.expire(retry_key, 3600)  # expire after 1 hour
+                    logger.info("anchor_send_failed rid=%s retries=%d", receipt_id, retries)
+                except Exception:
+                    pass
+
+                # Re-fetch receipt after rollback to avoid StaleDataError
+                rec = session.get(models.Receipt, receipt_id)
+                if rec:
+                    rec.status = "failed"
+                    session.commit()
 
     except Exception:
         logger.exception("anchor_receipt_job_error rid=%s", receipt_id)
         raise
     finally:
         session.close()
+        _eng.dispose()
 
 
 def _sync_confirm_fallback(

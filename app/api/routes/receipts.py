@@ -96,3 +96,50 @@ def get_receipt(rid: str, session=Depends(get_session)):
     )
 
     return out
+
+
+@router.post("/v1/iso/receipts/{rid}/retry-anchor")
+def retry_anchor(rid: str, session=Depends(get_session)):
+    """Re-queue a failed receipt for anchoring."""
+    import os
+    from app.jobs import anchor_receipt_job, _project_anchoring_chains
+    from app.queue import get_queue
+
+    rec: Optional[models.Receipt] = session.get(models.Receipt, rid)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    if rec.status != "failed":
+        raise HTTPException(status_code=409, detail=f"Receipt status is '{rec.status}', not 'failed'")
+
+    if not rec.bundle_hash:
+        raise HTTPException(status_code=409, detail="Receipt has no bundle_hash")
+
+    # Resolve chain config
+    proj_chains = _project_anchoring_chains(session, rec)
+    if not proj_chains:
+        proj_chains = [
+            {
+                "name": rec.chain or "flare",
+                "contract": os.getenv("ANCHOR_CONTRACT_ADDR") or "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8",
+                "rpc_url": os.getenv("FLARE_RPC_URL"),
+            }
+        ]
+
+    # Reset status and clear stale anchor tx
+    rec.status = "awaiting_anchor"
+    rec.flare_txid = None
+    session.commit()
+
+    # Enqueue anchor job
+    anchor_q = get_queue("anchor")
+    anchor_q.enqueue(
+        anchor_receipt_job,
+        receipt_id=str(rec.id),
+        bundle_hash=rec.bundle_hash,
+        chains=proj_chains,
+        job_timeout=120,
+    )
+
+    logger.info("retry_anchor_enqueued rid=%s", rid)
+    return {"ok": True, "id": str(rec.id), "status": "awaiting_anchor"}

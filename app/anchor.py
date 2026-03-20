@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 # Default to Flare mainnet if not configured.
 DEFAULT_RPC_URL = os.getenv("FLARE_RPC_URL", "https://flare-api.flare.network/ext/C/rpc")
+FALLBACK_RPC_URL = os.getenv("FLARE_RPC_URL_FALLBACK", "")
 # If ANCHOR_CONTRACT_ADDR is not set, fall back to the platform-hosted mainnet contract.
 DEFAULT_CONTRACT_ADDR = os.getenv("ANCHOR_CONTRACT_ADDR", "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8")
 DEFAULT_ABI_PATH = os.getenv("ANCHOR_ABI_PATH", "contracts/EvidenceAnchor.abi.json")
@@ -90,18 +91,31 @@ def _load_abi(abi_path: Optional[str]) -> List[Dict[str, Any]]:
 
 
 def _load_web3(rpc_url: Optional[str]) -> Web3:
-    url = rpc_url or DEFAULT_RPC_URL
+    primary = rpc_url or DEFAULT_RPC_URL
+    fallback = FALLBACK_RPC_URL
+
+    # Try primary with a short timeout (2s) — if the public RPC is slow, fall back
     try:
-        w3 = Web3(Web3.HTTPProvider(url))
-        try:
-            ok = bool(w3.is_connected())
-        except Exception:
-            ok = False
-        logger.debug("anchor_web3_loaded url=%s connected=%s", url, ok)
-        return w3
+        w3 = Web3(Web3.HTTPProvider(primary, request_kwargs={"timeout": 2}))
+        if w3.is_connected():
+            logger.debug("anchor_web3_loaded url=%s (primary)", primary)
+            return Web3(Web3.HTTPProvider(primary, request_kwargs={"timeout": 30}))
     except Exception:
-        logger.exception("anchor_web3_load_failed url=%s", url)
-        raise
+        pass
+
+    # Primary slow or down — use fallback (local node)
+    if fallback:
+        try:
+            w3 = Web3(Web3.HTTPProvider(fallback, request_kwargs={"timeout": 30}))
+            if w3.is_connected():
+                logger.info("anchor_web3_fallback url=%s (primary %s was slow/down)", fallback, primary)
+                return w3
+        except Exception:
+            pass
+
+    # Both failed — return primary with normal timeout, let caller handle errors
+    logger.error("anchor_web3_all_rpcs_failed, returning primary url=%s", primary)
+    return Web3(Web3.HTTPProvider(primary, request_kwargs={"timeout": 30}))
 
 
 def _load_contract(
@@ -353,7 +367,17 @@ def anchor_send(
     built = func.build_transaction(tx)
 
     signed = acct.sign_transaction(built)
-    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+
+    # send_raw_transaction can hang indefinitely on unresponsive nodes.
+    # Use a thread with a hard timeout to avoid blocking the worker.
+    import concurrent.futures
+    send_timeout = int(os.getenv("ANCHOR_SEND_TIMEOUT", "30"))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(w3.eth.send_raw_transaction, signed.raw_transaction)
+        try:
+            tx_hash = future.result(timeout=send_timeout)
+        except concurrent.futures.TimeoutError:
+            raise RuntimeError(f"send_raw_transaction timed out after {send_timeout}s")
     txid = tx_hash.hex()
 
     logger.info("anchor_send_ok txid=%s nonce=%s bundle=%s", txid, nonce, _short_hex(bundle_hash_hex))

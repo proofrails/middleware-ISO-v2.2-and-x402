@@ -40,49 +40,6 @@ The ISO 20022 Middleware provides a complete solution for payment processing:
 
 ---
 
-## Core Features
-# ISO 20022 Payments Middleware with x402 & Agent Anchoring
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-green.svg)]()
-
-> **Production-ready middleware for ISO 20022 payment processing with blockchain anchoring, x402 micropayments, and autonomous AI agents**
-
-Transform blockchain transactions into compliant ISO 20022 XML messages with cryptographic evidence bundles anchored on EVM chains. Enable pay-per-use API access with USDC micropayments and deploy autonomous XMTP agents.
-
-**[Quick Start](#quick-start)** | **[Core Features](#core-features)** | **[Projects](#project-management)** | **[Receipts](#receipt-verification)** | **[Dashboard](#dashboard--ui)** | **[API](#api-reference)** | **[SDK](#sdk-usage)** | **[Agents](#ai-agent-integration)**
-
----
-
-## Overview
-
-The ISO 20022 Middleware provides a complete solution for payment processing:
-
-### 🎯 Core Capabilities
-
-- **15 ISO 20022 Message Types**: pain.001, pain.002, pain.007, pain.008, pacs.002, pacs.004, pacs.007, pacs.008, pacs.009, camt.029, camt.052, camt.053, camt.054, camt.056, remt.001
-- **Multi-Chain Anchoring**: Evidence bundles anchored on Ethereum, Base, Flare, Optimism
-- **Project Isolation**: Multi-tenant support with Sign-In With Ethereum (SIWE) authentication
-- **Evidence Bundles**: Deterministic ZIP files with cryptographic signatures
-- **Real-Time Updates**: Server-Sent Events (SSE) for live receipt tracking
-- **TypeScript & Python SDKs**: Full-featured client libraries with contract ABIs
-
-### 💰 x402 Payment Protocol
-
-- **Micropayment API**: Pay-per-use endpoints with USDC on Base chain
-- **6 Premium Endpoints**: Verify bundles, generate statements, FX lookup, bulk operations
-- **Automatic Payments**: Transparent USDC handling via x402 protocol
-- **Revenue Analytics**: Track payments, usage, and revenue by endpoint
-
-### 🤖 Autonomous Agents
-
-- **XMTP Agent**: Natural language command processing via messaging
-- **Agent Management**: Full CRUD API + UI for managing autonomous agents
-- **Multi-Agent Support**: Run multiple agents per project with independent wallets
-- **Agent Anchoring**: Automatic or manual blockchain anchoring for agents
-
----
-
 ## Quick Start
 
 ### Installation
@@ -162,10 +119,9 @@ const details = await client.getProjectConfig(project.id);
 #### Using the API
 
 ```bash
-# Create project
-curl -X POST http://localhost:8000/v1/projects \
+# Create project (returns project details + API key)
+curl -X POST http://localhost:8000/v1/projects/register \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <siwe_token>" \
   -d '{
     "name": "My Project",
     "config": {
@@ -175,13 +131,13 @@ curl -X POST http://localhost:8000/v1/projects \
     }
   }'
 
-# List projects
+# List projects (authenticated with API key)
 curl http://localhost:8000/v1/projects \
-  -H "Authorization: Bearer <siwe_token>"
+  -H "X-API-Key: <your_api_key>"
 
 # Get project config
 curl http://localhost:8000/v1/projects/{project_id}/config \
-  -H "Authorization: Bearer <siwe_token>"
+  -H "X-API-Key: <your_api_key>"
 ```
 
 ---
@@ -392,7 +348,7 @@ Agent Anchoring allows AI agents to automatically or manually anchor payment dat
 
 ---
 
-## Quick Start
+## Usage Options
 
 Choose your preferred method:
 
@@ -1270,7 +1226,7 @@ PUT /v1/agents/{agent_id}/anchoring-config
 #### Anchor Data
 
 ```http
-POST /v1/agents/{agent_id}/anchor-data
+POST /v1/agents/{agent_id}/anchor
 ```
 
 **Request:**
@@ -1462,15 +1418,39 @@ XMTP_ENV=production  # or 'dev'
 └─────────────────────────────────┘
 ```
 
+### Worker Architecture
+
+The middleware uses Redis Queue (RQ) for asynchronous processing:
+
+```
+┌─────────────────┐     ┌───────────┐     ┌─────────────────────┐
+│   API Server    │────▶│   Redis   │◀────│  Worker (default)   │
+│  (FastAPI)      │     │  (Queue)  │     │  Receipt processing │
+└─────────────────┘     │           │     │  ISO generation     │
+                        │           │     │  Evidence bundling  │
+                        │           │     └─────────────────────┘
+                        │           │
+                        │           │     ┌────────────────────┐
+                        │           │◀────│  Anchor Worker     │
+                        │           │     │  On-chain sends    │
+                        └───────────┘     │  Confirmation poll │
+                                          │  Nonce management  │
+                                          └────────────────────┘
+```
+
+- **Worker** (default queue): Handles receipt processing, compliance checks, ISO message generation, and evidence bundle creation. Scale with `WORKERS` env var.
+- **Anchor Worker** (anchor queue): Sends on-chain transactions and polls for confirmations. Runs as a single instance with a background `AnchorPoller` thread. Uses Redis-backed `NonceManager` for atomic nonce coordination.
+
 ### Data Flow
 
 1. **Configuration**: User enables anchoring via UI/SDK/Agent
 2. **Trigger**: Payment processed or manual anchor requested
 3. **Hashing**: Data is hashed with SHA-256
-4. **Recording**: Anchor record created in database
-5. **Submission**: Hash submitted to blockchain contract
-6. **Confirmation**: Transaction mined and verified
-7. **Update**: Anchor record updated with TX details
+4. **Recording**: Anchor record created in database, job enqueued to default worker
+5. **Processing**: Worker generates ISO messages and evidence bundle
+6. **Anchoring**: Anchor worker sends hash to blockchain contract
+7. **Confirmation**: AnchorPoller monitors pending transactions
+8. **Update**: Anchor record updated with TX details, receipt finalized
 
 ### Smart Contracts
 
@@ -1547,6 +1527,55 @@ Tips for reducing gas costs:
 2. **Batch anchors**: Combine multiple anchors into single transaction
 3. **Monitor gas prices**: Anchor during low-traffic periods
 4. **Use dedicated wallet**: Separate anchor wallet with appropriate gas budget
+
+### Anchor Worker Configuration
+
+The anchor worker processes the `anchor` Redis queue, sending on-chain transactions and polling for confirmations.
+
+#### Scaling Workers
+
+The default worker handles receipt processing (compliance checks, ISO generation, evidence bundling). Scale it to process more receipts concurrently:
+
+```bash
+WORKERS=5   # scales the worker service in Docker Compose
+```
+
+Then start normally:
+
+```bash
+docker compose up -d
+```
+
+The anchor-worker (which sends on-chain transactions) runs as a single instance and should not be scaled unless you have a local RPC node and understand nonce coordination.
+
+#### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ANCHOR_PUBLIC_BATCH_SIZE` | `10` | Pause after N sends when using a public RPC to avoid rate limiting. |
+| `ANCHOR_LOCAL_BATCH_SIZE` | `50` | Pause after N sends when using a local/private RPC node. |
+| `ANCHOR_RETRY_INTERVAL` | `30` | Seconds between retry sweeps for unsent receipts. |
+| `ANCHOR_POLL_INTERVAL` | `3` | Seconds between confirmation polling cycles. |
+| `ANCHOR_CONFIRM_TIMEOUT` | `180` | Seconds to wait for a tx to confirm before marking it failed. |
+| `ANCHOR_JOB_TIMEOUT` | `120` | RQ job hard timeout in seconds. |
+| `ANCHOR_SEND_TIMEOUT` | `30` | Timeout for `send_raw_transaction` RPC calls. |
+| `ANCHOR_LOOKBACK_BLOCKS` | `50000` | Blocks to search back on startup for pending txs. At ~1 block/sec on Flare, 50000 = ~14 hours. |
+| `WORKERS` | `1` | Number of default worker Docker replicas for receipt processing. |
+
+#### Self-Recovery
+
+The anchor worker includes built-in safeguards against common failure scenarios:
+
+- **Dedup check**: Jobs skip receipts that are already `anchored` or already have a `flare_txid` (transaction already sent). Prevents duplicate on-chain transactions.
+- **Per-receipt retry limit**: After 5 consecutive send failures, the receipt is marked permanently `failed` and stops being re-enqueued. Tracked via Redis key `anchor:retries:{receipt_id}`.
+- **Queue size cap**: The retry poller stops enqueuing when the anchor queue exceeds 300 jobs, preventing unbounded growth from repeated failures.
+- **Dedup set**: Redis set (`anchor:retry:enqueued`) prevents the same receipt from being enqueued twice within 10 minutes.
+
+If a receipt is permanently failed, it can be manually retried by clearing its Redis retry counter:
+
+```bash
+docker compose exec redis redis-cli del anchor:retries:<receipt_id>
+```
 
 ---
 

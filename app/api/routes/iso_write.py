@@ -27,7 +27,7 @@ def _enqueue_receipt_processing(
             process_receipt_job,
             receipt_id,
             callback_url,
-            job_timeout=int(__import__("os").getenv("RQ_JOB_TIMEOUT", "600")),
+            job_timeout=int(__import__("os").getenv("RQ_JOB_TIMEOUT", "120")),
             retry=Retry(max=5, interval=[10, 30, 60, 120, 300]),
         )
         return
