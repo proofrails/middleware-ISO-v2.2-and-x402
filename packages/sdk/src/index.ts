@@ -91,6 +91,98 @@ export type RefundResponse = {
   status: string;
 };
 
+// ── Agent types ───────────────────────────────────────────────────────────────
+
+export type AgentCreate = {
+  name: string;
+  wallet_address: string;
+  xmtp_address?: string;
+  pricing_rules?: Record<string, string>;
+  project_id?: string;
+};
+
+export type AgentUpdate = {
+  name?: string;
+  wallet_address?: string;
+  xmtp_address?: string;
+  pricing_rules?: Record<string, string>;
+  status?: string;
+};
+
+export type AgentResponse = {
+  id: string;
+  name: string;
+  wallet_address: string;
+  xmtp_address?: string | null;
+  pricing_rules?: Record<string, string> | null;
+  status: string;
+  project_id?: string | null;
+  ai_mode: string;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+export type AgentAnchoringConfig = {
+  auto_anchor_enabled?: boolean;
+  anchor_on_payment?: boolean;
+  anchor_wallet_address?: string;
+  anchor_private_key?: string;
+};
+
+export type AgentAnchoringConfigResponse = {
+  id: string;
+  auto_anchor_enabled: boolean;
+  anchor_on_payment: boolean;
+  anchor_wallet: string | null;
+};
+
+export type AgentAnchorDataRequest = {
+  data: Record<string, unknown>;
+  description?: string;
+  chain?: string;
+  submit_onchain?: boolean;
+};
+
+export type AgentAnchorDataResponse = {
+  id: string;
+  agent_id: string;
+  anchor_hash: string;
+  chain: string;
+  status: string;
+  submit_onchain: boolean;
+  description?: string | null;
+  created_at?: string | null;
+};
+
+export type AgentAnchorRecord = {
+  id: string;
+  bundle_hash: string;
+  anchor_txid?: string | null;
+  chain: string;
+  status: string;
+  anchored_at?: string | null;
+  created_at?: string | null;
+};
+
+export type X402PaymentRecord = {
+  id: string;
+  tx_hash: string;
+  amount: string;
+  currency: string;
+  chain: string;
+  endpoint: string;
+  verified_at: string;
+  anchor_txid?: string | null;
+  anchor_status?: string | null;
+};
+
+export type RevenueResponse = {
+  total_revenue: string;
+  payment_count: number;
+  days: number;
+  by_endpoint: Array<{ endpoint: string; count: number; revenue: string }>;
+};
+
 export type ISOClientOptions = {
   baseUrl: string;
   apiKey?: string;
@@ -254,6 +346,125 @@ export default class IsoMiddlewareClient {
       const txt = await r.text().catch(() => "");
       throw new Error(`refund_failed:${r.status}:${txt}`);
     }
+    return r.json();
+  }
+
+  // ── Agent CRUD ──────────────────────────────────────────────────────────────
+
+  async createAgent(req: AgentCreate): Promise<AgentResponse> {
+    const r = await fetch(joinUrl(this.baseUrl, "/v1/agents"), {
+      method: "POST",
+      headers: this.headers(),
+      body: JSON.stringify(req),
+    });
+    if (!r.ok) throw new Error(`createAgent_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async listAgents(): Promise<AgentResponse[]> {
+    const r = await fetch(joinUrl(this.baseUrl, "/v1/agents"), { headers: this.headers() });
+    if (!r.ok) throw new Error(`listAgents_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async getAgent(agentId: string): Promise<AgentResponse> {
+    const r = await fetch(joinUrl(this.baseUrl, `/v1/agents/${agentId}`), {
+      headers: this.headers(),
+    });
+    if (!r.ok) throw new Error(`getAgent_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async updateAgent(agentId: string, req: AgentUpdate): Promise<AgentResponse> {
+    const r = await fetch(joinUrl(this.baseUrl, `/v1/agents/${agentId}`), {
+      method: "PUT",
+      headers: this.headers(),
+      body: JSON.stringify(req),
+    });
+    if (!r.ok) throw new Error(`updateAgent_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async deleteAgent(agentId: string): Promise<void> {
+    const r = await fetch(joinUrl(this.baseUrl, `/v1/agents/${agentId}`), {
+      method: "DELETE",
+      headers: this.headers(),
+    });
+    if (!r.ok) throw new Error(`deleteAgent_failed:${r.status}:${await r.text().catch(() => "")}`);
+  }
+
+  // ── Agent anchoring ─────────────────────────────────────────────────────────
+
+  async getAgentAnchoringConfig(agentId: string): Promise<AgentAnchoringConfigResponse> {
+    const r = await fetch(
+      joinUrl(this.baseUrl, `/v1/agents/${agentId}/anchoring-config`),
+      { headers: this.headers() },
+    );
+    if (!r.ok) throw new Error(`getAgentAnchoringConfig_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async updateAgentAnchoringConfig(
+    agentId: string,
+    cfg: AgentAnchoringConfig,
+  ): Promise<AgentAnchoringConfigResponse> {
+    const r = await fetch(
+      joinUrl(this.baseUrl, `/v1/agents/${agentId}/anchoring-config`),
+      { method: "PUT", headers: this.headers(), body: JSON.stringify(cfg) },
+    );
+    if (!r.ok) throw new Error(`updateAgentAnchoringConfig_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async anchorAgentData(
+    agentId: string,
+    req: AgentAnchorDataRequest,
+  ): Promise<AgentAnchorDataResponse> {
+    const r = await fetch(
+      joinUrl(this.baseUrl, `/v1/agents/${agentId}/anchor-data`),
+      { method: "POST", headers: this.headers(), body: JSON.stringify(req) },
+    );
+    if (!r.ok) throw new Error(`anchorAgentData_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async listAgentAnchors(agentId: string, days = 7): Promise<AgentAnchorRecord[]> {
+    const url = new URL(joinUrl(this.baseUrl, `/v1/agents/${agentId}/anchors`));
+    url.searchParams.set("days", String(days));
+    const r = await fetch(url.toString(), { headers: this.headers() });
+    if (!r.ok) throw new Error(`listAgentAnchors_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  // ── x402 analytics ─────────────────────────────────────────────────────────
+
+  async listX402Payments(limit = 50): Promise<X402PaymentRecord[]> {
+    const url = new URL(joinUrl(this.baseUrl, "/v1/x402/payments"));
+    url.searchParams.set("limit", String(limit));
+    const r = await fetch(url.toString(), { headers: this.headers() });
+    if (!r.ok) throw new Error(`listX402Payments_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  async getX402Revenue(days = 7): Promise<RevenueResponse> {
+    const url = new URL(joinUrl(this.baseUrl, "/v1/x402/revenue"));
+    url.searchParams.set("days", String(days));
+    const r = await fetch(url.toString(), { headers: this.headers() });
+    if (!r.ok) throw new Error(`getX402Revenue_failed:${r.status}:${await r.text().catch(() => "")}`);
+    return r.json();
+  }
+
+  // ── Receipt status (lightweight polling) ───────────────────────────────────
+
+  async getReceiptStatus(receiptId: string): Promise<{
+    id: string; status: string; bundle_hash?: string | null;
+    flare_txid?: string | null; anchored_at?: string | null;
+  }> {
+    const r = await fetch(
+      joinUrl(this.baseUrl, `/v1/iso/receipts/${receiptId}/status`),
+      { headers: this.headers() },
+    );
+    if (!r.ok) throw new Error(`getReceiptStatus_failed:${r.status}:${await r.text().catch(() => "")}`);
     return r.json();
   }
 }

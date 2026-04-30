@@ -241,24 +241,69 @@ def process_receipt_job(
         except Exception:
             pass
 
-        # FX enrichment helper artifact
+        # FX enrichment — FTSO v2 takes priority for Flare-chain receipts
         try:
+            chain_val = receipt_dict.get("chain", "")
+            ccy = receipt_dict.get("currency")
             fxp = getattr(getattr(cfg, "fx_policy", None), "provider", None)
             mode = getattr(getattr(cfg, "fx_policy", None), "mode", "none")
-            if fxp and mode != "none":
+
+            # Auto-select FTSO when receipt is on Flare and FTSO is enabled
+            ftso_rate_obj = None
+            from .settings import get_settings as _gs
+            _st = _gs()
+            if _st.ftso_enabled and chain_val in ("flare", "flare-testnet", "coston2", "coston"):
+                try:
+                    from .flare.ftso import symbol_to_feed, get_ftso_rate as _get_ftso
+                    feed_sym = symbol_to_feed(ccy or "")
+                    if feed_sym:
+                        ftso_rate_obj = _get_ftso(feed_sym)
+                        if ftso_rate_obj:
+                            receipt_dict["fx_rate"] = str(ftso_rate_obj.value)
+                            receipt_dict["fx_source"] = "ftso_v2"
+                            receipt_dict["fx_feed"] = feed_sym
+                            receipt_dict["fx_timestamp"] = ftso_rate_obj.timestamp
+                except Exception:
+                    pass
+
+            if ftso_rate_obj:
+                fx_info = {
+                    "base_ccy": "USD",
+                    "quote_ccy": ccy,
+                    "provider": "ftso_v2",
+                    "feed": ftso_rate_obj.feed_id,
+                    "rate": str(ftso_rate_obj.value),
+                    "raw_value": ftso_rate_obj.raw_value,
+                    "raw_decimals": ftso_rate_obj.raw_decimals,
+                    "source": "ftso_v2",
+                    "on_chain": True,
+                    "ts": datetime.utcfromtimestamp(ftso_rate_obj.timestamp).isoformat(),
+                }
+                _write_iso_artifact(
+                    session,
+                    str(rec.id),
+                    "fx",
+                    "fx.json",
+                    json.dumps(fx_info, separators=(",", ":"), default=str).encode("utf-8"),
+                )
+            elif fxp and mode != "none":
+                # Fallback: use configured provider (coingecko / chainlink)
                 base = getattr(getattr(cfg, "fx_policy", None), "base_ccy", None)
-                ccy = receipt_dict.get("currency")
                 feed = getattr(getattr(cfg, "fx_policy", None), "chainlink_feed", None)
                 rpc = getattr(getattr(cfg, "fx_policy", None), "chainlink_rpc_url", None) or getattr(
                     getattr(cfg, "ledger", None), "rpc_url", None
                 )
                 detail = fx_providers.get_rate_detail(base_ccy=base, quote_ccy=ccy, provider=fxp, rpc_url=rpc, feed=feed)
+                if detail.get("rate"):
+                    receipt_dict["fx_rate"] = detail["rate"]
+                    receipt_dict["fx_source"] = detail.get("source")
                 fx_info = {
                     "base_ccy": base,
                     "quote_ccy": ccy,
                     "provider": fxp,
                     "rate": detail.get("rate"),
                     "source": detail.get("source"),
+                    "on_chain": False,
                     "ts": datetime.utcnow().isoformat(),
                 }
                 _write_iso_artifact(
@@ -360,6 +405,57 @@ def process_receipt_job(
                 anyio.from_thread.run(hub.publish, str(rec.id), evt_payload)  # type: ignore
             except Exception:
                 pass
+            return
+
+        # --- Demo mode: simulate anchoring without a real blockchain ---
+        from .settings import get_settings as _demo_settings
+        if _demo_settings().demo_mode:
+            import hashlib as _hl
+            import random as _rnd
+            import time as _tm
+
+            rec.xml_path = f"{ARTIFACTS_DIR}/{rec.id}/pain001.xml"
+            rec.bundle_path = f"{ARTIFACTS_DIR}/{rec.id}/evidence.zip"
+            rec.status = "awaiting_anchor"
+            session.commit()
+
+            # Publish SSE for the awaiting_anchor state
+            try:
+                _evt = {
+                    "receipt_id": str(rec.id),
+                    "status": rec.status,
+                    "bundle_hash": rec.bundle_hash,
+                    "flare_txid": None,
+                    "xml_url": f"/files/{rec.id}/pain001.xml",
+                    "bundle_url": f"/files/{rec.id}/evidence.zip",
+                    "created_at": rec.created_at.isoformat() if rec.created_at else None,
+                    "anchored_at": None,
+                }
+                anyio.from_thread.run(hub.publish, str(rec.id), _evt)
+            except Exception:
+                pass
+
+            # Simulate blockchain confirmation delay
+            _tm.sleep(_rnd.uniform(3, 5))
+
+            # Fake but deterministic txid
+            fake_txid = "0x" + _hl.sha256((bundle_hash or str(rec.id)).encode()).hexdigest()
+            now = datetime.utcnow()
+            rec.flare_txid = fake_txid
+            rec.status = "anchored"
+            rec.anchored_at = now
+            session.add(models.ChainAnchor(
+                receipt_id=str(rec.id),
+                chain=rec.chain or "flare",
+                txid=fake_txid,
+                anchored_at=now,
+            ))
+            session.commit()
+
+            logger.info("demo_anchor_simulated rid=%s txid=%s", str(rec.id), fake_txid)
+
+            # Run finalization (generates pain.002, camt.054, SSE, callback)
+            finalize_receipt(str(rec.id), session=session, callback_url=callback_url)
             return
 
         # Platform mode: resolve chain config, then enqueue to anchor queue
@@ -696,7 +792,7 @@ def finalize_receipt(
         except Exception:
             pass
 
-        # Optional callback
+        # Optional legacy callback_url (point-to-point, no HMAC)
         if callback_url:
             try:
                 import requests
@@ -718,6 +814,14 @@ def finalize_receipt(
                 requests.post(callback_url, json=cb_payload, timeout=15)
             except Exception:
                 pass
+
+        # Webhook subscriptions — HMAC-signed, project-scoped, with retry
+        try:
+            from app.webhook_dispatcher import dispatch_receipt_event
+            event = f"receipt.{rec.status}"  # receipt.anchored or receipt.failed
+            dispatch_receipt_event(rec, event, session=session)
+        except Exception:
+            pass
 
     except Exception:
         logger.exception("finalize_receipt_error rid=%s", receipt_id)

@@ -1,13 +1,119 @@
-# ISO 20022 Payments Middleware with x402 & Agent Anchoring
+# ISO 20022 Payments Middleware with x402, Agent Anchoring & Agentic API
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-green.svg)]()
+[![Branch](https://img.shields.io/badge/Branch-agentic-blue.svg)]()
 
-> **Production-ready middleware for ISO 20022 payment processing with blockchain anchoring, x402 micropayments, and autonomous AI agents**
+> **Production-ready middleware for ISO 20022 payment processing with blockchain anchoring, x402 micropayments, autonomous AI agents, and a fully agent-optimised API surface**
 
-Transform blockchain transactions into compliant ISO 20022 XML messages with cryptographic evidence bundles anchored on EVM chains. Enable pay-per-use API access with USDC micropayments and deploy autonomous XMTP agents.
+Transform blockchain transactions into compliant ISO 20022 XML messages with cryptographic evidence bundles anchored on Flare. Pay-per-use API access with USDC micropayments, autonomous XMTP agents, and — new in this release — a complete **agentic integration layer** built for LLM agents, AI pipelines, and machine-to-machine workflows.
 
-**[Quick Start](#quick-start)** | **[Core Features](#core-features)** | **[Projects](#project-management)** | **[Receipts](#receipt-verification)** | **[Dashboard](#dashboard--ui)** | **[API](#api-reference)** | **[SDK](#sdk-usage)** | **[Agents](#ai-agent-integration)**
+**[Quick Start](#quick-start)** | **[Agentic API ✨](#agentic-api-new)** | **[Core Features](#core-features)** | **[Flare AI Skills](#flare-ai-skills-integration)** | **[Projects](#project-management)** | **[Receipts](#receipt-verification)** | **[Dashboard](#dashboard--ui)** | **[API](#api-reference)** | **[SDK](#sdk-usage)** | **[Agents](#ai-agent-integration)**
+
+---
+
+## Agentic API ✨ NEW
+
+This release adds a production-grade integration layer specifically designed for autonomous agents, LLM pipelines, and machine-to-machine workflows. Every feature solves a concrete reliability problem that agents hit at scale.
+
+### What's new at a glance
+
+| Feature | Endpoint / Header | Why it matters for agents |
+|---|---|---|
+| **Capability discovery** | `GET /v1/capabilities` | Self-configuring agents — no hardcoded prompts |
+| **Idempotency keys** | `Idempotency-Key: <uuid>` header | Safe retries without duplicate receipts |
+| **Structured error codes** | `{"error":{"code":"RECEIPT_NOT_FOUND",...}}` | Branch on `code`, not on string messages |
+| **Operation status polling** | `GET /v1/operations/{id}` | Lightweight pipeline-state endpoint |
+| **Lightweight receipt status** | `GET /v1/iso/receipts/{id}/status` | Poll without fetching full ISO payloads |
+| **Webhook subscriptions** | `POST /v1/webhooks` | Push-based events instead of polling |
+| **Receipt metadata & tags** | `metadata`, `tags` fields on record-tip | Carry agent context through the pipeline |
+| **Cursor pagination** | `?cursor=` on `GET /v1/receipts` | Stable traversal under concurrent inserts |
+| **Rate limit headers** | `X-RateLimit-*` on every response | Backoff without guessing |
+| **FTSO price feeds** | `GET /v1/flare/feeds` | Live on-chain prices for FX enrichment |
+| **FDC attestation helper** | `POST /v1/flare/fdc/prepare-attestation` | Merkle-proof tx verification |
+| **Flare AI explain** | `POST /v1/flare/explain` | Natural language Flare protocol Q&A |
+
+### 5-minute agent quickstart
+
+```python
+import httpx, time
+
+BASE = "https://your-middleware.example.com"
+H = {"X-API-Key": "your-key"}
+
+# 1. Self-configure — discover all available operations
+caps = httpx.get(f"{BASE}/v1/capabilities", headers=H).json()
+# caps["tools"] → OpenAI-compatible function definitions
+# caps["flare_protocol"]["ftso"]["available_feeds"] → ["FLR/USD", ...]
+
+# 2. Record a payment (safe to retry with Idempotency-Key)
+result = httpx.post(
+    f"{BASE}/v1/iso/record-tip",
+    headers={**H, "Idempotency-Key": "inv-2024-001-attempt-1"},
+    json={
+        "tip_tx_hash": "0xabc...", "chain": "flare",
+        "amount": "500.00",        "currency": "FLR",
+        "sender_wallet": "0x...",  "receiver_wallet": "0x...",
+        "reference": "invoice:INV-2024-001",
+        "metadata": {"task_id": "t-123", "workflow": "reconciliation"},
+        "tags": ["batch-jan", "high-priority"],
+    },
+).json()
+operation_id = result["operation_id"]
+
+# 3. Poll lightweight status endpoint
+while True:
+    s = httpx.get(f"{BASE}/v1/operations/{operation_id}", headers=H).json()
+    if s["status"] in ("anchored", "failed"):
+        break
+    remaining = int(httpx.get(f"{BASE}/v1/operations/{operation_id}", headers=H)
+                    .headers.get("X-RateLimit-Remaining", 100))
+    time.sleep(5 if remaining > 10 else 30)
+
+# 4. Get live FTSO price for FX reporting
+feed = httpx.get(f"{BASE}/v1/flare/feeds/FLR%2FUSD").json()
+print(f"Anchoring cost at spot: FLR/USD = {feed['price']}")
+```
+
+### Webhooks (production alternative to polling)
+
+```python
+# Register once at startup
+httpx.post(f"{BASE}/v1/webhooks", headers={**H, "Idempotency-Key": "wh-setup-v1"},
+    json={"url": "https://my-agent/hook", "events": ["receipt.anchored", "receipt.failed"]})
+
+# In your webhook handler — verify HMAC signature
+import hashlib, hmac
+def verify(body: bytes, sig_header: str, secret: str) -> bool:
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, sig_header.removeprefix("sha256="))
+```
+
+Webhook payload includes `metadata` and `tags` from the original record-tip — your agent's context travels all the way through the pipeline to the push notification.
+
+### Structured errors — branch on code, not message
+
+```python
+resp = httpx.get(f"{BASE}/v1/iso/receipts/bad-id/status")
+err  = resp.json()["error"]
+# err = {"code": "RECEIPT_NOT_FOUND", "message": "...", "retryable": false}
+
+if err["code"] == "RATE_LIMITED":
+    time.sleep(err["details"]["retry_after_seconds"])
+elif err["code"] == "ANCHOR_FAILED":
+    httpx.post(f"{BASE}/v1/iso/receipts/{rid}/retry-anchor", headers=H)
+```
+
+### Running tests
+
+```bash
+# All tests run in-process — no Redis, no running server, no blockchain needed
+pytest tests/test_agentic_features.py -v
+# 52 tests, ~5 s
+
+# Full suite
+pytest tests/ -v
+```
 
 ---
 
@@ -46,8 +152,8 @@ The ISO 20022 Middleware provides a complete solution for payment processing:
 
 ```bash
 # Clone repository
-git clone https://github.com/alfre97x/middleware-ISO-and-x402.git
-cd middleware-ISO-and-x402
+git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
+cd middleware-ISO-v2.2-and-x402
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -1591,6 +1697,13 @@ docker compose exec redis redis-cli del anchor:retries:<receipt_id>
    - API endpoints use standard authentication
    - Anchor verification is publicly accessible
 
+### Dependency and Lockfile Policy
+
+- Use one package manager per workspace package (this repo currently uses npm).
+- Commit lockfiles only for first-party packages that belong to this repository.
+- Do not commit lockfiles or dependencies from copied/vendor directories (for example nested `Downloads` snapshots).
+- Never commit private key material (`.keys/`, `*.pem`, `*.key`, `*.hex`).
+
 
 
 ### Audit Trail
@@ -1609,18 +1722,72 @@ Anyone can verify:
 ---
 
 
+## Flare AI Skills Integration
+
+This middleware embeds the [Flare AI Skills](https://github.com/flare-foundation/flare-ai-skills) knowledge base directly into its API, making Flare protocol intelligence available to any agent consuming this middleware.
+
+### FTSO Live Price Feeds
+
+```bash
+# All available feeds
+GET /v1/flare/feeds
+
+# Single feed
+GET /v1/flare/feeds/FLR%2FUSD
+# → {"symbol": "FLR/USD", "price": "0.02150", "age_seconds": 45.2, ...}
+```
+
+Prices sourced directly from Flare FTSO v2 on-chain oracle — the same data injected into ISO 20022 evidence bundles. Updated every ~90 seconds. No API key needed.
+
+### FDC Attestation (Merkle-proof tx verification)
+
+Stronger than raw event-log checking. Returns the exact request body to send to the FDC verifier for Merkle-proof-backed transaction attestation.
+
+```bash
+POST /v1/flare/fdc/prepare-attestation
+{"tx_hash": "0xabc...", "chain": "flare", "required_confirmations": 6}
+
+# → verifier_url, da_layer_url, request_body ready to POST
+```
+
+### Natural Language Flare Q&A
+
+```bash
+POST /v1/flare/explain
+{"question": "How do I consume FTSO price feeds on-chain?"}
+```
+
+Covers FTSO v2, FDC attestation types, FAssets (FXRP/FBTC/FDOGE), Smart Accounts (XRPL bridge), governance, and developer tooling. Requires `OPENAI_API_KEY`.
+
+### New Environment Variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `RATE_LIMIT_ENABLED` | `true` | Toggle rate limiting |
+| `IDEMPOTENCY_ENABLED` | `true` | Toggle idempotency middleware |
+| `FDC_VERIFIER_URL` | testnet URL | FDC verifier API base URL |
+| `FDC_DA_LAYER_URL` | testnet URL | FDC DA layer for proof retrieval |
+| `FDC_API_KEY` | — | X-apikey for FDC verifier |
+
+---
+
 ## Resources
 
 ### Documentation
-- [Full API Documentation](../API_Documentation.md)
-- [Technical Documentation](../docs/AGENT_ANCHORING.md)
-- [x402 Protocol Guide](../docs/X402_INTEGRATION.md)
-- [XMTP Agents Guide](../docs/AGENTS_GUIDE.md)
+- [Full API Documentation](docs/API_Documentation.md)
+- [**Agentic Integration Guide**](docs/AGENTIC_INTEGRATION.md)
+- [Agent Anchoring](docs/AGENT_ANCHORING.md)
+- [x402 Protocol Guide](docs/X402_INTEGRATION.md)
+- [XMTP Agents Guide](docs/AGENTS_GUIDE.md)
+- [Flare Integration](docs/FLARE_INTEGRATION.md)
+- [Flare-Native Implementations](docs/concepts/flare-native-implementations.md)
+- [Release Checklist](docs/RELEASE_CHECKLIST.md)
+- [Known Limitations](docs/KNOWN_LIMITATIONS.md)
 
 ### Examples
-- [TypeScript SDK Examples](../packages/sdk/README.md)
-- [Python SDK Examples](../packages/sdk-python/README.md)
-- [Agent Templates](../agents/)
+- [TypeScript SDK Examples](packages/sdk/README.md)
+- [Python SDK Examples](packages/sdk-python/README.md)
+- [Agent Templates](agents/)
 
 
 ---

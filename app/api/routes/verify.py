@@ -53,23 +53,41 @@ def verify(req: schemas.VerifyRequest):
     matches = False
     txid = None
     anchored_at = None
-    try:
-        from app import anchor
 
-        info = anchor.find_anchor(bundle_hash)
-        matches = info.matches
-        txid = info.txid
-        anchored_at = info.anchored_at
-    except Exception:
+    # Demo mode: look up bundle_hash in DB instead of on-chain
+    from app.settings import get_settings as _get_settings
+    if _get_settings().demo_mode and bundle_hash:
         try:
-            from app import anchor_node
+            from app import db as _db, models as _models
+            _s = _db.SessionLocal()
+            try:
+                rec = _s.query(_models.Receipt).filter(_models.Receipt.bundle_hash == bundle_hash).first()
+                if rec and rec.status == "anchored":
+                    matches = True
+                    txid = rec.flare_txid
+                    anchored_at = rec.anchored_at
+            finally:
+                _s.close()
+        except Exception:
+            errors.append("demo_lookup_failed")
+    else:
+        try:
+            from app import anchor
 
-            info = anchor_node.find_anchor(bundle_hash)
+            info = anchor.find_anchor(bundle_hash)
             matches = info.matches
             txid = info.txid
             anchored_at = info.anchored_at
         except Exception:
-            errors.append("anchor_lookup_unavailable")
+            try:
+                from app import anchor_node
+
+                info = anchor_node.find_anchor(bundle_hash)
+                matches = info.matches
+                txid = info.txid
+                anchored_at = info.anchored_at
+            except Exception:
+                errors.append("anchor_lookup_unavailable")
 
     return schemas.VerifyResponse(
         matches_onchain=matches, bundle_hash=bundle_hash, flare_txid=txid, anchored_at=anchored_at, errors=errors

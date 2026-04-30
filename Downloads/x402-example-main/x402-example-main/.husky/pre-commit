@@ -1,4 +1,0 @@
-# .husky/pre-commit
-
-yarn format:check
-yarn lint:check

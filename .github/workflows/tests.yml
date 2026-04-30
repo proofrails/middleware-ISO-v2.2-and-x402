@@ -1,4 +1,5 @@
 name: tests
+
 on:
   push:
   pull_request:
@@ -6,15 +7,65 @@ on:
 jobs:
   python-tests:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: sqlite:///./test_ci.db
+      AUTO_CREATE_DB: "true"
+      RATE_LIMIT_ENABLED: "false"
+      IDEMPOTENCY_ENABLED: "false"
+      FTSO_ENABLED: "false"
+      DEMO_MODE: "false"
+      MONITOR_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install deps
+          python-version: "3.11"
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest
-      - name: Run tests
-        run: pytest -q
+      - name: Check Alembic migrations apply cleanly
+        run: alembic upgrade head
+      - name: Run unit and integration tests
+        run: pytest -q -m "not network"
+
+  typescript-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build TypeScript SDK
+        working-directory: packages/sdk
+        run: |
+          npm ci
+          npm run build
+
+  agent-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build XMTP agent
+        working-directory: agents/iso-x402-agent
+        run: |
+          npm ci
+          npm run build
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build Next.js web app
+        working-directory: web-alt
+        env:
+          NEXT_PUBLIC_API_BASE: "http://localhost:8000"
+        run: |
+          npm ci
+          npm run build

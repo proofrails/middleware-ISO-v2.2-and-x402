@@ -8,6 +8,8 @@ import { handleVerifyBundle } from './handlers/verify';
 import { handleGenerateStatement } from './handlers/statements';
 import { handleRefund } from './handlers/refunds';
 import { handleHelp } from './handlers/help';
+import { handleGetStatus } from './handlers/status';
+import { handleAnchorData, handleListAnchors, handleVerifyAnchor } from './handlers/anchoring';
 
 export interface AgentConfig {
   walletPrivateKey: string;
@@ -18,6 +20,8 @@ export interface AgentConfig {
   chainRpcUrl: string;
   usdcContract: string;
   agentName: string;
+  /** Agent ID registered in the ProofRails backend (used for anchoring endpoints). */
+  agentId?: string;
 }
 
 export class ISOAgent {
@@ -138,8 +142,38 @@ export class ISOAgent {
           response = await handleRefund(this.isoClient, command.args);
           break;
 
+        case 'status':
+          response = await handleGetStatus(this.isoClient, command.args);
+          break;
+
+        case 'anchor':
+          response = await handleAnchorData(
+            this.isoClient,
+            this.config.agentId ?? '',
+            command.args,
+          );
+          break;
+
+        case 'list-anchors':
+        case 'list anchors':
+          response = await handleListAnchors(
+            this.isoClient,
+            this.config.agentId ?? '',
+            command.args,
+          );
+          break;
+
+        case 'verify-anchor':
+        case 'verify anchor':
+          response = await handleVerifyAnchor(
+            this.isoClient,
+            this.config.agentId ?? '',
+            command.args,
+          );
+          break;
+
         default:
-          response = '❌ Unknown command. Type "help" for available commands.';
+          response = 'Unknown command. Type "help" for available commands.';
       }
 
       await this.sendReply(message, response);

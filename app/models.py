@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -83,6 +84,12 @@ class Receipt(Base):
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     anchored_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Agentic integration fields — free-form context attached by the caller
+    # Note: 'metadata' is reserved by SQLAlchemy's Declarative API, so the
+    # Python attribute is 'extra_metadata' while the DB column stays 'extra_metadata'.
+    extra_metadata = Column(JSON, nullable=True)   # arbitrary key-value dict
+    tags = Column(JSON, nullable=True)             # list of string labels for filtering
 
     __table_args__ = (UniqueConstraint("chain", "tip_tx_hash", name="uq_chain_tip"),)
 
@@ -178,6 +185,9 @@ class X402Payment(Base):
     endpoint = Column(String, nullable=False)  # Which endpoint was accessed
     agent_id = Column(GUID, ForeignKey("agent_configs.id"), nullable=True, index=True)
     verified_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    # Set when this payment's associated data is anchored on-chain
+    anchor_txid = Column(String, nullable=True)
+    anchor_status = Column(String, nullable=True, index=True)  # pending | anchored | failed
 
 
 class AgentConfig(Base):
@@ -216,7 +226,13 @@ class AgentConfig(Base):
     
     ai_endpoint = Column(String, nullable=True)
     # Custom AI endpoint URL (for custom provider)
-    
+
+    # Anchoring configuration (added in migration d8f9c3b21456)
+    anchor_wallet_address = Column(String, nullable=True)
+    anchor_private_key_encrypted = Column(String, nullable=True)
+    auto_anchor_enabled = Column(Boolean, nullable=False, server_default="false", default=False)
+    anchor_on_payment = Column(Boolean, nullable=False, server_default="false", default=False)
+
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -236,6 +252,27 @@ class ProtectedEndpoint(Base):
     updated_at = Column(DateTime(timezone=True), nullable=True)
 
 
+class WatchedWallet(Base):
+    """Wallet addresses monitored by the proactive monitoring loop.
+
+    The monitor polls Flare C-Chain for new incoming transactions to each
+    registered address and auto-creates receipts for unrecognised transfers.
+    """
+    __tablename__ = "watched_wallets"
+
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, nullable=False)
+    address = Column(String, nullable=False, unique=True, index=True)
+    project_id = Column(GUID, ForeignKey("projects.id"), nullable=True, index=True)
+    label = Column(String, nullable=True)
+    last_checked_block = Column(String, nullable=True)  # hex block number string
+    enabled = Column(String, nullable=False, server_default="true")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<WatchedWallet address={self.address} enabled={self.enabled}>"
+
+
 class AgentAnchor(Base):
     """Track anchoring transactions initiated by autonomous agents."""
     __tablename__ = "agent_anchors"
@@ -249,6 +286,42 @@ class AgentAnchor(Base):
     status = Column(String, nullable=False, server_default="pending")  # pending | confirmed | failed
     anchored_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    
+
     def __repr__(self) -> str:  # pragma: no cover
         return f"<AgentAnchor id={self.id} agent_id={self.agent_id} status={self.status}>"
+
+
+class WebhookSubscription(Base):
+    """Project-level webhook subscriptions for push-based event delivery.
+
+    Registered endpoints receive HMAC-signed HTTP POST requests when receipt
+    lifecycle events occur (receipt.pending, receipt.anchored, receipt.failed).
+    See app/webhook_dispatcher.py for the delivery contract and retry policy.
+    """
+    __tablename__ = "webhook_subscriptions"
+
+    id = Column(GUID, primary_key=True, default=uuid.uuid4, nullable=False)
+    project_id = Column(GUID, ForeignKey("projects.id"), nullable=True, index=True)
+
+    url = Column(String, nullable=False)
+
+    # JSON list of subscribed event topics, e.g. ["receipt.anchored", "receipt.failed"]
+    # Use ["*"] to receive all events.
+    events = Column(JSON, nullable=False)
+
+    # Human-readable label
+    description = Column(String, nullable=True)
+
+    # HMAC-SHA256 signing secret — returned only at creation time
+    secret = Column(String, nullable=False)
+
+    # "true" | "false"
+    enabled = Column(String, nullable=False, server_default="true")
+
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=True)
+    last_fired_at = Column(DateTime(timezone=True), nullable=True)
+    last_status_code = Column(String, nullable=True)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<WebhookSubscription id={self.id} url={self.url} enabled={self.enabled}>"

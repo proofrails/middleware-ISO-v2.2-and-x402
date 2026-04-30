@@ -164,10 +164,27 @@ def _chainlink_rate_from_env() -> Optional[str]:
     return get_chainlink_rate(rpc, feed)
 
 
+def _ftso_rate(base_ccy: Optional[str], quote_ccy: Optional[str], rpc_url: Optional[str] = None) -> Optional[str]:
+    """Fetch rate from Flare FTSO v2 on-chain oracle."""
+    if not quote_ccy:
+        return None
+    # FTSO feeds are always vs USD; only handle USD base
+    if (base_ccy or "USD").upper() != "USD":
+        return None
+    try:
+        from .flare.ftso import symbol_to_feed, ftso_rate_as_str
+        feed_sym = symbol_to_feed(quote_ccy)
+        if not feed_sym:
+            return None
+        return ftso_rate_as_str(feed_sym)
+    except Exception:
+        return None
+
+
 def get_rate(base_ccy: Optional[str], quote_ccy: Optional[str], provider: Optional[str]) -> Optional[str]:
     """
     Public facade preserved for backward compatibility.
-    provider: 'coingecko' | 'chainlink' | other
+    provider: 'coingecko' | 'chainlink' | 'ftso' | other
     """
     if not quote_ccy or not provider:
         return None
@@ -178,6 +195,8 @@ def get_rate(base_ccy: Optional[str], quote_ccy: Optional[str], provider: Option
         elif p == "chainlink":
             # Use env-configured feed/rpc by default.
             return _chainlink_rate_from_env()
+        elif p == "ftso":
+            return _ftso_rate(base_ccy, quote_ccy)
         else:
             return None
     except Exception:
@@ -193,8 +212,8 @@ def get_rate_detail(
     feed: Optional[str] = None,
 ) -> Dict[str, Optional[str]]:
     """
-    Extended variant that returns {'rate': str|None, 'source': 'coingecko'|'chainlink'|None}.
-    Allows passing Chainlink parameters explicitly without env.
+    Extended variant that returns {'rate': str|None, 'source': 'coingecko'|'chainlink'|'ftso'|None}.
+    Allows passing Chainlink/FTSO parameters explicitly without env.
     """
     src = None
     rate: Optional[str] = None
@@ -208,4 +227,7 @@ def get_rate_detail(
             rate = get_chainlink_rate(rpc_url, feed)
         else:
             rate = _chainlink_rate_from_env()
+    elif p == "ftso":
+        src = "ftso_v2"
+        rate = _ftso_rate(base_ccy, quote_ccy, rpc_url)
     return {"rate": rate, "source": src}

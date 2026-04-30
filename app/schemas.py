@@ -27,13 +27,32 @@ class TipRecordRequest(BaseModel):
     receiver_wallet: str = Field(..., description="Receiver wallet address (0x...)")
     reference: str = Field(..., description="External reference, e.g., capella:tip:<id>")
     callback_url: Optional[str] = Field(
-        None, description="Optional: Capella callback URL to notify when anchoring completes"
+        None, description="Optional: callback URL to notify when anchoring completes"
+    )
+    # Agentic integration fields
+    metadata: Optional[dict] = Field(
+        None,
+        description=(
+            "Free-form key-value metadata attached to this receipt. "
+            "Use for correlation IDs, task IDs, workflow context, etc."
+        ),
+    )
+    tags: Optional[List[str]] = Field(
+        None,
+        description="Optional string tags for filtering receipts (e.g. ['batch-1', 'refund-eligible'])",
     )
 
 
 class RecordTipResponse(BaseModel):
     receipt_id: str
     status: Status
+    operation_id: str = Field(
+        ...,
+        description=(
+            "Async operation ID for status polling via GET /v1/operations/{operation_id}. "
+            "Equal to receipt_id — both can be used interchangeably."
+        ),
+    )
 
 
 class ReceiptResponse(BaseModel):
@@ -84,6 +103,8 @@ class ReceiptListItem(BaseModel):
     reference: str
     created_at: datetime
     anchored_at: Optional[datetime] = None
+    tags: Optional[List[str]] = None
+    metadata: Optional[dict] = None
 
 
 class ReceiptsPage(BaseModel):
@@ -91,6 +112,26 @@ class ReceiptsPage(BaseModel):
     total: int
     page: int
     page_size: int
+    # Cursor pagination fields (populated when cursor parameter is used)
+    next_cursor: Optional[str] = Field(
+        None,
+        description=(
+            "Opaque cursor for the next page. Pass as ?cursor= to retrieve the next "
+            "batch. Null when there are no more results. Cursor-based pagination is "
+            "preferred over page/page_size for agents traversing large or live datasets."
+        ),
+    )
+
+
+class ReceiptStatusResponse(BaseModel):
+    """Lightweight receipt status — for agents polling pipeline progress."""
+
+    id: str
+    status: str
+    bundle_hash: Optional[str] = None
+    flare_txid: Optional[str] = None
+    anchored_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 class SDKBuildRequest(BaseModel):
@@ -241,3 +282,111 @@ class FIMessageResponse(BaseModel):
     type: str = Field(..., description="Message type (e.g., 'camt.056', 'pacs.009')")
     receipt_id: str = Field(..., description="Original receipt ID")
     url: str = Field(..., description="URL to download the generated XML")
+
+
+# ── Agent schemas ─────────────────────────────────────────────────────────────
+
+class AgentCreate(BaseModel):
+    name: str
+    wallet_address: str = Field(..., description="Agent's EVM payment wallet address")
+    xmtp_address: Optional[str] = None
+    pricing_rules: Optional[dict] = None
+    project_id: Optional[str] = None
+
+
+class AgentUpdate(BaseModel):
+    name: Optional[str] = None
+    wallet_address: Optional[str] = None
+    xmtp_address: Optional[str] = None
+    pricing_rules: Optional[dict] = None
+    status: Optional[str] = None
+
+
+class AgentResponse(BaseModel):
+    id: str
+    name: str
+    wallet_address: str
+    xmtp_address: Optional[str] = None
+    pricing_rules: Optional[dict] = None
+    status: str
+    project_id: Optional[str] = None
+    ai_mode: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+
+class AgentAIConfigUpdate(BaseModel):
+    ai_mode: Optional[str] = Field(None, description="simple | shared | custom")
+    ai_system_prompt: Optional[str] = None
+    ai_provider: Optional[str] = Field(None, description="openai | anthropic | google | custom")
+    ai_api_key: Optional[str] = Field(None, description="API key (write-only, stored encrypted)")
+    ai_model: Optional[str] = None
+    ai_endpoint: Optional[str] = None
+
+
+class AgentAnchoringConfig(BaseModel):
+    """Anchoring configuration for an agent. All fields are optional — pass only what you want to change."""
+    auto_anchor_enabled: Optional[bool] = None
+    anchor_on_payment: Optional[bool] = None
+    anchor_wallet_address: Optional[str] = Field(None, description="EVM wallet address for on-chain txs")
+    anchor_private_key: Optional[str] = Field(
+        None,
+        description="Private key for the anchor wallet (write-only, stored encrypted). "
+                    "Prefer using the platform wallet via ANCHOR_PRIVATE_KEY env var instead.",
+    )
+
+
+class AgentAnchorDataRequest(BaseModel):
+    data: dict = Field(..., description="Arbitrary JSON data to hash and optionally anchor")
+    description: Optional[str] = Field(None, description="Human-readable description of this anchor")
+    chain: Optional[str] = Field("flare", description="Chain to anchor on (default: flare)")
+    submit_onchain: bool = Field(False, description="If true, immediately submit anchor tx on-chain")
+
+
+class AgentAnchorDataResponse(BaseModel):
+    id: str
+    agent_id: str
+    anchor_hash: str = Field(..., description="0x-prefixed SHA-256 of canonical JSON")
+    chain: str
+    status: str
+    submit_onchain: bool
+    description: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AgentAnchorRequest(BaseModel):
+    bundle_hash: str = Field(..., description="0x-prefixed 32-byte hash to anchor")
+    receipt_id: Optional[str] = Field(None, description="Associate this anchor with a receipt ID")
+
+
+# ── x402 premium schemas ──────────────────────────────────────────────────────
+
+class StatementRequest(BaseModel):
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    window: Optional[str] = Field(
+        None,
+        description="Time window for camt.052 intraday (e.g. '09:00-17:00'). "
+                    "Omit or use '00:00-23:59' for a full-day camt.053.",
+    )
+
+
+class FXLookupRequest(BaseModel):
+    base_ccy: str = Field("USD", description="Base currency code")
+    quote_ccy: str = Field("FLR", description="Quote currency code")
+    provider: str = Field("ftso", description="Price provider: ftso | coingecko | fallback")
+
+
+class BulkVerifyRequest(BaseModel):
+    bundle_urls: List[str] = Field(..., description="Up to 10 bundle URLs to verify")
+
+
+class X402PaymentResponse(BaseModel):
+    id: str
+    tx_hash: str
+    amount: str
+    currency: str
+    chain: str
+    endpoint: str
+    verified_at: datetime
+    anchor_txid: Optional[str] = None
+    anchor_status: Optional[str] = None

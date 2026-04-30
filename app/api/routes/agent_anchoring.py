@@ -1,48 +1,198 @@
-"""Agent anchoring integration - connect agents with on-chain anchoring."""
-from uuid import uuid4
-from datetime import datetime, timedelta
+"""Agent anchoring — connect agents with on-chain evidence anchoring."""
+from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+import hashlib
+import json
+from datetime import datetime, timedelta
+from uuid import uuid4
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import models, anchor
+from app import models, schemas
 from app.api.deps import get_session
-from app.auth.principal import Principal
 from app.auth.api_key_auth import resolve_principal
+from app.auth.principal import Principal
 
 router = APIRouter(tags=["agent-anchoring"])
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _require_agent(
+    agent_id: str,
+    session: Session,
+    principal: Principal,
+) -> models.AgentConfig:
+    """Load agent and verify ownership. Raises 404 or 403."""
+    import uuid as _uuid
+    try:
+        _uuid.UUID(agent_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(404, "agent_not_found")
+    agent = session.get(models.AgentConfig, agent_id)
+    if not agent:
+        raise HTTPException(404, "agent_not_found")
+    if not principal.is_admin and agent.project_id != principal.project_id:
+        raise HTTPException(403, "access_denied")
+    return agent
+
+
+def _canonical_hash(data: dict) -> str:
+    """SHA-256 of canonical JSON (sorted keys, compact). Returns 0x-prefixed hex."""
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return f"0x{digest}"
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.get("/v1/agents/{agent_id}/anchoring-config")
+def get_anchoring_config(
+    agent_id: str,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(resolve_principal),
+):
+    """Return the current anchoring configuration for an agent.
+
+    Fields:
+    - ``auto_anchor_enabled``: whether receipts are automatically anchored
+    - ``anchor_on_payment``: whether x402 payments trigger auto-anchoring
+    - ``anchor_wallet``: EVM wallet used for on-chain transactions (address only)
+    """
+    if principal.is_public:
+        raise HTTPException(401, "auth_required")
+    agent = _require_agent(agent_id, session, principal)
+
+    return {
+        "id": str(agent.id),
+        "auto_anchor_enabled": bool(agent.auto_anchor_enabled),
+        "anchor_on_payment": bool(agent.anchor_on_payment),
+        "anchor_wallet": agent.anchor_wallet_address,
+    }
+
+
+@router.put("/v1/agents/{agent_id}/anchoring-config")
+def update_anchoring_config(
+    agent_id: str,
+    payload: schemas.AgentAnchoringConfig,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(resolve_principal),
+):
+    """Update anchoring configuration for an agent.
+
+    Pass only the fields you want to change. Private key is write-only:
+    it is stored encrypted and never returned.
+    """
+    if principal.is_public:
+        raise HTTPException(401, "auth_required")
+    agent = _require_agent(agent_id, session, principal)
+
+    if payload.auto_anchor_enabled is not None:
+        agent.auto_anchor_enabled = payload.auto_anchor_enabled
+
+    if payload.anchor_on_payment is not None:
+        agent.anchor_on_payment = payload.anchor_on_payment
+
+    if payload.anchor_wallet_address is not None:
+        agent.anchor_wallet_address = payload.anchor_wallet_address
+
+    if payload.anchor_private_key is not None and payload.anchor_private_key:
+        import base64
+        agent.anchor_private_key_encrypted = base64.b64encode(
+            payload.anchor_private_key.encode()
+        ).decode()
+
+    agent.updated_at = datetime.utcnow()
+    session.commit()
+    session.refresh(agent)
+
+    return {
+        "id": str(agent.id),
+        "auto_anchor_enabled": bool(agent.auto_anchor_enabled),
+        "anchor_on_payment": bool(agent.anchor_on_payment),
+        "anchor_wallet": agent.anchor_wallet_address,
+    }
+
+
+@router.post("/v1/agents/{agent_id}/anchor-data")
+def anchor_data(
+    agent_id: str,
+    payload: schemas.AgentAnchorDataRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    principal: Principal = Depends(resolve_principal),
+):
+    """Hash arbitrary JSON data and optionally anchor the hash on-chain.
+
+    The ``data`` dict is serialised to canonical JSON (sorted keys, compact),
+    then SHA-256 hashed. Only the hash is stored — raw data is never persisted.
+
+    Set ``submit_onchain=true`` to immediately queue an on-chain anchor
+    transaction. Requires either the agent's ``anchor_wallet_address`` or the
+    system ``ANCHOR_PRIVATE_KEY`` env var to be configured.
+    """
+    if principal.is_public:
+        raise HTTPException(401, "auth_required")
+    agent = _require_agent(agent_id, session, principal)
+
+    anchor_hash = _canonical_hash(payload.data)
+
+    chain = payload.chain or "flare"
+
+    agent_anchor = models.AgentAnchor(
+        id=uuid4(),
+        agent_id=agent.id,
+        receipt_id=None,
+        bundle_hash=anchor_hash,
+        chain=chain,
+        status="pending",
+    )
+    session.add(agent_anchor)
+    session.commit()
+    session.refresh(agent_anchor)
+
+    if payload.submit_onchain:
+        background_tasks.add_task(
+            _perform_anchor,
+            anchor_id=str(agent_anchor.id),
+            bundle_hash=anchor_hash,
+            agent_wallet=agent.anchor_wallet_address,
+            agent_key=agent.anchor_private_key_encrypted,
+        )
+
+    return schemas.AgentAnchorDataResponse(
+        id=str(agent_anchor.id),
+        agent_id=str(agent.id),
+        anchor_hash=anchor_hash,
+        chain=chain,
+        status=agent_anchor.status,
+        submit_onchain=payload.submit_onchain,
+        description=payload.description,
+        created_at=agent_anchor.created_at,
+    )
 
 
 @router.post("/v1/agents/{agent_id}/anchor")
 async def trigger_agent_anchor(
     agent_id: str,
-    payload: dict,
+    payload: schemas.AgentAnchorRequest,
     background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     principal: Principal = Depends(resolve_principal),
 ):
-    """Manually trigger anchoring for an agent.
-    
-    Allows agents to manually anchor bundle hashes on-chain.
-    Uses agent's anchor wallet if configured, otherwise system wallet.
+    """Anchor an existing bundle hash on-chain.
+
+    Use this when you already have a ``bundle_hash`` (e.g. from a receipt).
+    To hash and anchor arbitrary data in one step use POST anchor-data instead.
     """
     if principal.is_public:
         raise HTTPException(401, "auth_required")
-    
-    agent = session.get(models.AgentConfig, agent_id)
-    if not agent:
-        raise HTTPException(404, "agent_not_found")
-    
-    if not principal.is_admin and agent.project_id != principal.project_id:
-        raise HTTPException(403, "access_denied")
-    
-    bundle_hash = payload.get("bundle_hash")
-    receipt_id = payload.get("receipt_id")
-    
-    if not bundle_hash:
-        raise HTTPException(400, "bundle_hash_required")
-    
-    # Create anchor record
+    agent = _require_agent(agent_id, session, principal)
+
+    bundle_hash = payload.bundle_hash
+    receipt_id = payload.receipt_id
+
     agent_anchor = models.AgentAnchor(
         id=uuid4(),
         agent_id=agent.id,
@@ -50,12 +200,10 @@ async def trigger_agent_anchor(
         bundle_hash=bundle_hash,
         status="pending",
     )
-    
     session.add(agent_anchor)
     session.commit()
     session.refresh(agent_anchor)
-    
-    # Queue background anchoring job
+
     background_tasks.add_task(
         _perform_anchor,
         anchor_id=str(agent_anchor.id),
@@ -63,12 +211,12 @@ async def trigger_agent_anchor(
         agent_wallet=agent.anchor_wallet_address,
         agent_key=agent.anchor_private_key_encrypted,
     )
-    
+
     return {
         "anchor_id": str(agent_anchor.id),
         "bundle_hash": bundle_hash,
         "status": "pending",
-        "message": "Anchoring initiated"
+        "message": "Anchoring queued",
     }
 
 
@@ -80,30 +228,19 @@ def list_agent_anchors(
     session: Session = Depends(get_session),
     principal: Principal = Depends(resolve_principal),
 ):
-    """List all anchors created by this agent."""
+    """List anchors created by this agent, newest first."""
     if principal.is_public:
         raise HTTPException(401, "auth_required")
-    
-    agent = session.get(models.AgentConfig, agent_id)
-    if not agent:
-        raise HTTPException(404, "agent_not_found")
-    
-    if not principal.is_admin and agent.project_id != principal.project_id:
-        raise HTTPException(403, "access_denied")
-    
-    # Build query
-    query = session.query(models.AgentAnchor).filter_by(agent_id=agent_id)
-    
-    # Filter by date range
+    _require_agent(agent_id, session, principal)
+
+    q = session.query(models.AgentAnchor).filter_by(agent_id=agent_id)
     since = datetime.utcnow() - timedelta(days=days)
-    query = query.filter(models.AgentAnchor.created_at >= since)
-    
-    # Filter by status if provided
+    q = q.filter(models.AgentAnchor.created_at >= since)
     if status:
-        query = query.filter_by(status=status)
-    
-    anchors = query.order_by(models.AgentAnchor.created_at.desc()).all()
-    
+        q = q.filter(models.AgentAnchor.status == status)
+
+    anchors = q.order_by(models.AgentAnchor.created_at.desc()).all()
+
     return [
         {
             "id": str(a.id),
@@ -118,53 +255,6 @@ def list_agent_anchors(
     ]
 
 
-@router.put("/v1/agents/{agent_id}/anchoring-config")
-def update_anchoring_config(
-    agent_id: str,
-    payload: dict,
-    session: Session = Depends(get_session),
-    principal: Principal = Depends(resolve_principal),
-):
-    """Update agent's anchoring configuration."""
-    if principal.is_public:
-        raise HTTPException(401, "auth_required")
-    
-    agent = session.get(models.AgentConfig, agent_id)
-    if not agent:
-        raise HTTPException(404, "agent_not_found")
-    
-    if not principal.is_admin and agent.project_id != principal.project_id:
-        raise HTTPException(403, "access_denied")
-    
-    # Update anchoring config
-    if "auto_anchor_enabled" in payload:
-        agent.auto_anchor_enabled = str(payload["auto_anchor_enabled"]).lower()
-    
-    if "anchor_on_payment" in payload:
-        agent.anchor_on_payment = str(payload["anchor_on_payment"]).lower()
-    
-    if "anchor_wallet_address" in payload:
-        agent.anchor_wallet_address = payload["anchor_wallet_address"]
-    
-    if "anchor_private_key" in payload and payload["anchor_private_key"]:
-        # Encrypt the private key (simple base64 for now)
-        import base64
-        encrypted = base64.b64encode(payload["anchor_private_key"].encode()).decode()
-        agent.anchor_private_key_encrypted = encrypted
-    
-    agent.updated_at = datetime.utcnow()
-    
-    session.commit()
-    session.refresh(agent)
-    
-    return {
-        "id": str(agent.id),
-        "auto_anchor_enabled": agent.auto_anchor_enabled == "true",
-        "anchor_on_payment": agent.anchor_on_payment == "true",
-        "anchor_wallet": agent.anchor_wallet_address,
-    }
-
-
 @router.get("/v1/agents/{agent_id}/activity-unified")
 def get_unified_activity(
     agent_id: str,
@@ -172,38 +262,29 @@ def get_unified_activity(
     session: Session = Depends(get_session),
     principal: Principal = Depends(resolve_principal),
 ):
-    """Get unified activity feed (payments + anchors + messages)."""
+    """Unified activity feed combining x402 payments and anchor events."""
     if principal.is_public:
         raise HTTPException(401, "auth_required")
-    
-    agent = session.get(models.AgentConfig, agent_id)
-    if not agent:
-        raise HTTPException(404, "agent_not_found")
-    
-    if not principal.is_admin and agent.project_id != principal.project_id:
-        raise HTTPException(403, "access_denied")
-    
+    agent = _require_agent(agent_id, session, principal)
+
     since = datetime.utcnow() - timedelta(days=days)
-    
-    # Get payments
+
     payments = (
         session.query(models.X402Payment)
-        .filter_by(agent_id=agent_id)
+        .filter(models.X402Payment.agent_id == agent_id)
         .filter(models.X402Payment.verified_at >= since)
         .all()
     )
-    
-    # Get anchors
+
     anchors = (
         session.query(models.AgentAnchor)
-        .filter_by(agent_id=agent_id)
+        .filter(models.AgentAnchor.agent_id == agent_id)
         .filter(models.AgentAnchor.created_at >= since)
         .all()
     )
-    
-    # Combine into unified feed
+
     activities = []
-    
+
     for p in payments:
         activities.append({
             "type": "payment",
@@ -216,26 +297,25 @@ def get_unified_activity(
                 "endpoint": p.endpoint,
                 "anchor_txid": p.anchor_txid,
                 "anchor_status": p.anchor_status,
-            }
+            },
         })
-    
+
     for a in anchors:
         activities.append({
             "type": "anchor",
             "id": str(a.id),
-            "content": f"Anchored bundle {a.bundle_hash[:10]}... on {a.chain}",
+            "content": f"Anchored {a.bundle_hash[:10]}... on {a.chain}",
             "timestamp": a.created_at.isoformat(),
             "details": {
                 "bundle_hash": a.bundle_hash,
                 "anchor_txid": a.anchor_txid,
                 "chain": a.chain,
                 "status": a.status,
-            }
+            },
         })
-    
-    # Sort by timestamp
+
     activities.sort(key=lambda x: x["timestamp"], reverse=True)
-    
+
     return {
         "agent_id": agent_id,
         "agent_name": agent.name,
@@ -245,59 +325,52 @@ def get_unified_activity(
             "total_payments": len(payments),
             "total_anchors": len(anchors),
             "anchored_payments": sum(1 for p in payments if p.anchor_txid),
-        }
+        },
     }
 
 
-# Background task to perform anchoring
+# ── Background task ───────────────────────────────────────────────────────────
+
 async def _perform_anchor(
     anchor_id: str,
     bundle_hash: str,
     agent_wallet: str = None,
     agent_key: str = None,
 ):
-    """Background task to anchor bundle on-chain."""
-    from app.api.deps import get_session
+    """Background task: submit bundle hash to the configured anchor contract."""
+    from app.api.deps import get_session as _get_session
     from app import anchor as anchor_module
-    
-    session = next(get_session())
-    
+
+    session = next(_get_session())
+    agent_anchor = None
+
     try:
         agent_anchor = session.get(models.AgentAnchor, anchor_id)
         if not agent_anchor:
             return
-        
-        # Decrypt agent key if provided
+
         private_key = None
         if agent_key:
             import base64
             private_key = base64.b64decode(agent_key).decode()
-        
-        # Anchor on-chain
-        txid, block_number = anchor_module.anchor_bundle(
-            bundle_hash,
-            private_key=private_key,
-        )
-        
-        # Update anchor record
+
+        txid, _block = anchor_module.anchor_bundle(bundle_hash, private_key=private_key)
+
         agent_anchor.anchor_txid = txid
         agent_anchor.status = "confirmed"
         agent_anchor.anchored_at = datetime.utcnow()
-        
-        # If this anchor is linked to a payment, update it too
-        if agent_anchor.receipt_id:
-            payment = session.query(models.X402Payment).filter_by(
-                receipt_id=agent_anchor.receipt_id
-            ).first()
-            if payment:
-                payment.anchor_txid = txid
-                payment.anchor_status = "anchored"
-        
         session.commit()
-        
-    except Exception as e:
-        # Mark as failed
+
+    except Exception as exc:
         if agent_anchor:
             agent_anchor.status = "failed"
-            session.commit()
-        print(f"Anchoring failed for {anchor_id}: {e}")
+            try:
+                session.commit()
+            except Exception:
+                pass
+        import logging
+        logging.getLogger("middleware.anchor").warning(
+            "agent_anchor_failed anchor_id=%s: %s", anchor_id, exc
+        )
+    finally:
+        session.close()
