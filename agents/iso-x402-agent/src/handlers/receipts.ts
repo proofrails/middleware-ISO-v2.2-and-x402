@@ -6,15 +6,16 @@ export async function handleListReceipts(
 ): Promise<string> {
   try {
     const limit = args.limit || 10;
-    const receipts = await client.listReceipts(limit);
+    const page = await client.listReceipts(limit);
+    const receipts = page.items;
 
     if (!receipts || receipts.length === 0) {
       return '📭 No receipts found.';
     }
 
-    let response = `📋 **Recent Receipts** (${receipts.length}):\n\n`;
+    let response = `📋 **Recent Receipts** (${receipts.length} of ${page.total}):\n\n`;
 
-    for (const receipt of receipts) {
+    for (const receipt of receipts as any[]) {
       response += `🧾 **${receipt.reference}**\n`;
       response += `   ID: \`${receipt.id}\`\n`;
       response += `   Amount: ${receipt.amount} ${receipt.currency}\n`;

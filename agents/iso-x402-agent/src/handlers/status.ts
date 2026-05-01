@@ -7,9 +7,9 @@ import { logger } from '../utils/logger';
  */
 export async function handleGetStatus(
   client: ISOMiddlewareClient,
-  args: string[],
+  args: Record<string, any>,
 ): Promise<string> {
-  const receiptId = args[0];
+  const receiptId = args.receiptId ?? args[0];
 
   if (!receiptId) {
     return 'Usage: status <receipt_id>\nReturns current status, bundle_hash, and anchor txid.';

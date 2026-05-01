@@ -1,16 +1,12 @@
 import { ISOMiddlewareClient } from '../x402/client';
 import { logger } from '../utils/logger';
 
-/**
- * Handle "anchor <json>" — hash arbitrary JSON data and queue an on-chain anchor.
- * The agent must have anchor_wallet_address configured on the backend.
- */
 export async function handleAnchorData(
   client: ISOMiddlewareClient,
   agentId: string,
-  args: string[],
+  args: Record<string, any>,
 ): Promise<string> {
-  const raw = args.join(' ').trim();
+  const raw: string = args.data ?? args.json ?? '';
 
   if (!raw) {
     return (
@@ -47,15 +43,12 @@ export async function handleAnchorData(
   }
 }
 
-/**
- * Handle "list anchors [days]" — list recent anchor records for this agent.
- */
 export async function handleListAnchors(
   client: ISOMiddlewareClient,
   agentId: string,
-  args: string[],
+  args: Record<string, any>,
 ): Promise<string> {
-  const days = parseInt(args[0] ?? '7', 10) || 7;
+  const days = parseInt(String(args.days ?? args[0] ?? '7'), 10) || 7;
 
   try {
     const response = await (client as any).api.get(
@@ -85,15 +78,12 @@ export async function handleListAnchors(
   }
 }
 
-/**
- * Handle "verify anchor <hash>" — check whether an anchor hash is confirmed on-chain.
- */
 export async function handleVerifyAnchor(
   client: ISOMiddlewareClient,
   agentId: string,
-  args: string[],
+  args: Record<string, any>,
 ): Promise<string> {
-  const hash = args[0];
+  const hash: string = args.hash ?? args[0] ?? '';
   if (!hash) {
     return 'Usage: verify anchor <hash>\nExample: verify anchor 0xabc123…';
   }

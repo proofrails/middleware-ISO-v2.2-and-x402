@@ -1,5 +1,5 @@
 {
-  "name": "@iso-middleware/sdk",
+  "name": "iso-middleware-sdk",
   "version": "0.1.0",
   "description": "TypeScript SDK for ISO 20022 Middleware Platform",
   "type": "module",
@@ -26,13 +26,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2",
+    "url": "https://github.com/proofrails/middleware-ISO-v2.2-and-x402",
     "directory": "packages/sdk"
   },
   "bugs": {
-    "url": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2/issues"
+    "url": "https://github.com/proofrails/middleware-ISO-v2.2-and-x402/issues"
   },
-  "homepage": "https://github.com/alfre97x/Middleware-ISO-20022-v2.2#readme",
+  "homepage": "https://github.com/proofrails/middleware-ISO-v2.2-and-x402#readme",
   "publishConfig": {
     "access": "public"
   },

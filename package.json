@@ -11,7 +11,8 @@
     "deploy": "node scripts/deploy.js",
     "build": "npm -ws run build",
     "clean": "npm -ws run clean || echo",
-    "test": "npm -ws run test || echo"
+    "test": "npm -ws run test || echo",
+    "docs:check": "node scripts/check-docs-links.mjs"
   },
   "dependencies": {
     "ethers": "^6.13.1",

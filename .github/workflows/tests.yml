@@ -62,6 +62,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Build TypeScript SDK (required by web-alt)
+        working-directory: packages/sdk
+        run: npm ci && npm run build
       - name: Build Next.js web app
         working-directory: web-alt
         env:
@@ -69,3 +72,13 @@ jobs:
         run: |
           npm ci
           npm run build
+
+  docs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check internal documentation links
+        run: node scripts/check-docs-links.mjs
