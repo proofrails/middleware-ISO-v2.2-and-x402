@@ -4,7 +4,7 @@
 
 This branch (`agentic`) extends ProofRails v2.2 with:
 
-- **x402 payment-gated API endpoints** — premium API access paid with USDC micropayments on Base
+- **x402 payment-gated API endpoints** — premium API access paid with USDC on Base or FLR on Flare
 - **AI/XMTP agent workflows** — autonomous agents that pay for, generate, and verify payment evidence
 - **Agent-triggered anchoring** — agents can hash and anchor arbitrary data to Flare on-chain
 - **Flare-native paths** — Flare EVM anchoring (implemented), FTSO FX rates (implemented), FDC/FAssets/Smart Accounts (proposed)
@@ -30,6 +30,7 @@ This branch (`agentic`) extends ProofRails v2.2 with:
          │  Anchor contract│    │  x402 payment     │
          │  FTSO v2 feeds  │    │  verification     │
          └─────────────────┘    └───────────────────┘
+                                   x402: USDC (Base) or FLR (Flare)
 ```
 
 ## Release status
@@ -59,7 +60,8 @@ This branch (`agentic`) extends ProofRails v2.2 with:
 | Python SDK — full surface | Implemented |
 | Webhook subscriptions | Implemented |
 | Proactive wallet monitoring | Implemented |
-| x402 production payment (real USDC) | Implemented (requires live Base RPC) |
+| x402 production payment (USDC on Base) | Implemented (requires live Base RPC) |
+| x402 production payment (FLR on Flare) | Implemented (requires live Flare RPC) |
 | FDC-backed receipt verification | Proposed |
 | FAssets ISO flows | Proposed |
 | XRPL Smart Accounts integration | Proposed |
