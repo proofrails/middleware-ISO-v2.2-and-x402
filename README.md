@@ -26,10 +26,11 @@ The ISO 20022 Middleware provides a complete solution for payment processing:
 
 ### 💰 x402 Payment Protocol
 
-- **Micropayment API**: Pay-per-use endpoints with USDC on Base chain
+- **Three Payment Paths**: USDC on Base, USDT0 on Flare (EIP-3009), native FLR on Flare
+- **X402Facilitator Contract**: On-chain EIP-3009 settlement — audited Solidity contract (CEI, Pausable, ReentrancyGuard)
 - **6 Premium Endpoints**: Verify bundles, generate statements, FX lookup, bulk operations
-- **Automatic Payments**: Transparent USDC handling via x402 protocol
-- **Revenue Analytics**: Track payments, usage, and revenue by endpoint
+- **Dual Settlement Modes**: Client-settled (payer submits tx) or server-settled (API submits authorization)
+- **Revenue Analytics**: Track payments, revenue, and usage by endpoint and currency in the `/x402` dashboard
 
 ### 🤖 Autonomous Agents
 
@@ -40,7 +41,9 @@ The ISO 20022 Middleware provides a complete solution for payment processing:
 
 ---
 
-## Core Features
+## Core Features — Deployment
+> See **[DEPLOY.md](DEPLOY.md)** for the complete step-by-step deployment guide (contract, backend, frontend, Railway).
+
 # ISO 20022 Payments Middleware with x402 & Agent Anchoring
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -69,10 +72,11 @@ The ISO 20022 Middleware provides a complete solution for payment processing:
 
 ### 💰 x402 Payment Protocol
 
-- **Micropayment API**: Pay-per-use endpoints with USDC on Base chain
+- **Three Payment Paths**: USDC on Base, USDT0 on Flare (EIP-3009), native FLR on Flare
+- **X402Facilitator Contract**: On-chain EIP-3009 settlement — audited Solidity contract (CEI, Pausable, ReentrancyGuard)
 - **6 Premium Endpoints**: Verify bundles, generate statements, FX lookup, bulk operations
-- **Automatic Payments**: Transparent USDC handling via x402 protocol
-- **Revenue Analytics**: Track payments, usage, and revenue by endpoint
+- **Dual Settlement Modes**: Client-settled (payer submits tx) or server-settled (API submits authorization)
+- **Revenue Analytics**: Track payments, revenue, and usage by endpoint and currency in the `/x402` dashboard
 
 ### 🤖 Autonomous Agents
 
@@ -112,6 +116,35 @@ Access the dashboard at: **http://localhost:3000**
 ---
 
 ## Core Features
+
+### x402 Payment Protocol
+
+Pay-per-use API access with three payment paths. All premium endpoints respond with `HTTP 402` listing accepted options; clients and agents pick one.
+
+| Path | Network | Asset | Mechanism |
+|------|---------|-------|-----------|
+| `erc20_transfer` | Base (chainId 8453) | USDC | ERC-20 transfer event |
+| `eip3009_facilitator` | Flare (chainId 14) | USDT0 | EIP-3009 via X402Facilitator contract |
+| `native_transfer` | Flare (chainId 14) | FLR | Native value transfer |
+
+**X402Facilitator contract** (`contracts/X402Facilitator.sol`) settles USDT0 payments on Flare. It uses `transferWithAuthorization` (EIP-3009), follows the Checks-Effects-Interactions pattern, is Pausable and ReentrancyGuard-protected, and never holds funds. See `docs/security/X402Facilitator-audit.md` for the internal audit and `DEPLOY.md` for deployment instructions.
+
+**Premium endpoints:**
+
+| Endpoint | Price |
+|----------|-------|
+| `POST /v1/x402/premium/fx-lookup` | 0.001 |
+| `POST /v1/x402/premium/verify-bundle` | 0.001 |
+| `GET /v1/x402/premium/iso-message/{id}/{type}` | 0.002 |
+| `POST /v1/x402/premium/refund` | 0.003 |
+| `POST /v1/x402/premium/generate-statement` | 0.005 |
+| `POST /v1/x402/premium/bulk-verify` | 0.010 |
+
+**Dashboard:** the `/x402` page in `web-alt` shows payment history, revenue analytics, facilitator configuration, and a checkout demo for end-to-end testing.
+
+Full integration reference: [`docs/X402_INTEGRATION.md`](docs/X402_INTEGRATION.md)
+
+---
 
 ### 1. Project Management
 
