@@ -57,11 +57,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Static
+    # Static — only mount directories that exist (ui/embed are optional in test/CI)
     os.makedirs(settings.artifacts_dir, exist_ok=True)
     app.mount("/files", StaticFiles(directory=settings.artifacts_dir), name="files")
-    app.mount("/ui", StaticFiles(directory="ui"), name="ui")
-    app.mount("/embed", StaticFiles(directory="embed"), name="embed")
+    if os.path.isdir("ui"):
+        app.mount("/ui", StaticFiles(directory="ui"), name="ui")
+    if os.path.isdir("embed"):
+        app.mount("/embed", StaticFiles(directory="embed"), name="embed")
 
     # Routers
     app.include_router(health_router)

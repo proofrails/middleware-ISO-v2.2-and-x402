@@ -63,6 +63,66 @@ class Settings(BaseSettings):
     ai_temperature: float = Field(default=0.2, alias="AI_TEMPERATURE")
     ai_max_tokens: int = Field(default=512, alias="AI_MAX_TOKENS")
 
+    # x402 — feature toggles
+    x402_enable_base_usdc: bool = Field(default=True, alias="X402_ENABLE_BASE_USDC")
+    x402_enable_flare_usdt0: bool = Field(default=True, alias="X402_ENABLE_FLARE_USDT0")
+    x402_enable_flare_native_flr: bool = Field(default=True, alias="X402_ENABLE_FLARE_NATIVE_FLR")
+
+    # x402 — Base USDC path
+    x402_base_rpc_url: str = Field(
+        default="https://mainnet.base.org", alias="X402_BASE_RPC_URL"
+    )
+    x402_usdc_address: str = Field(
+        default="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", alias="X402_USDC_ADDRESS"
+    )
+    x402_usdc_amount: str = Field(default="0.001", alias="X402_USDC_AMOUNT")
+    x402_base_recipient: Optional[str] = Field(default=None, alias="X402_BASE_RECIPIENT")
+
+    # x402 — Flare USDT0 path (EIP-3009 facilitator)
+    x402_flare_rpc_url: str = Field(
+        default="https://flare-api.flare.network/ext/C/rpc", alias="X402_FLARE_RPC_URL"
+    )
+    x402_flare_chain_id: int = Field(default=14, alias="X402_FLARE_CHAIN_ID")
+    x402_usdt0_flare_address: str = Field(
+        default="0xe7cd86e13AC4309349F30B3435a9d337750fC82D", alias="X402_USDT0_FLARE_ADDRESS"
+    )
+    x402_usdt0_decimals: int = Field(default=6, alias="X402_USDT0_DECIMALS")
+    x402_flare_facilitator_address: Optional[str] = Field(
+        default=None, alias="X402_FLARE_FACILITATOR_ADDRESS"
+    )
+    x402_usdt0_recipient: Optional[str] = Field(default=None, alias="X402_USDT0_RECIPIENT")
+    x402_usdt0_amount: str = Field(default="0.001", alias="X402_USDT0_AMOUNT")
+    x402_flare_confirmations: int = Field(default=1, alias="X402_FLARE_CONFIRMATIONS")
+
+    # x402 — Flare native FLR path
+    x402_flr_recipient: Optional[str] = Field(default=None, alias="X402_FLR_RECIPIENT")
+    x402_flr_amount: str = Field(default="0.05", alias="X402_FLR_AMOUNT")
+
+    # x402 — settlement mode
+    # "client" = client submits settlement tx, provides settlement_tx_hash
+    # "server" = server signs and submits to facilitator (requires X402_SETTLER_PRIVATE_KEY)
+    x402_settlement_mode: str = Field(default="client", alias="X402_SETTLEMENT_MODE")
+    x402_settler_private_key: Optional[str] = Field(
+        default=None, alias="X402_SETTLER_PRIVATE_KEY"
+    )
+
+    # x402 — shared recipient fallback (used when path-specific recipient is not set)
+    x402_recipient_address: Optional[str] = Field(
+        default=None, alias="X402_RECIPIENT_ADDRESS"
+    )
+
+    @property
+    def x402_effective_usdc_recipient(self) -> Optional[str]:
+        return self.x402_base_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_usdt0_recipient(self) -> Optional[str]:
+        return self.x402_usdt0_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_flr_recipient(self) -> Optional[str]:
+        return self.x402_flr_recipient or self.x402_recipient_address
+
     @property
     def allow_origins_list(self) -> List[str]:
         return [o.strip() for o in self.allow_origins.split(",") if o.strip()]

@@ -65,32 +65,58 @@ def update_pricing(
 @router.get("/v1/x402/payments")
 def list_payments(
     limit: int = 50,
+    offset: int = 0,
+    currency: Optional[str] = None,
+    chain: Optional[str] = None,
+    status: Optional[str] = None,
+    payment_type: Optional[str] = None,
     session: Session = Depends(get_session),
     principal: Principal = Depends(resolve_principal),
 ):
-    """List recent x402 payments."""
+    """List recent x402 payments with optional filters."""
     if principal.is_public:
         raise HTTPException(401, "auth_required")
-    
-    payments = (
-        session.query(models.X402Payment)
-        .order_by(models.X402Payment.verified_at.desc())
-        .limit(limit)
-        .all()
-    )
-    
-    return [
-        {
-            "id": str(p.id),
-            "tx_hash": p.tx_hash,
-            "amount": str(p.amount),
-            "currency": p.currency,
-            "chain": p.chain,
-            "endpoint": p.endpoint,
-            "verified_at": p.verified_at.isoformat() if p.verified_at else None,
-        }
-        for p in payments
-    ]
+
+    q = session.query(models.X402Payment)
+    if currency:
+        q = q.filter(models.X402Payment.currency == currency)
+    if chain:
+        q = q.filter(models.X402Payment.chain == chain)
+    if status:
+        q = q.filter(models.X402Payment.status == status)
+    if payment_type:
+        q = q.filter(models.X402Payment.payment_type == payment_type)
+
+    total = q.count()
+    payments = q.order_by(models.X402Payment.verified_at.desc()).offset(offset).limit(limit).all()
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "items": [
+            {
+                "id": str(p.id),
+                "payment_type": p.payment_type,
+                "tx_hash": p.tx_hash,
+                "amount": str(p.amount),
+                "currency": p.currency,
+                "chain": p.chain,
+                "chain_id": p.chain_id,
+                "token_address": p.token_address,
+                "facilitator_address": p.facilitator_address,
+                "payer_address": p.payer_address,
+                "recipient": p.recipient,
+                "eip3009_nonce": p.eip3009_nonce,
+                "authorization_type": p.authorization_type,
+                "facilitator_payment_id": p.facilitator_payment_id,
+                "endpoint": p.endpoint,
+                "status": p.status,
+                "verified_at": p.verified_at.isoformat() if p.verified_at else None,
+            }
+            for p in payments
+        ],
+    }
 
 
 @router.get("/v1/x402/revenue")
@@ -135,14 +161,88 @@ def get_revenue(
         .all()
     )
     
+    # By currency
+    by_currency = (
+        session.query(
+            models.X402Payment.currency,
+            models.X402Payment.chain,
+            sql_func.count(models.X402Payment.id).label("count"),
+            sql_func.sum(models.X402Payment.amount).label("total"),
+        )
+        .filter(models.X402Payment.verified_at >= since)
+        .group_by(models.X402Payment.currency, models.X402Payment.chain)
+        .all()
+    )
+
+    # By payment_type
+    by_type = (
+        session.query(
+            models.X402Payment.payment_type,
+            sql_func.count(models.X402Payment.id).label("count"),
+            sql_func.sum(models.X402Payment.amount).label("total"),
+        )
+        .filter(models.X402Payment.verified_at >= since)
+        .group_by(models.X402Payment.payment_type)
+        .all()
+    )
+
     return {
-        "total_revenue": str(total),
+        "total_revenue_usd_equivalent": str(total),
         "payment_count": count,
         "days": days,
         "by_endpoint": [
             {"endpoint": row[0], "count": row[1], "revenue": str(row[2])}
             for row in by_endpoint
         ],
+        "by_currency": [
+            {"currency": row[0], "chain": row[1], "count": row[2], "revenue": str(row[3])}
+            for row in by_currency
+        ],
+        "by_payment_type": [
+            {"payment_type": row[0], "count": row[1], "revenue": str(row[2])}
+            for row in by_type
+        ],
+    }
+
+
+@router.get("/v1/x402/facilitator-config")
+def get_facilitator_config(
+    principal: Principal = Depends(resolve_principal),
+):
+    """Return current x402 facilitator configuration (read from env/settings)."""
+    if not principal.is_admin:
+        raise HTTPException(403, "admin_required")
+
+    from app.settings import get_settings
+    s = get_settings()
+
+    return {
+        "settlement_mode": s.x402_settlement_mode,
+        "usdc": {
+            "enabled": s.x402_enable_base_usdc,
+            "amount": s.x402_usdc_amount,
+            "recipient": s.x402_effective_usdc_recipient,
+            "token_address": s.x402_usdc_address,
+            "network": "base",
+            "chain_id": 8453,
+        },
+        "usdt0": {
+            "enabled": s.x402_enable_flare_usdt0,
+            "amount": s.x402_usdt0_amount,
+            "recipient": s.x402_effective_usdt0_recipient,
+            "token_address": s.x402_usdt0_flare_address,
+            "facilitator_address": s.x402_flare_facilitator_address,
+            "network": "flare",
+            "chain_id": s.x402_flare_chain_id,
+            "decimals": s.x402_usdt0_decimals,
+        },
+        "flr": {
+            "enabled": s.x402_enable_flare_native_flr,
+            "amount": s.x402_flr_amount,
+            "recipient": s.x402_effective_flr_recipient,
+            "network": "flare",
+            "chain_id": s.x402_flare_chain_id,
+        },
     }
 
 

@@ -170,14 +170,41 @@ class X402Payment(Base):
     __tablename__ = "x402_payments"
 
     id = Column(GUID, primary_key=True, default=uuid.uuid4, nullable=False)
-    tx_hash = Column(String, nullable=False, unique=True, index=True)
+
+    # payment_type: "erc20_transfer" | "eip3009_facilitator" | "native_transfer"
+    payment_type = Column(String, nullable=False, server_default="erc20_transfer")
+
+    # Settlement transaction hash (on-chain tx that moved funds / called facilitator).
+    # Nullable for server-submitted mode before settlement is broadcast.
+    tx_hash = Column(String, nullable=True, unique=True, index=True)
+
+    # Human-readable amounts stored as Decimal; raw_amount stores exact integer units.
     amount = Column(Numeric(38, 18), nullable=False)
+    raw_amount = Column(String, nullable=True)  # bigint as string to avoid overflow
+
     currency = Column(String, nullable=False, server_default="USDC")
     chain = Column(String, nullable=False, server_default="base")
+    chain_id = Column(String, nullable=True)  # "14" for Flare mainnet
+
+    # Addresses
+    token_address = Column(String, nullable=True)       # ERC-20 token contract
+    facilitator_address = Column(String, nullable=True) # X402Facilitator contract
+    payer_address = Column(String, nullable=True)       # Who signed / paid
     recipient = Column(String, nullable=False)
-    endpoint = Column(String, nullable=False)  # Which endpoint was accessed
+
+    # EIP-3009 specific
+    # Stored as hex string (0x-prefixed bytes32). Unique per (nonce, chain_id, token_address).
+    eip3009_nonce = Column(String, nullable=True)
+    authorization_type = Column(String, nullable=True)  # "transferWithAuthorization" | "receiveWithAuthorization"
+
+    # Facilitator payment ID (keccak256 from contract)
+    facilitator_payment_id = Column(String, nullable=True)
+
+    endpoint = Column(String, nullable=False)           # Which endpoint was accessed
+    status = Column(String, nullable=False, server_default="verified")  # pending|verified|failed
+
     agent_id = Column(GUID, ForeignKey("agent_configs.id"), nullable=True, index=True)
-    verified_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    verified_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class AgentConfig(Base):
