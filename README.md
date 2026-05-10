@@ -170,3 +170,7 @@ For the full agentic branch with AI-driven workflows, Flare-native features, and
 ## License
 
 MIT
+
+::::
+
+note: add AI native docs
