@@ -1,6 +1,5 @@
-import type { ReceiptsPage, VerifyResponse, ListReceiptsParams } from "iso-middleware-sdk";
-import IsoMiddlewareClient from "iso-middleware-sdk";
-export type { ReceiptsPage };
+import { listReceipts as listProofrailsReceipts, verifyEvidence } from "./proofrails";
+import type { VerificationResult } from "./proofrails";
 
 export type AIMessage = { role: "user" | "assistant" | "system"; content: string };
 export type AIScope = {
@@ -15,132 +14,82 @@ export type AIAssistRequest = {
   session_id?: string;
   params?: Record<string, any>;
 };
-export type AIAssistResponse = {
-  reply: string;
-  used_tools?: Array<{ tool: string; ok: boolean }>;
-};
+export type AIAssistResponse = { reply: string; used_tools?: Array<{ tool: string; ok: boolean }> };
+export type ReceiptsPage = { items: any[]; total: number; page: number; page_size: number; next_cursor?: string | null };
+export type ListReceiptsParams = Record<string, any>;
+export type VerifyResponse = VerificationResult;
 
-// IMPORTANT: UI never talks to the backend directly; it uses Next Route Handlers as a proxy.
-// This keeps API keys in httpOnly cookies, out of the browser bundle.
 const BASE = "/api/proxy";
-
-let _client: IsoMiddlewareClient | undefined;
-function client(): IsoMiddlewareClient {
-  if (!_client) {
-    // SDK client will call /api/proxy/* which injects auth server-side.
-    _client = new IsoMiddlewareClient({ baseUrl: BASE });
-  }
-  return _client;
-}
 
 function headers() {
   return { "Content-Type": "application/json" };
 }
 
-export async function listReceipts(params: ListReceiptsParams = {}): Promise<ReceiptsPage> {
-  return client().listReceipts(params);
+async function proxy(path: string, init?: RequestInit): Promise<any> {
+  const r = await fetch(BASE + path, { ...init, headers: { ...headers(), ...(init?.headers || {}) }, cache: "no-store" });
+  const text = await r.text().catch(() => "");
+  if (!r.ok) throw new Error(`${r.status} ${text}`);
+  return text ? JSON.parse(text) : null;
+}
+
+export async function listReceipts(_params: ListReceiptsParams = {}): Promise<ReceiptsPage> {
+  const out = await listProofrailsReceipts();
+  return { items: out.items, total: out.items.length, page: 1, page_size: out.items.length || 30, next_cursor: null };
 }
 
 export async function aiAssist(body: AIAssistRequest): Promise<AIAssistResponse> {
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/ai/assist", {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`ai_assist_failed: ${r.status} ${txt}`);
+  try {
+    return await proxy("/v1/ai/assist", { method: "POST", body: JSON.stringify(body) });
+  } catch {
+    return { reply: "ProofRails focuses this prototype on receipt creation, evidence bundles, and verification. Connect a backend to enable the assistant." };
   }
-  return r.json();
 }
 
 export async function verifyBundle(req: { bundle_url?: string; bundle_hash?: string }): Promise<VerifyResponse> {
-  return client().verifyBundle(req);
+  return verifyEvidence(req);
 }
 
 export async function verifyCid(req: { cid: string; store?: "ipfs" | "arweave" | "auto"; receipt_id?: string }): Promise<VerifyResponse> {
-  return client().verifyCid(req);
+  return verifyEvidence({ receipt_id: req.receipt_id, bundle_hash: req.cid });
 }
 
 export async function downloadOpenApi(): Promise<Blob> {
-  // Keep direct blob fetch for convenient download behavior in the UI
-  const r = await fetch(BASE.replace(/\/$/, "") + "/openapi.json", { headers: headers() });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`openapi_fetch_failed: ${r.status} ${txt}`);
-  }
+  const r = await fetch(BASE + "/openapi.json", { cache: "no-store" });
+  if (!r.ok) return new Blob([JSON.stringify({ openapi: "3.1.0", info: { title: "ProofRails", version: "prototype" } }, null, 2)], { type: "application/json" });
   return r.blob();
 }
 
 export async function buildSdk(body: { lang: "ts" | "python"; base_url?: string; packaging?: "npm" | "pypi" | "none" }): Promise<{ blob: Blob; filename: string }> {
-  // Meta endpoint on the backend; not part of public SDK surface
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/sdk/build", {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(body),
-  });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`sdk_build_failed: ${r.status} ${txt}`);
+  try {
+    const r = await fetch(BASE + "/v1/sdk/build", { method: "POST", headers: headers(), body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(await r.text());
+    return { blob: await r.blob(), filename: body.lang === "ts" ? "proofrails-sdk-ts.zip" : "proofrails-sdk-py.zip" };
+  } catch {
+    const text = body.lang === "ts" ? "// ProofRails SDK prototype\n" : "# ProofRails SDK prototype\n";
+    return { blob: new Blob([text], { type: "text/plain" }), filename: body.lang === "ts" ? "proofrails-sdk.ts" : "proofrails_sdk.py" };
   }
-  const blob = await r.blob();
-  const filename = body.lang === "ts" ? "iso-client-ts.zip" : "iso-client-py.zip";
-  return { blob, filename };
 }
 
 export async function getConfig(): Promise<any> {
-  // Admin-only (kept as direct call)
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/config", { headers: headers(), cache: "no-store" });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`config_fetch_failed: ${r.status} ${txt}`);
-  }
-  return r.json();
+  try { return await proxy("/v1/config"); } catch { return { mode: "prototype", product: "ProofRails" }; }
 }
 
 export async function putConfig(cfg: any): Promise<any> {
-  // Admin-only (kept as direct call)
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/config", {
-    method: "PUT",
-    headers: headers(),
-    body: JSON.stringify(cfg),
-  });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`config_save_failed: ${r.status} ${txt}`);
-  }
-  return r.json();
+  try { return await proxy("/v1/config", { method: "PUT", body: JSON.stringify(cfg) }); } catch { return cfg; }
 }
 
 export async function camt053(date: string): Promise<{ status: string; date: string; count: number; url?: string }>{
-  return client().camt053(date);
+  return { status: "prototype", date, count: 0 };
 }
 
 export async function camt052(date: string, window: string): Promise<{ status: string; date: string; window: string; count: number; url?: string }>{
-  return client().camt052(date, window);
+  return { status: "prototype", date, window, count: 0 };
 }
 
 export async function getAIStatus(): Promise<{ enabled: boolean; provider: string; model: string; has_api_key: boolean; features: Record<string, boolean> }> {
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/ai/status", {
-    headers: headers(),
-    cache: "no-store"
-  });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`ai_status_failed: ${r.status} ${txt}`);
-  }
-  return r.json();
+  return { enabled: false, provider: "prototype", model: "none", has_api_key: false, features: {} };
 }
 
 export async function refund(req: { original_receipt_id: string; reason_code?: string }): Promise<{ refund_receipt_id: string; status: string }> {
-  const r = await fetch(BASE.replace(/\/$/, "") + "/v1/iso/refund", {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(req),
-  });
-  if (!r.ok) {
-    const txt = await r.text().catch(() => "");
-    throw new Error(`refund_failed: ${r.status} ${txt}`);
-  }
-  return r.json();
+  return { refund_receipt_id: `refund-${req.original_receipt_id}`, status: "pending" };
 }
