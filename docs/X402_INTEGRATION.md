@@ -96,7 +96,9 @@ The client provides the raw EIP-3009 signature fields. The API server submits th
 }
 ```
 
-> **Note:** `receiveWithAuthorization` is intentionally not used. EIP-3009 requires `msg.sender == to` for `receiveWithAuthorization`, which cannot be satisfied when a contract (the facilitator) is the caller. `transferWithAuthorization` is used for both settlement paths; the facilitator enforces `msg.sender == payload.to` as a guard on `settlePaymentAsPayee`.
+> **Note — signing type:** Clients always sign `TransferWithAuthorization` EIP-712 typed data regardless of mode. Both `settlePayment` and `settlePaymentAsPayee` call `USDT0.transferWithAuthorization()` internally. `token.receiveWithAuthorization()` is never used: it requires `msg.sender == to`, which cannot be satisfied when a contract (the facilitator) is the caller.
+>
+> **Note — `authorization_type` field:** This server-side hint controls which facilitator function the API server submits to. `"transferWithAuthorization"` → `settlePayment()` (open to anyone); `"receiveWithAuthorization"` → `settlePaymentAsPayee()` (requires settler wallet == recipient). The default is `"receiveWithAuthorization"`, meaning the settler key must be the same address as `X402_USDT0_RECIPIENT`.
 
 ---
 
@@ -216,10 +218,12 @@ Prices are in USDC (Base) or USDT0 (Flare). FLR prices are set separately via `X
 
 ### Settlement flow
 
+**Client-settled (payer calls `settlePayment`):**
+
 ```
-Client                      X402Facilitator              USDT0 token
+Payer/Agent                 X402Facilitator              USDT0 token
   │                               │                          │
-  │  settlePaymentAsPayee(payload)│                          │
+  │  settlePayment(payload)       │                          │
   │──────────────────────────────►│                          │
   │                               │ checks: token supported  │
   │                               │ checks: not expired      │
@@ -235,6 +239,8 @@ Client                      X402Facilitator              USDT0 token
   │◄──────────────────────────────│                          │
   │  returns: paymentId           │                          │
 ```
+
+> `settlePayment()` is callable by anyone (including the payer). `settlePaymentAsPayee()` requires `msg.sender == payload.to` (the recipient) and is used in server-settled mode where the ProofRails server wallet IS the recipient.
 
 ### Deployment
 
