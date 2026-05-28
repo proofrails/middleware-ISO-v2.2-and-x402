@@ -1,14 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import VerificationResultCard from "../../components/receipt/VerificationResultCard";
 import { verifyEvidence, type VerificationResult } from "../../lib/proofrails";
 
 export default function VerifyPage() {
+  const searchParams = useSearchParams();
   const [receiptId, setReceiptId] = useState("");
   const [bundleHash, setBundleHash] = useState("");
   const [bundleUrl, setBundleUrl] = useState("");
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const queryReceiptId = searchParams.get("receipt_id") || searchParams.get("rid");
+    const queryBundleHash = searchParams.get("bundle_hash");
+    const queryBundleUrl = searchParams.get("bundle_url");
+    if (queryReceiptId) setReceiptId(queryReceiptId);
+    if (queryBundleHash) setBundleHash(queryBundleHash);
+    if (queryBundleUrl) setBundleUrl(queryBundleUrl);
+  }, [searchParams]);
   async function run() { setBusy(true); try { setResult(await verifyEvidence({ receipt_id: receiptId || undefined, bundle_hash: bundleHash || undefined, bundle_url: bundleUrl || undefined })); } finally { setBusy(false); } }
   const cls = "mt-1 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-slate-950";
   return (
