@@ -1,0 +1,91 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Create your first receipt | ProofRails Docs</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
+<a class="" href="/introduction">Introduction</a>
+<a class="" href="/quickstart">Quickstart</a>
+<a class="active" href="/create-first-receipt">Create your first receipt</a>
+<a class="" href="/verify-receipt">Verify a receipt</a>
+</div>
+<div class="nav-group"><div class="nav-title">Core concepts</div>
+<a class="" href="/concepts/receipts">Receipts</a>
+<a class="" href="/concepts/evidence-bundles">Evidence bundles</a>
+<a class="" href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a>
+<a class="" href="/concepts/anchoring">Onchain anchoring</a>
+<a class="" href="/concepts/verification-model">Verification model</a>
+</div>
+<div class="nav-group"><div class="nav-title">API Reference</div>
+<a class="" href="/api-reference/overview">API overview</a>
+<a class="" href="/api-reference/authentication">Authentication</a>
+<a class="" href="/api-reference/receipts">Receipts API</a>
+<a class="" href="/api-reference/verification">Verification API</a>
+<a class="" href="/api-reference/projects">Projects API</a>
+<a class="" href="/api-reference/agents">Agents API</a>
+<a class="" href="/api-reference/x402">x402 API</a>
+</div>
+<div class="nav-group"><div class="nav-title">Guides</div>
+<a class="" href="/guides/local-development">Local development</a>
+<a class="" href="/guides/production-deployment">Production deployment</a>
+<a class="" href="/guides/agent-workflows">Agent workflows</a>
+<a class="" href="/guides/flare-anchoring">Flare anchoring</a>
+</div>
+<div class="nav-group"><div class="nav-title">x402</div>
+<a class="" href="/x402/overview">x402 overview</a>
+<a class="" href="/x402/coston2-testnet-demo">Coston2 testnet demo</a>
+</div>
+<div class="nav-group"><div class="nav-title">Security and limits</div>
+<a class="" href="/security/claims-and-limitations">Claims and limitations</a>
+<a class="" href="/security/key-management">Key management</a>
+<a class="" href="/security/known-limitations">Known limitations</a>
+</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Create your first receipt</h1><p>Independent documentation site for ProofRails receipts, evidence bundles, verification, x402, agents, and deployment.</p><div class="toplinks"><a class="primary" href="/introduction">Start here</a><a class="secondary" href="/api-reference/overview">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>Create your first receipt</h1>
+<p>The core ProofRails action is receipt creation.</p>
+<pre><code>POST /v1/iso/record-tip</code></pre>
+<h2>Request</h2>
+<pre><code>curl -X POST http://localhost:8000/v1/iso/record-tip \
+  -H &quot;X-API-Key: dev-admin-CHANGE_ME&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#x27;{
+    &quot;reference&quot;: &quot;invoice-001&quot;,
+    &quot;tip_tx_hash&quot;: &quot;0xabc123&quot;,
+    &quot;chain&quot;: &quot;flare&quot;,
+    &quot;amount&quot;: &quot;100.0&quot;,
+    &quot;currency&quot;: &quot;FLR&quot;,
+    &quot;sender_wallet&quot;: &quot;0xSender&quot;,
+    &quot;receiver_wallet&quot;: &quot;0xReceiver&quot;,
+    &quot;metadata&quot;: {
+      &quot;invoice_id&quot;: &quot;invoice-001&quot;,
+      &quot;source&quot;: &quot;merchant_checkout&quot;
+    },
+    &quot;tags&quot;: [&quot;invoice&quot;, &quot;demo&quot;]
+  }&#x27;</code></pre>
+<h2>Required fields</h2>
+<ul>
+<li><code>reference</code></li>
+<li><code>tip_tx_hash</code></li>
+<li><code>chain</code></li>
+<li><code>amount</code></li>
+<li><code>currency</code></li>
+<li><code>sender_wallet</code></li>
+<li><code>receiver_wallet</code></li>
+</ul>
+<h2>Response</h2>
+<pre><code>{
+  &quot;receipt_id&quot;: &quot;&lt;uuid&gt;&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;operation_id&quot;: &quot;&lt;uuid&gt;&quot;
+}</code></pre>
+<p><code>operation_id</code> is used to poll the processing workflow.</p>
+<h2>Poll operation status</h2>
+<pre><code>curl http://localhost:8000/v1/operations/&lt;operation_id&gt; \
+  -H &quot;X-API-Key: dev-admin-CHANGE_ME&quot;</code></pre>
+<p>Common statuses:</p>
+<ul>
+<li><code>pending</code></li>
+<li><code>processing</code></li>
+<li><code>awaiting_anchor</code></li>
+<li><code>anchored</code></li>
+<li><code>failed</code></li>
+</ul>
+<h2>Fetch the receipt</h2>
+<pre><code>curl http://localhost:8000/v1/iso/receipts/&lt;receipt_id&gt; \
+  -H &quot;X-API-Key: dev-admin-CHANGE_ME&quot;</code></pre>
+<h2>Fetch generated ISO artifacts</h2>
+<pre><code>curl http://localhost:8000/v1/iso/messages/&lt;receipt_id&gt; \
+  -H &quot;X-API-Key: dev-admin-CHANGE_ME&quot;</code></pre></article></main></div></body></html>

@@ -1,0 +1,19 @@
+---
+title: Coston2 testnet demo
+description: The x402test app flow for Coston2 payments and ProofRails receipts.
+---
+
+# Coston2 testnet demo
+
+The x402test app demonstrates a Coston2 payment unlock flow:
+
+1. Connect wallet.
+2. Switch to Coston2.
+3. Fund gas.
+4. Mint MockUSDT0.
+5. Settle the x402-style payment.
+6. Verify settlement with the backend.
+7. Unlock the resource.
+8. Create and verify a ProofRails receipt.
+
+The settlement transaction is not the same object as a ProofRails receipt or bundle hash. A verifier should receive a receipt ID or bundle hash once receipt creation completes.

@@ -1,0 +1,38 @@
+---
+title: x402 API
+description: x402 pricing, payment verification, and premium endpoints.
+---
+
+# x402 API
+
+ProofRails includes x402-style payment-gated endpoint support.
+
+## Pricing and payments
+
+```http
+GET  /v1/x402/pricing
+POST /v1/x402/pricing
+GET  /v1/x402/payments
+GET  /v1/x402/revenue
+GET  /v1/x402/facilitator-config
+POST /v1/x402/verify-payment
+```
+
+## Premium endpoints
+
+```http
+POST /v1/x402/premium/verify-bundle
+POST /v1/x402/premium/generate-statement
+GET  /v1/x402/premium/iso-message/{receipt_id}/{msg_type}
+POST /v1/x402/premium/fx-lookup
+POST /v1/x402/premium/bulk-verify
+POST /v1/x402/premium/refund
+```
+
+## Local mock mode
+
+```env
+X402_MOCK_PAYMENTS=true
+```
+
+Use mock mode for local development only.

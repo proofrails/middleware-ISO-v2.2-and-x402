@@ -1,0 +1,32 @@
+---
+title: Agents API
+description: Agent records, AI config, testing, and anchoring.
+---
+
+# Agents API
+
+ProofRails supports agent workflows for autonomous receipt and verification tasks.
+
+Core routes:
+
+```http
+POST   /v1/agents
+GET    /v1/agents
+GET    /v1/agents/{agent_id}
+PUT    /v1/agents/{agent_id}
+DELETE /v1/agents/{agent_id}
+GET    /v1/agents/{agent_id}/stats
+POST   /v1/agents/{agent_id}/test
+PUT    /v1/agents/{agent_id}/ai-config
+```
+
+Anchoring routes:
+
+```http
+GET  /v1/agents/{agent_id}/anchoring-config
+PUT  /v1/agents/{agent_id}/anchoring-config
+POST /v1/agents/{agent_id}/anchor-data
+POST /v1/agents/{agent_id}/anchor
+GET  /v1/agents/{agent_id}/anchors
+GET  /v1/agents/{agent_id}/activity-unified
+```

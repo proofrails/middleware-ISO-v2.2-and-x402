@@ -1,0 +1,66 @@
+---
+title: Introduction
+description: Official documentation for ProofRails, an evidence and translation layer for onchain payments.
+---
+
+# ProofRails
+
+ProofRails is an open translation and evidence layer for onchain payments. It turns blockchain activity into ISO 20022-style records, packages the supporting material into audit-grade evidence bundles, and anchors bundle hashes onchain so a receipt can be checked later.
+
+ProofRails does **not** move funds. It records, translates, packages, anchors, and verifies evidence around funds movement.
+
+## One-line version
+
+ProofRails gives crypto payments the missing evidence layer: finance-readable receipts, ISO 20022-style artifacts, signed evidence bundles, and onchain verification.
+
+## Who this is for
+
+- **Developers** integrating receipt creation, verification, x402 endpoints, or agent workflows.
+- **Operators** who need payment receipts, reconciliation artifacts, and verifiable evidence trails.
+- **Partners and auditors** evaluating how onchain events can map into finance-grade records.
+
+## Product model
+
+A normal ProofRails workflow has five steps:
+
+1. A user, app, or agent submits an onchain payment reference.
+2. ProofRails creates a receipt record for that payment.
+3. The backend generates ISO 20022-style artifacts such as `pain.001`, `pacs.008`, `camt.053`, and `camt.054` where applicable.
+4. ProofRails builds an evidence bundle with receipt metadata, generated XML, manifest data, checksums, and signatures.
+5. The bundle hash is anchored onchain so anyone can later verify whether the evidence matches the recorded commitment.
+
+## What ProofRails verifies
+
+ProofRails can verify:
+
+- evidence integrity
+- bundle hash consistency
+- receipt metadata consistency
+- onchain anchor match, when an anchor exists
+- generated artifact references attached to the receipt
+
+ProofRails does not independently verify:
+
+- invoice validity
+- KYC status
+- legal settlement finality
+- sender intent
+- bank acceptance
+- regulatory certification
+
+## Main surfaces
+
+- **Receipt API**: create, list, poll, fetch, and retry receipts.
+- **Verifier**: verify by receipt ID, bundle hash, bundle URL, or CID.
+- **Evidence bundles**: portable proof packages for receipts and generated artifacts.
+- **Flare anchoring**: onchain hash commitments for tamper-evident records.
+- **x402**: paid verification and premium endpoint experiments.
+- **Agents**: agent records, AI configuration, XMTP commands, and agent-triggered anchoring.
+
+## Current status
+
+The active implementation lives on the `agentic` branch of the ProofRails repository. Treat it as a pre-production release until the release checklist, deployment configuration, and known limitations have been reviewed for the target environment.
+
+<Note>
+Use precise language publicly: ProofRails creates ISO 20022-style artifacts and verifiable evidence trails. Do not describe it as a bank, payment processor, custodian, compliance certification provider, or source of legal settlement finality.
+</Note>

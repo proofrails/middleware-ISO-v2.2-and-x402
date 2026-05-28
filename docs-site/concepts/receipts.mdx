@@ -1,0 +1,28 @@
+---
+title: Receipts
+description: The primary ProofRails record object.
+---
+
+# Receipts
+
+A ProofRails receipt is the canonical record for an onchain payment reference plus its business context and verification state.
+
+A receipt can include:
+
+- payment reference
+- transaction hash
+- chain
+- amount and currency
+- sender wallet
+- receiver wallet
+- metadata and tags
+- generated ISO-style artifacts
+- evidence bundle URL or hash
+- anchor transaction reference
+- processing status
+
+Receipts are designed for reconciliation, audit trails, agent workflows, and user-facing proof pages.
+
+## Idempotency
+
+Duplicate `chain + tip_tx_hash` or duplicate `reference` should return the existing receipt rather than creating an accidental duplicate. Use idempotency headers for client retries where enabled.

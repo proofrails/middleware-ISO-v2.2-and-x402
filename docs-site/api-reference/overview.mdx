@@ -1,0 +1,46 @@
+---
+title: API overview
+description: Base URL, auth, response model, and API sections.
+---
+
+# API overview
+
+ProofRails exposes a REST API served by FastAPI.
+
+## Base URLs
+
+```text
+http://localhost:8000          # local development
+https://app.proofrails.com     # hosted app/API when configured
+```
+
+## Interactive docs
+
+FastAPI generates:
+
+```text
+GET /docs
+GET /redoc
+GET /openapi.json
+```
+
+## Authentication
+
+Most endpoints require:
+
+```text
+X-API-Key: <your_project_api_key>
+```
+
+Project-scoped keys can be generated through project registration or the app settings flow, depending on deployment.
+
+## API groups
+
+- Receipts
+- Verification
+- Projects and API keys
+- Agents
+- x402
+- Anchoring
+- Monitoring
+- Webhooks

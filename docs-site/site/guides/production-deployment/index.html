@@ -1,0 +1,58 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Production deployment | ProofRails Docs</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
+<a class="" href="/introduction">Introduction</a>
+<a class="" href="/quickstart">Quickstart</a>
+<a class="" href="/create-first-receipt">Create your first receipt</a>
+<a class="" href="/verify-receipt">Verify a receipt</a>
+</div>
+<div class="nav-group"><div class="nav-title">Core concepts</div>
+<a class="" href="/concepts/receipts">Receipts</a>
+<a class="" href="/concepts/evidence-bundles">Evidence bundles</a>
+<a class="" href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a>
+<a class="" href="/concepts/anchoring">Onchain anchoring</a>
+<a class="" href="/concepts/verification-model">Verification model</a>
+</div>
+<div class="nav-group"><div class="nav-title">API Reference</div>
+<a class="" href="/api-reference/overview">API overview</a>
+<a class="" href="/api-reference/authentication">Authentication</a>
+<a class="" href="/api-reference/receipts">Receipts API</a>
+<a class="" href="/api-reference/verification">Verification API</a>
+<a class="" href="/api-reference/projects">Projects API</a>
+<a class="" href="/api-reference/agents">Agents API</a>
+<a class="" href="/api-reference/x402">x402 API</a>
+</div>
+<div class="nav-group"><div class="nav-title">Guides</div>
+<a class="" href="/guides/local-development">Local development</a>
+<a class="active" href="/guides/production-deployment">Production deployment</a>
+<a class="" href="/guides/agent-workflows">Agent workflows</a>
+<a class="" href="/guides/flare-anchoring">Flare anchoring</a>
+</div>
+<div class="nav-group"><div class="nav-title">x402</div>
+<a class="" href="/x402/overview">x402 overview</a>
+<a class="" href="/x402/coston2-testnet-demo">Coston2 testnet demo</a>
+</div>
+<div class="nav-group"><div class="nav-title">Security and limits</div>
+<a class="" href="/security/claims-and-limitations">Claims and limitations</a>
+<a class="" href="/security/key-management">Key management</a>
+<a class="" href="/security/known-limitations">Known limitations</a>
+</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Production deployment</h1><p>Independent documentation site for ProofRails receipts, evidence bundles, verification, x402, agents, and deployment.</p><div class="toplinks"><a class="primary" href="/introduction">Start here</a><a class="secondary" href="/api-reference/overview">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>Production deployment</h1>
+<p>Before production use, verify:</p>
+<ul>
+<li>API keys and admin keys are not default values.</li>
+<li>Secrets are stored in the deployment platform, not committed to Git.</li>
+<li><code>NEXT_PUBLIC_API_BASE</code> or API proxy configuration points to the correct production API.</li>
+<li>Anchoring RPC, contract address, private key, and gas funding are configured.</li>
+<li>x402 recipient, facilitator, chain, and token settings match the target environment.</li>
+<li>Rate limiting and idempotency settings match expected traffic.</li>
+<li>Webhooks use HTTPS endpoints and signature verification where supported.</li>
+</ul>
+<h2>Deployment surfaces</h2>
+<ul>
+<li>Backend FastAPI service</li>
+<li>Web app / dashboard</li>
+<li>Independent documentation site</li>
+<li>Optional x402 test app or campaign app</li>
+<li>Worker or polling process for anchoring and monitoring</li>
+</ul>
+<div class="callout warn"><strong>Warning</strong>
+<p>Do not deploy with blank production environment variables. Blank envs can override working local defaults and cause production-only failures.</p>
+</div></article></main></div></body></html>

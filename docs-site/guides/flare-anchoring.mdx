@@ -1,0 +1,24 @@
+---
+title: Flare anchoring
+description: Configure and operate Flare EVM evidence anchoring.
+---
+
+# Flare anchoring
+
+ProofRails can anchor evidence bundle hashes on Flare EVM-compatible networks.
+
+Configuration usually requires:
+
+- Flare RPC URL
+- EvidenceAnchor contract address
+- anchoring private key
+- funded anchoring wallet
+- confirmation and retry settings
+
+Use retry anchoring when a receipt fails because of transient RPC, gas, or worker issues.
+
+```http
+POST /v1/iso/receipts/{receipt_id}/retry-anchor
+```
+
+Future Flare-facing paths such as FDC-backed verification and FAssets ISO flows should be described as proposed unless verified in the deployed implementation.

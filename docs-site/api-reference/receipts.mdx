@@ -1,0 +1,70 @@
+---
+title: Receipts API
+description: Create, list, fetch, poll, and retry ProofRails receipts.
+---
+
+# Receipts API
+
+## Create receipt
+
+```http
+POST /v1/iso/record-tip
+```
+
+Creates a receipt from an onchain payment reference.
+
+## Poll operation
+
+```http
+GET /v1/operations/{operation_id}
+```
+
+Returns processing status for a receipt operation.
+
+## List receipts
+
+```http
+GET /v1/receipts
+```
+
+Common filters:
+
+- `status`
+- `chain`
+- `reference`
+- `since`
+- `until`
+- `scope`
+- `page`
+- `page_size`
+- `cursor`
+
+## Get receipt
+
+```http
+GET /v1/iso/receipts/{receipt_id}
+```
+
+## Get receipt status
+
+```http
+GET /v1/iso/receipts/{receipt_id}/status
+```
+
+## Generated ISO messages
+
+```http
+GET /v1/iso/messages/{receipt_id}
+```
+
+Optional query:
+
+```text
+type=pacs.008
+```
+
+## Retry anchoring
+
+```http
+POST /v1/iso/receipts/{receipt_id}/retry-anchor
+```

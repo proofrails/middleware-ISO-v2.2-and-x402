@@ -1,0 +1,34 @@
+---
+title: Verification API
+description: Verify receipts, bundles, URLs, and CIDs.
+---
+
+# Verification API
+
+## Verify evidence
+
+```http
+POST /v1/iso/verify
+```
+
+Accepted verification inputs include:
+
+- `receipt_id`
+- `bundle_hash`
+- `bundle_url`
+
+## Verify CID
+
+```http
+POST /v1/iso/verify-cid
+```
+
+## Expected response data
+
+Verification responses can include:
+
+- `matches_onchain`
+- `bundle_hash`
+- `flare_txid`
+- `anchored_at`
+- errors or mismatch details

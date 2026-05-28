@@ -1,0 +1,24 @@
+---
+title: Key management
+description: Handle API keys, private keys, and environment secrets safely.
+---
+
+# Key management
+
+ProofRails deployments may use several secret types:
+
+- project API keys
+- admin API keys
+- anchoring private keys
+- webhook secrets
+- x402 facilitator or recipient configuration
+- deployment platform secrets
+
+Guidance:
+
+- Never commit real secrets.
+- Use `.env.example` for placeholders only.
+- Store production secrets in the deployment platform or a secret manager.
+- Rotate any token pasted into chat, logs, screenshots, or public issues.
+- Use separate keys for development, staging, and production.
+- Treat exposed credentials as compromised.

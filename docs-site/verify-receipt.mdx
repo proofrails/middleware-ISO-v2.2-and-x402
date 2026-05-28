@@ -1,0 +1,56 @@
+---
+title: Verify a receipt
+description: Verify ProofRails evidence by receipt ID, bundle hash, or bundle URL.
+---
+
+# Verify a receipt
+
+Verification checks whether the supplied receipt evidence matches the stored record and onchain anchor data when anchor data exists.
+
+```http
+POST /v1/iso/verify
+```
+
+## Verify by bundle hash
+
+```bash
+curl -X POST http://localhost:8000/v1/iso/verify \
+  -H "X-API-Key: dev-admin-CHANGE_ME" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bundle_hash": "0x..."
+  }'
+```
+
+## Verify by bundle URL
+
+```bash
+curl -X POST http://localhost:8000/v1/iso/verify \
+  -H "X-API-Key: dev-admin-CHANGE_ME" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bundle_url": "http://localhost:8000/files/<receipt_id>/evidence.zip"
+  }'
+```
+
+## Verify by CID
+
+```http
+POST /v1/iso/verify-cid
+```
+
+Use this when evidence is referenced by content identifier and the deployment supports that storage path.
+
+## Response shape
+
+A verification response can include:
+
+- `matches_onchain`
+- `bundle_hash`
+- `flare_txid`
+- `anchored_at`
+- verification errors or mismatch details
+
+<Warning>
+Verification is not a claim that the invoice was valid, the payer intended the transfer, a bank accepted the record, or a regulator certified the workflow. It is a claim about the submitted evidence and its anchor consistency.
+</Warning>

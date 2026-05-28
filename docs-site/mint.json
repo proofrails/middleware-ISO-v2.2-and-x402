@@ -1,0 +1,80 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ProofRails",
+  "colors": {
+    "primary": "#e11d8a",
+    "light": "#f8fafc",
+    "dark": "#020617"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": [
+    {
+      "group": "Start here",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "create-first-receipt",
+        "verify-receipt"
+      ]
+    },
+    {
+      "group": "Core concepts",
+      "pages": [
+        "concepts/receipts",
+        "concepts/evidence-bundles",
+        "concepts/iso-20022-artifacts",
+        "concepts/anchoring",
+        "concepts/verification-model"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api-reference/overview",
+        "api-reference/authentication",
+        "api-reference/receipts",
+        "api-reference/verification",
+        "api-reference/projects",
+        "api-reference/agents",
+        "api-reference/x402"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/local-development",
+        "guides/production-deployment",
+        "guides/agent-workflows",
+        "guides/flare-anchoring"
+      ]
+    },
+    {
+      "group": "x402",
+      "pages": [
+        "x402/overview",
+        "x402/coston2-testnet-demo"
+      ]
+    },
+    {
+      "group": "Security and limits",
+      "pages": [
+        "security/claims-and-limitations",
+        "security/key-management",
+        "security/known-limitations"
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "name": "App",
+      "url": "https://app.proofrails.com",
+      "icon": "square-arrow-up-right"
+    },
+    {
+      "name": "GitHub",
+      "url": "https://github.com/proofrails/middleware-ISO-v2.2-and-x402",
+      "icon": "github"
+    }
+  ]
+}

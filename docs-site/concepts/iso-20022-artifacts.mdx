@@ -1,0 +1,20 @@
+---
+title: ISO 20022-style artifacts
+description: How ProofRails maps payment evidence into finance-readable messages.
+---
+
+# ISO 20022-style artifacts
+
+ProofRails generates ISO 20022-style artifacts around onchain payments. These artifacts are intended to make crypto payment activity easier to reconcile, explain, and audit.
+
+Examples include:
+
+- `pain.001`: payment initiation style artifact
+- `pacs.008`: credit transfer style artifact
+- `camt.053`: statement style artifact
+- `camt.054`: notification style artifact
+- refund and investigation related messages where supported
+
+<Note>
+Use “ISO 20022-style” unless a stricter compliance or certification claim has been independently verified for the target deployment.
+</Note>

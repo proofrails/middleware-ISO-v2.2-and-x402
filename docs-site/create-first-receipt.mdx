@@ -1,0 +1,85 @@
+---
+title: Create your first receipt
+description: Submit an onchain payment reference and create a ProofRails receipt.
+---
+
+# Create your first receipt
+
+The core ProofRails action is receipt creation.
+
+```http
+POST /v1/iso/record-tip
+```
+
+## Request
+
+```bash
+curl -X POST http://localhost:8000/v1/iso/record-tip \
+  -H "X-API-Key: dev-admin-CHANGE_ME" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reference": "invoice-001",
+    "tip_tx_hash": "0xabc123",
+    "chain": "flare",
+    "amount": "100.0",
+    "currency": "FLR",
+    "sender_wallet": "0xSender",
+    "receiver_wallet": "0xReceiver",
+    "metadata": {
+      "invoice_id": "invoice-001",
+      "source": "merchant_checkout"
+    },
+    "tags": ["invoice", "demo"]
+  }'
+```
+
+## Required fields
+
+- `reference`
+- `tip_tx_hash`
+- `chain`
+- `amount`
+- `currency`
+- `sender_wallet`
+- `receiver_wallet`
+
+## Response
+
+```json
+{
+  "receipt_id": "<uuid>",
+  "status": "pending",
+  "operation_id": "<uuid>"
+}
+```
+
+`operation_id` is used to poll the processing workflow.
+
+## Poll operation status
+
+```bash
+curl http://localhost:8000/v1/operations/<operation_id> \
+  -H "X-API-Key: dev-admin-CHANGE_ME"
+```
+
+Common statuses:
+
+- `pending`
+- `processing`
+- `awaiting_anchor`
+- `anchored`
+- `failed`
+
+## Fetch the receipt
+
+```bash
+curl http://localhost:8000/v1/iso/receipts/<receipt_id> \
+  -H "X-API-Key: dev-admin-CHANGE_ME"
+```
+
+## Fetch generated ISO artifacts
+
+```bash
+curl http://localhost:8000/v1/iso/messages/<receipt_id> \
+  -H "X-API-Key: dev-admin-CHANGE_ME"
+```

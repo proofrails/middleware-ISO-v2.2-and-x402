@@ -1,0 +1,69 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Quickstart | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
+<a class="" href="introduction.html">Introduction</a>
+<a class="active" href="quickstart.html">Quickstart</a>
+<a class="" href="create-first-receipt.html">Create your first receipt</a>
+<a class="" href="verify-receipt.html">Verify a receipt</a>
+</div>
+<div class="nav-group"><div class="nav-title">Core concepts</div>
+<a class="" href="concepts__receipts.html">Receipts</a>
+<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
+<a class="" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
+<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
+<a class="" href="concepts__verification-model.html">Verification model</a>
+</div>
+<div class="nav-group"><div class="nav-title">API Reference</div>
+<a class="" href="api-reference__overview.html">API overview</a>
+<a class="" href="api-reference__authentication.html">Authentication</a>
+<a class="" href="api-reference__receipts.html">Receipts API</a>
+<a class="" href="api-reference__verification.html">Verification API</a>
+<a class="" href="api-reference__projects.html">Projects API</a>
+<a class="" href="api-reference__agents.html">Agents API</a>
+<a class="" href="api-reference__x402.html">x402 API</a>
+</div>
+<div class="nav-group"><div class="nav-title">Guides</div>
+<a class="" href="guides__local-development.html">Local development</a>
+<a class="" href="guides__production-deployment.html">Production deployment</a>
+<a class="" href="guides__agent-workflows.html">Agent workflows</a>
+<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
+</div>
+<div class="nav-group"><div class="nav-title">x402</div>
+<a class="" href="x402__overview.html">x402 overview</a>
+<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
+</div>
+<div class="nav-group"><div class="nav-title">Security and limits</div>
+<a class="" href="security__claims-and-limitations.html">Claims and limitations</a>
+<a class="" href="security__key-management.html">Key management</a>
+<a class="" href="security__known-limitations.html">Known limitations</a>
+</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Quickstart</h1><p>Independent documentation site for ProofRails receipts, evidence bundles, verification, x402, agents, and deployment.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>Quickstart</h1>
+<p>This quickstart gets the backend running locally, creates a receipt, polls status, and verifies the resulting evidence.</p>
+<h2>Prerequisites</h2>
+<ul>
+<li>Git</li>
+<li>Docker and Docker Compose, or Python 3.11+</li>
+<li>A terminal with access to the ProofRails repository</li>
+</ul>
+<h2>Clone</h2>
+<pre><code>git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
+cd middleware-ISO-v2.2-and-x402
+git checkout agentic
+cp .env.example .env</code></pre>
+<p>For local development, set:</p>
+<pre><code>API_KEYS=dev-admin-CHANGE_ME
+X402_MOCK_PAYMENTS=true
+RATE_LIMIT_ENABLED=false
+AUTO_CREATE_DB=true</code></pre>
+<h2>Run with Docker Compose</h2>
+<pre><code>docker compose up --build</code></pre>
+<p>The local API should be available at:</p>
+<pre><code>http://localhost:8000</code></pre>
+<p>Interactive OpenAPI docs:</p>
+<pre><code>http://localhost:8000/docs</code></pre>
+<h2>Run backend directly</h2>
+<pre><code>python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000</code></pre>
+<h2>Health check</h2>
+<pre><code>curl http://localhost:8000/v1/health</code></pre>
+<h2>Next step</h2>
+<p>Create a receipt with <a href="/create-first-receipt">Create your first receipt</a>.</p></article></main></div></body></html>

@@ -1,0 +1,86 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Introduction | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
+<a class="active" href="introduction.html">Introduction</a>
+<a class="" href="quickstart.html">Quickstart</a>
+<a class="" href="create-first-receipt.html">Create your first receipt</a>
+<a class="" href="verify-receipt.html">Verify a receipt</a>
+</div>
+<div class="nav-group"><div class="nav-title">Core concepts</div>
+<a class="" href="concepts__receipts.html">Receipts</a>
+<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
+<a class="" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
+<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
+<a class="" href="concepts__verification-model.html">Verification model</a>
+</div>
+<div class="nav-group"><div class="nav-title">API Reference</div>
+<a class="" href="api-reference__overview.html">API overview</a>
+<a class="" href="api-reference__authentication.html">Authentication</a>
+<a class="" href="api-reference__receipts.html">Receipts API</a>
+<a class="" href="api-reference__verification.html">Verification API</a>
+<a class="" href="api-reference__projects.html">Projects API</a>
+<a class="" href="api-reference__agents.html">Agents API</a>
+<a class="" href="api-reference__x402.html">x402 API</a>
+</div>
+<div class="nav-group"><div class="nav-title">Guides</div>
+<a class="" href="guides__local-development.html">Local development</a>
+<a class="" href="guides__production-deployment.html">Production deployment</a>
+<a class="" href="guides__agent-workflows.html">Agent workflows</a>
+<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
+</div>
+<div class="nav-group"><div class="nav-title">x402</div>
+<a class="" href="x402__overview.html">x402 overview</a>
+<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
+</div>
+<div class="nav-group"><div class="nav-title">Security and limits</div>
+<a class="" href="security__claims-and-limitations.html">Claims and limitations</a>
+<a class="" href="security__key-management.html">Key management</a>
+<a class="" href="security__known-limitations.html">Known limitations</a>
+</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Introduction</h1><p>Independent documentation site for ProofRails receipts, evidence bundles, verification, x402, agents, and deployment.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>ProofRails</h1>
+<p>ProofRails is an open translation and evidence layer for onchain payments. It turns blockchain activity into ISO 20022-style records, packages the supporting material into audit-grade evidence bundles, and anchors bundle hashes onchain so a receipt can be checked later.</p>
+<p>ProofRails does <strong>not</strong> move funds. It records, translates, packages, anchors, and verifies evidence around funds movement.</p>
+<h2>One-line version</h2>
+<p>ProofRails gives crypto payments the missing evidence layer: finance-readable receipts, ISO 20022-style artifacts, signed evidence bundles, and onchain verification.</p>
+<h2>Who this is for</h2>
+<ul>
+<li><strong>Developers</strong> integrating receipt creation, verification, x402 endpoints, or agent workflows.</li>
+<li><strong>Operators</strong> who need payment receipts, reconciliation artifacts, and verifiable evidence trails.</li>
+<li><strong>Partners and auditors</strong> evaluating how onchain events can map into finance-grade records.</li>
+</ul>
+<h2>Product model</h2>
+<p>A normal ProofRails workflow has five steps:</p>
+<p>1. A user, app, or agent submits an onchain payment reference.</p>
+<p>2. ProofRails creates a receipt record for that payment.</p>
+<p>3. The backend generates ISO 20022-style artifacts such as <code>pain.001</code>, <code>pacs.008</code>, <code>camt.053</code>, and <code>camt.054</code> where applicable.</p>
+<p>4. ProofRails builds an evidence bundle with receipt metadata, generated XML, manifest data, checksums, and signatures.</p>
+<p>5. The bundle hash is anchored onchain so anyone can later verify whether the evidence matches the recorded commitment.</p>
+<h2>What ProofRails verifies</h2>
+<p>ProofRails can verify:</p>
+<ul>
+<li>evidence integrity</li>
+<li>bundle hash consistency</li>
+<li>receipt metadata consistency</li>
+<li>onchain anchor match, when an anchor exists</li>
+<li>generated artifact references attached to the receipt</li>
+</ul>
+<p>ProofRails does not independently verify:</p>
+<ul>
+<li>invoice validity</li>
+<li>KYC status</li>
+<li>legal settlement finality</li>
+<li>sender intent</li>
+<li>bank acceptance</li>
+<li>regulatory certification</li>
+</ul>
+<h2>Main surfaces</h2>
+<ul>
+<li><strong>Receipt API</strong>: create, list, poll, fetch, and retry receipts.</li>
+<li><strong>Verifier</strong>: verify by receipt ID, bundle hash, bundle URL, or CID.</li>
+<li><strong>Evidence bundles</strong>: portable proof packages for receipts and generated artifacts.</li>
+<li><strong>Flare anchoring</strong>: onchain hash commitments for tamper-evident records.</li>
+<li><strong>x402</strong>: paid verification and premium endpoint experiments.</li>
+<li><strong>Agents</strong>: agent records, AI configuration, XMTP commands, and agent-triggered anchoring.</li>
+</ul>
+<h2>Current status</h2>
+<p>The active implementation lives on the <code>agentic</code> branch of the ProofRails repository. Treat it as a pre-production release until the release checklist, deployment configuration, and known limitations have been reviewed for the target environment.</p>
+<div class="callout note"><strong>Note</strong>
+<p>Use precise language publicly: ProofRails creates ISO 20022-style artifacts and verifiable evidence trails. Do not describe it as a bank, payment processor, custodian, compliance certification provider, or source of legal settlement finality.</p>
+</div></article></main></div></body></html>

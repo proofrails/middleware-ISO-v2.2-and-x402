@@ -1,0 +1,42 @@
+---
+title: Local development
+description: Run ProofRails locally for development and testing.
+---
+
+# Local development
+
+## Backend
+
+```bash
+cp .env.example .env
+```
+
+Recommended local settings:
+
+```env
+API_KEYS=dev-admin-CHANGE_ME
+DATABASE_URL=sqlite:///./local.db
+AUTO_CREATE_DB=true
+X402_MOCK_PAYMENTS=true
+RATE_LIMIT_ENABLED=false
+```
+
+Run:
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+## Web app
+
+```bash
+npm run dev --workspace web-alt
+```
+
+Default local app:
+
+```text
+http://localhost:3000
+```
+
+If running from WSL and viewing from Windows, use the WSL IP address instead of `127.0.0.1` when needed.

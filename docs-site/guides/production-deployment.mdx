@@ -1,0 +1,28 @@
+---
+title: Production deployment
+description: Production notes for ProofRails deployments.
+---
+
+# Production deployment
+
+Before production use, verify:
+
+- API keys and admin keys are not default values.
+- Secrets are stored in the deployment platform, not committed to Git.
+- `NEXT_PUBLIC_API_BASE` or API proxy configuration points to the correct production API.
+- Anchoring RPC, contract address, private key, and gas funding are configured.
+- x402 recipient, facilitator, chain, and token settings match the target environment.
+- Rate limiting and idempotency settings match expected traffic.
+- Webhooks use HTTPS endpoints and signature verification where supported.
+
+## Deployment surfaces
+
+- Backend FastAPI service
+- Web app / dashboard
+- Independent documentation site
+- Optional x402 test app or campaign app
+- Worker or polling process for anchoring and monitoring
+
+<Warning>
+Do not deploy with blank production environment variables. Blank envs can override working local defaults and cause production-only failures.
+</Warning>

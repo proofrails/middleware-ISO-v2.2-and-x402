@@ -1,0 +1,17 @@
+---
+title: Projects API
+description: Project registration and configuration endpoints.
+---
+
+# Projects API
+
+Projects provide tenancy and API key scoping.
+
+```http
+POST /v1/projects/register
+GET  /v1/projects
+GET  /v1/projects/{project_id}/config
+PUT  /v1/projects/{project_id}/config
+```
+
+Project configuration can include active chain settings, callbacks, and app-specific defaults depending on deployment.

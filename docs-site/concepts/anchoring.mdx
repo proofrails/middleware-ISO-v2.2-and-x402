@@ -1,0 +1,20 @@
+---
+title: Onchain anchoring
+description: How ProofRails uses onchain commitments for tamper-evident receipts.
+---
+
+# Onchain anchoring
+
+Anchoring commits the evidence bundle hash onchain. The anchor is not the whole receipt; it is a timestamped commitment to the evidence state.
+
+ProofRails can use Flare EVM anchoring for bundle hashes. A verified anchor means the submitted bundle hash matches the committed value associated with the receipt or anchor record.
+
+## Failure handling
+
+Receipts can temporarily fail to anchor because of RPC, gas, private key, contract, or worker issues. Use:
+
+```http
+POST /v1/iso/receipts/{receipt_id}/retry-anchor
+```
+
+when the underlying issue has been fixed.

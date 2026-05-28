@@ -1,0 +1,23 @@
+---
+title: Evidence bundles
+description: Portable verification artifacts for ProofRails receipts.
+---
+
+# Evidence bundles
+
+An evidence bundle is the portable proof package for a receipt.
+
+It can include:
+
+- receipt metadata
+- generated ISO XML files
+- checksums
+- manifest data
+- signature material
+- references to the anchor transaction
+
+The important property is hash sensitivity. If the bundle changes, its hash changes. That lets a verifier compare the supplied evidence against the onchain anchor.
+
+## Why bundles matter
+
+Block explorers show transactions. They do not automatically package the business context, ISO-style artifacts, metadata, and verification trail needed for finance operations. Evidence bundles make that context portable.
