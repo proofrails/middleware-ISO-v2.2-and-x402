@@ -1,252 +1,219 @@
 # ISO Middleware SDK (Python)
 
-> **📊 Implementation Status**: See project root [docs/FEATURE_STATUS.md](../../docs/FEATURE_STATUS.md) for comprehensive tracking.
-
-Python client library for the ISO 20022 Middleware Platform.
-
-## Feature Support
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| List Receipts | ✅ | With filters and scope |
-| Get Receipt | ✅ | Full receipt details |
-| Get Anchors | ✅ | Multi-chain anchor list |
-| Confirm Anchor | ✅ | Tenant-mode anchoring |
-| Verify Bundle | ✅ | URL and hash-based |
-| Verify CID | ✅ | IPFS/Arweave support |
-| Project Config | ✅ | Get/put per-project |
-| Statements | ✅ | camt.052 & camt.053 |
-| AI Status | ✅ | Check AI provider |
-| Auth Info | ✅ | Get current principal |
-| Refund | 🔜 | Being implemented |
+Python client for the ProofRails API.
 
 ## Installation
 
 ```bash
-pip install iso-middleware-sdk
+pip install -e packages/sdk-python   # from repo root
+# or
+pip install iso-middleware-sdk       # once published
 ```
 
-## Quick Start
+## Quick start
 
 ```python
 from iso_middleware_sdk import ISOClient
 
-# Initialize client
 client = ISOClient(
-    base_url="https://your-middleware-api.com",
-    api_key="your_api_key_here"
+    base_url="http://localhost:8000",
+    api_key="your_api_key",
 )
 
-# List receipts
-receipts = client.list_receipts(
-    status="anchored",
-    page=1,
-    page_size=20,
-    scope="mine"
-)
-
-print(f"Found {receipts['total']} receipts")
-for receipt in receipts['items']:
-    print(f"- {receipt['id']}: {receipt['amount']} {receipt['currency']}")
+page = client.list_receipts(scope="mine", page=1, page_size=20)
+print(f"{page['total']} receipts")
+for r in page["items"]:
+    print(r["id"], r["status"], r["amount"], r["currency"])
 ```
 
-## API Methods
+## API methods
 
 ### Receipts
+
 ```python
-# List receipts with filters
-receipts = client.list_receipts(
+# List receipts (paginated)
+page = client.list_receipts(
     status="anchored",
+    chain="flare",
+    scope="mine",    # or "all" (admin only)
     page=1,
     page_size=20,
-    scope="mine"  # or "all" (requires admin)
 )
+# page: { items, total, page, page_size }
 
-# Get specific receipt
-receipt = client.get_receipt("receipt-uuid-here")
+# Get one receipt
+receipt = client.get_receipt("receipt-uuid")
 
-# Get per-chain anchor transactions
-anchors = client.get_anchors("receipt-uuid-here")
+# Lightweight status poll
+status = client.get_receipt_status("receipt-uuid")
+
+# Per-chain anchor txids
+anchors = client.get_anchors("receipt-uuid")
 ```
 
 ### Verification
+
 ```python
-# Verify bundle by URL
-verification = client.verify_bundle(
-    bundle_url="https://example.com/bundle.zip"
-)
-
-# Verify bundle by hash
-verification = client.verify_bundle(
-    bundle_hash="0x..."
-)
-
-# Verify CID (IPFS/Arweave)
-verification = client.verify_cid(
-    cid="Qm...",
-    store="ipfs",  # or "arweave" or "auto"
-    receipt_id="optional-receipt-id"
-)
-```
-
-### Tenant Anchoring
-```python
-# Confirm anchor after manual on-chain submission
-result = client.confirm_anchor(
-    receipt_id="receipt-uuid",
-    flare_txid="0x...",
-    chain="flare"  # optional, uses default if not specified
-)
-```
-
-### Project Configuration
-```python
-# Get project configuration
-config = client.get_project_config("project-uuid")
-
-# Update project configuration
-client.put_project_config("project-uuid", updated_config)
+client.verify_bundle(bundle_url="https://...")
+client.verify_bundle(bundle_hash="0x...")
+client.verify_cid(cid="Qm...", store="ipfs", receipt_id="optional")
 ```
 
 ### Statements
+
 ```python
-# Generate daily statement (camt.053)
-statement = client.camt053(date="2026-01-19")
-
-# Generate intraday statement (camt.052)
-statement = client.camt052(date="2026-01-19", window="09:00-17:00")
-```
-
-### AI & Auth
-```python
-# Check AI status
-ai_status = client.ai_status()
-print(f"AI enabled: {ai_status['enabled']}, Provider: {ai_status['provider']}")
-
-# Get current principal information
-me = client.auth_me()
-print(f"Role: {me['role']}, Is Admin: {me['is_admin']}")
+daily = client.camt053(date="2026-01-19")
+intraday = client.camt052(date="2026-01-19", window="09:00-17:00")
 ```
 
 ### Refunds
+
 ```python
-# Initiate a refund for an anchored receipt
 refund = client.refund(
     original_receipt_id="receipt-uuid",
-    reason_code="CUST"  # Optional: CUST, DUPL, TECH, FRAD
+    reason_code="CUST",  # CUST | DUPL | TECH | FRAD
 )
-
-print(f"Refund receipt ID: {refund['refund_receipt_id']}")
-print(f"Status: {refund['status']}")
-
-# Example: Full refund workflow
-receipt = client.get_receipt("original-receipt-uuid")
-if receipt['status'] == 'anchored':
-    refund_result = client.refund(
-        original_receipt_id=receipt['id'],
-        reason_code="CUST"
-    )
-    print(f"Refund created: {refund_result['refund_receipt_id']}")
+# refund: { refund_receipt_id, status }
 ```
 
-## Self-hosted Anchoring (Tenant Mode) ✅
+### Tenant anchoring
 
-In tenant mode, the middleware generates evidence first (receipt becomes `awaiting_anchor`) and the tenant anchors on-chain.
+```python
+client.confirm_anchor(
+    receipt_id="receipt-uuid",
+    flare_txid="0x...",
+    chain="flare",
+)
+```
 
-High-level steps:
-1. Configure per-project anchoring chains (`execution_mode='tenant'`, `chains=[{name, contract, rpc_url?}]`).
-2. Send the bundle hash to your contract (e.g. `EvidenceAnchor.anchorEvidence(bundle_hash)`) using your own EVM tooling (web3.py, ethers, etc.).
-3. Call `confirm_anchor()` to let the platform validate the tx log against the configured contract.
+### Project configuration
 
-Multi-chain: if you configured multiple chains in `chains[]`, submit a confirm per chain. The receipt becomes `anchored` only once all are confirmed.
+```python
+config = client.get_project_config("project-uuid")
+client.put_project_config("project-uuid", {
+    "anchoring": {
+        "execution_mode": "platform",  # or "tenant"
+        "chains": [{"name": "flare", "contract": "0x...", "rpc_url": "..."}],
+    }
+})
+```
 
-### Example with web3.py
+### Agent CRUD
+
+```python
+agent = client.create_agent(
+    name="My Agent",
+    wallet_address="0x...",
+    xmtp_address="0x...",
+)
+
+agents = client.list_agents()
+agent = client.get_agent("agent-uuid")
+client.update_agent("agent-uuid", name="Renamed")
+client.delete_agent("agent-uuid")
+```
+
+### Agent anchoring config
+
+```python
+config = client.get_agent_anchoring_config("agent-uuid")
+
+client.update_agent_anchoring_config(
+    "agent-uuid",
+    auto_anchor_enabled=True,
+    anchor_on_payment=False,
+    anchor_wallet_address="0x...",
+)
+```
+
+### Agent anchor data
+
+```python
+# Hash arbitrary JSON and optionally submit on-chain
+result = client.anchor_agent_data(
+    agent_id="agent-uuid",
+    data={"invoice_id": "INV-001", "amount": "100.00"},
+    description="Invoice proof",
+    chain="flare",           # flare | coston2 | base | sepolia
+    submit_onchain=True,
+)
+# result: { id, agent_id, anchor_hash, chain, status, submit_onchain }
+
+# List recent anchor records
+records = client.list_agent_anchors("agent-uuid", days=7)
+```
+
+### x402 analytics
+
+```python
+payments = client.list_x402_payments(limit=50)
+revenue = client.get_x402_revenue(days=7)
+# revenue: { total_revenue, payment_count, days, by_endpoint }
+```
+
+### Misc
+
+```python
+ai = client.ai_status()
+me = client.auth_me()
+```
+
+## Tenant anchoring — full example
 
 ```python
 from web3 import Web3
 from iso_middleware_sdk import ISOClient
 
-# Initialize SDK client
-client = ISOClient(
-    base_url="https://your-middleware-api.com",
-    api_key="your_api_key_here"
-)
+client = ISOClient(base_url="http://localhost:8000", api_key="...")
 
-# Get project configuration to find contract address
-config = client.get_project_config("your-project-id")
-chain = config['anchoring']['chains'][0]  # First configured chain
+# Get bundle hash
+receipt = client.get_receipt("receipt-uuid")
 
-# Connect to blockchain
-w3 = Web3(Web3.HTTPProvider(chain['rpc_url'] or 'https://rpc.ankr.com/flare'))
+# Anchor on-chain
+w3 = Web3(Web3.HTTPProvider("https://flare-api.flare.network/ext/C/rpc"))
 contract = w3.eth.contract(
-    address=chain['contract'],
+    address="0x<anchor-contract>",
     abi=[{
         "type": "function",
         "name": "anchorEvidence",
         "inputs": [{"name": "bundleHash", "type": "bytes32"}],
-        "outputs": []
-    }]
+        "outputs": [],
+    }],
 )
-
-# Get receipt and bundle hash
-receipt = client.get_receipt("receipt-uuid")
-bundle_hash = receipt['bundle_hash']
-
-# Anchor on-chain
 tx = contract.functions.anchorEvidence(
-    Web3.to_bytes(hexstr=bundle_hash)
-).transact({'from': your_account})
-
-# Wait for confirmation
+    Web3.to_bytes(hexstr=receipt["bundle_hash"])
+).transact({"from": your_account})
 tx_receipt = w3.eth.wait_for_transaction_receipt(tx)
 
-# Confirm back to middleware
+# Confirm to middleware
 client.confirm_anchor(
-    receipt_id=receipt['id'],
+    receipt_id=receipt["id"],
     flare_txid=tx.hex(),
-    chain=chain['name']
+    chain="flare",
 )
 ```
 
-## Development
-
-```bash
-# Install dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Format code
-black src/
-ruff check src/
-```
-
-## Contributing
-
-When adding new features:
-1. Add the method to `src/iso_middleware_sdk/client.py`
-2. Update this README with examples
-3. Update [docs/FEATURE_STATUS.md](../../docs/FEATURE_STATUS.md)
-4. Add tests if applicable
-5. Update type hints
-
-## Error Handling
-
-The SDK raises exceptions for HTTP errors:
+## Error handling
 
 ```python
 from iso_middleware_sdk import ISOClient
-from iso_middleware_sdk.exceptions import APIError, AuthenticationError
+import requests
 
 client = ISOClient(base_url="...", api_key="...")
 
 try:
     receipt = client.get_receipt("invalid-id")
-except AuthenticationError:
-    print("Invalid API key")
-except APIError as e:
-    print(f"API error: {e.status_code} - {e.message}")
+except requests.HTTPError as e:
+    print(e.response.status_code, e.response.text)
+```
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+black src/
+ruff check src/
 ```
 
 ## License

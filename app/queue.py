@@ -37,4 +37,5 @@ def enqueue_receipt_processing(
         callback_url=callback_url,
         reason_code=reason_code,
         is_refund=is_refund,
+        job_timeout=120,
     )

@@ -12,8 +12,7 @@
     "build": "npm -ws run build",
     "clean": "npm -ws run clean || echo",
     "test": "npm -ws run test || echo",
-    "compile": "hardhat compile",
-    "test:contracts": "hardhat test"
+    "docs:check": "node scripts/check-docs-links.mjs"
   },
   "dependencies": {
     "ethers": "^6.13.1",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Bot, Brain, Activity, BarChart3, DollarSign, TrendingUp, Anchor } from "lucide-react";
 import AgentsList from "@/components/agents/AgentsList";
 import AgentDetails from "@/components/agents/AgentDetails";
@@ -13,6 +13,10 @@ import AgentRevenue from "@/components/agents/AgentRevenue";
 import AgentChat from "@/components/agents/AgentChat";
 import AgentAnchoring from "@/components/agents/AgentAnchoring";
 
+// All API calls go through /api/proxy so the server-side project API key is
+// injected automatically. Never call API_BASE directly from the browser.
+const api = (path: string) => `/api/proxy${path}`;
+
 interface Agent {
   id: string;
   name: string;
@@ -22,13 +26,18 @@ interface Agent {
   created_at: string;
 }
 
-export default function AgentsPage() {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
+interface AnchoringConfig {
+  auto_anchor_enabled: boolean;
+  anchor_on_payment: boolean;
+  anchor_wallet?: string;
+}
 
-  // State
+export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [activeTab, setActiveTab] = useState<"agents" | "ai" | "activity" | "analytics" | "pricing" | "revenue" | "anchoring">("agents");
+  const [activeTab, setActiveTab] = useState<
+    "agents" | "ai" | "activity" | "analytics" | "pricing" | "revenue" | "anchoring"
+  >("agents");
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(true);
   const [showNewAgentForm, setShowNewAgentForm] = useState(false);
@@ -41,16 +50,15 @@ export default function AgentsPage() {
   const [testResponse, setTestResponse] = useState("");
   const [revenueDays, setRevenueDays] = useState(7);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
-  
-  // Anchoring state
-  const [anchoringConfig, setAnchoringConfig] = useState({
+
+  const [anchoringConfig, setAnchoringConfig] = useState<AnchoringConfig>({
     auto_anchor_enabled: false,
     anchor_on_payment: false,
-    anchor_wallet: undefined as string | undefined,
+    anchor_wallet: undefined,
   });
   const [anchors, setAnchors] = useState<any[]>([]);
+  const [anchoringConfigLoading, setAnchoringConfigLoading] = useState(false);
 
-  // AI Config
   const [aiConfig, setAiConfig] = useState({
     ai_mode: "simple",
     ai_system_prompt: "",
@@ -58,7 +66,6 @@ export default function AgentsPage() {
     ai_model: "gpt-4o-mini",
   });
 
-  // Data
   const [pricing, setPricing] = useState<any[]>([]);
   const [revenue, setRevenue] = useState<any>(null);
   const [activityLogs] = useState([
@@ -78,65 +85,95 @@ export default function AgentsPage() {
     ],
   });
 
-  // Load data
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Load anchors when switching to anchoring tab
-  useEffect(() => {
-    if (selectedAgent && activeTab === "anchoring") {
-      loadAnchors();
-    }
-  }, [selectedAgent, activeTab]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const agentsRes = await fetch(`${API_BASE}/v1/agents`);
-      if (agentsRes.ok) {
-        setAgents(await agentsRes.json());
-      }
-
-      const pricingRes = await fetch(`${API_BASE}/v1/x402/pricing`);
-      if (pricingRes.ok) {
-        setPricing(await pricingRes.json());
-      }
-
+      const [agentsRes, pricingRes] = await Promise.all([
+        fetch(api("/v1/agents")),
+        fetch(api("/v1/x402/pricing")),
+      ]);
+      if (agentsRes.ok) setAgents(await agentsRes.json());
+      if (pricingRes.ok) setPricing(await pricingRes.json());
       await loadRevenue(revenueDays);
     } catch (err) {
       console.error("Failed to load data:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [revenueDays]);
 
   const loadRevenue = async (days: number) => {
     try {
-      const res = await fetch(`${API_BASE}/v1/x402/revenue?days=${days}`);
-      if (res.ok) {
-        setRevenue(await res.json());
-      }
+      const res = await fetch(api(`/v1/x402/revenue?days=${days}`));
+      if (res.ok) setRevenue(await res.json());
     } catch (err) {
       console.error("Failed to load revenue:", err);
     }
   };
 
-  // Agent operations
+  const loadAnchoringConfig = useCallback(async (agent: Agent) => {
+    setAnchoringConfigLoading(true);
+    try {
+      const res = await fetch(api(`/v1/agents/${agent.id}/anchoring-config`));
+      if (res.ok) {
+        const data = await res.json();
+        setAnchoringConfig({
+          auto_anchor_enabled: data.auto_anchor_enabled ?? false,
+          anchor_on_payment: data.anchor_on_payment ?? false,
+          anchor_wallet: data.anchor_wallet ?? undefined,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load anchoring config:", err);
+    } finally {
+      setAnchoringConfigLoading(false);
+    }
+  }, []);
+
+  const loadAnchors = useCallback(async (agent: Agent) => {
+    try {
+      const res = await fetch(api(`/v1/agents/${agent.id}/anchors`));
+      if (res.ok) setAnchors(await res.json());
+    } catch (err) {
+      console.error("Failed to load anchors:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // When agent selection changes, load its anchoring config immediately
+  useEffect(() => {
+    if (selectedAgent) {
+      loadAnchoringConfig(selectedAgent);
+    } else {
+      setAnchoringConfig({ auto_anchor_enabled: false, anchor_on_payment: false, anchor_wallet: undefined });
+      setAnchors([]);
+    }
+  }, [selectedAgent?.id]);
+
+  // Load anchors when switching to the anchoring tab
+  useEffect(() => {
+    if (selectedAgent && activeTab === "anchoring") {
+      loadAnchors(selectedAgent);
+    }
+  }, [selectedAgent?.id, activeTab]);
+
   const createAgent = async (formData: { name: string; wallet_address: string; xmtp_address?: string }) => {
     try {
-      const res = await fetch(`${API_BASE}/v1/agents`, {
+      const res = await fetch(api("/v1/agents"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-
       if (res.ok) {
         await loadData();
         setShowNewAgentForm(false);
         setShowTemplateModal(false);
       } else {
-        alert("Failed to create agent");
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to create agent: ${err.detail || res.status}`);
       }
     } catch (err) {
       alert("Failed to create agent");
@@ -145,19 +182,18 @@ export default function AgentsPage() {
 
   const updateAgent = async (formData: { name: string; wallet_address: string; xmtp_address?: string }) => {
     if (!selectedAgent) return;
-    
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}`, {
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
-
       if (res.ok) {
         await loadData();
         setShowEditModal(false);
       } else {
-        alert("Failed to update agent");
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to update agent: ${err.detail || res.status}`);
       }
     } catch (err) {
       alert("Failed to update agent");
@@ -165,13 +201,9 @@ export default function AgentsPage() {
   };
 
   const deleteAgent = async () => {
-    if (!selectedAgent || !confirm("Delete this agent?")) return;
-
+    if (!selectedAgent || !confirm(`Delete agent "${selectedAgent.name}"? This cannot be undone.`)) return;
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}`), { method: "DELETE" });
       if (res.ok) {
         await loadData();
         setSelectedAgent(null);
@@ -194,11 +226,8 @@ export default function AgentsPage() {
 
   const downloadAgent = async () => {
     if (!selectedAgent) return;
-    
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}/download-template`, {
-        method: "POST",
-      });
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}/download-template`), { method: "POST" });
       if (res.ok) {
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
@@ -208,7 +237,7 @@ export default function AgentsPage() {
         a.click();
       }
     } catch (err) {
-      alert("Failed to download agent");
+      alert("Failed to download agent template");
     }
   };
 
@@ -220,98 +249,111 @@ export default function AgentsPage() {
 
   const sendTestMessage = async (message: string) => {
     if (!selectedAgent) return "";
-    
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}/test-ai`, {
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}/test-ai`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ test_message: message }),
       });
-
       if (res.ok) {
         const data = await res.json();
-        const response = `✅ Success!\n\nMode: ${data.mode}\nParsed: ${JSON.stringify(data.parsed_result, null, 2)}`;
+        const response = `Mode: ${data.mode}\nParsed: ${JSON.stringify(data.parsed_result, null, 2)}`;
         setTestResponse(response);
         return response;
       }
-      return "❌ Test failed";
+      return `Test failed (${res.status})`;
     } catch (err) {
-      return "❌ Error sending test message";
+      return "Error sending test message";
     }
   };
 
   const saveAIConfig = async () => {
     if (!selectedAgent) return;
-    
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}/ai-config`, {
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}/ai-config`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(aiConfig),
       });
-      
-      if (res.ok) {
-        alert("✅ AI configuration saved!");
-      } else {
-        alert("❌ Failed to save AI config");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to save AI config: ${err.detail || res.status}`);
       }
     } catch (err) {
-      alert("❌ Failed to save AI config");
+      alert("Failed to save AI config");
     }
   };
 
   const handleChatMessage = async (message: string) => {
     try {
-      const res = await fetch(`${API_BASE}/v1/ai/parse-command`, {
+      const res = await fetch(api("/v1/ai/parse-command"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message,
-          system_prompt: `You are a helpful assistant for the ISO 20022 Payment Middleware agent setup system.
-Help users understand agent configuration, AI modes, deployment, x402 payments, and troubleshooting.
-Be concise, friendly, and technical.`,
+          system_prompt:
+            "You are a helpful assistant for the ProofRails agent setup system. " +
+            "Help users understand agent configuration, AI modes, deployment, x402 payments, and troubleshooting. " +
+            "Be concise and technical.",
         }),
       });
-
       if (res.ok) {
         const data = await res.json();
-        return data.raw_response || "I'm here to help! Could you rephrase your question?";
+        return data.raw_response || "Could you rephrase your question?";
       }
-      return "Sorry, I encountered an error.";
-    } catch (err) {
-      return "Sorry, I encountered an error.";
-    }
-  };
-
-  // Anchoring functions
-  const loadAnchors = async () => {
-    if (!selectedAgent) return;
-    try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}/anchors`);
-      if (res.ok) {
-        setAnchors(await res.json());
-      }
-    } catch (err) {
-      console.error("Failed to load anchors:", err);
+      return "Error contacting AI service.";
+    } catch {
+      return "Error contacting AI service.";
     }
   };
 
   const saveAnchoringConfig = async () => {
     if (!selectedAgent) return;
     try {
-      const res = await fetch(`${API_BASE}/v1/agents/${selectedAgent.id}/anchoring-config`, {
+      const payload = {
+        auto_anchor_enabled: anchoringConfig.auto_anchor_enabled,
+        anchor_on_payment: anchoringConfig.anchor_on_payment,
+        // backend field name is anchor_wallet_address
+        anchor_wallet_address: anchoringConfig.anchor_wallet || null,
+      };
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}/anchoring-config`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(anchoringConfig),
+        body: JSON.stringify(payload),
       });
-      
       if (res.ok) {
-        alert("✅ Anchoring configuration saved!");
+        const data = await res.json();
+        setAnchoringConfig({
+          auto_anchor_enabled: data.auto_anchor_enabled,
+          anchor_on_payment: data.anchor_on_payment,
+          anchor_wallet: data.anchor_wallet ?? undefined,
+        });
       } else {
-        alert("❌ Failed to save anchoring config");
+        const err = await res.json().catch(() => ({}));
+        alert(`Failed to save anchoring config: ${err.detail || res.status}`);
       }
     } catch (err) {
-      alert("❌ Failed to save anchoring config");
+      alert("Failed to save anchoring config");
+    }
+  };
+
+  const submitAnchorData = async (data: object, description: string, chain: string, submitOnchain: boolean) => {
+    if (!selectedAgent) return null;
+    try {
+      const res = await fetch(api(`/v1/agents/${selectedAgent.id}/anchor-data`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data, description, chain, submit_onchain: submitOnchain }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        await loadAnchors(selectedAgent);
+        return result;
+      }
+      const err = await res.json().catch(() => ({}));
+      return { error: err.detail || `HTTP ${res.status}` };
+    } catch (err: any) {
+      return { error: err.message };
     }
   };
 
@@ -327,7 +369,6 @@ Be concise, friendly, and technical.`,
 
   return (
     <div className="flex h-[calc(100vh-73px)] relative">
-      {/* Left Sidebar */}
       <AgentsList
         agents={agents}
         selectedAgent={selectedAgent}
@@ -345,10 +386,8 @@ Be concise, friendly, and technical.`,
         selectedTemplate={selectedTemplate}
       />
 
-      {/* Main Content */}
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="p-6">
-          {/* Tabs */}
           <div className="flex gap-2 mb-6 border-b border-slate-200 overflow-x-auto">
             {tabs.map((tab) => (
               <button
@@ -368,7 +407,6 @@ Be concise, friendly, and technical.`,
             ))}
           </div>
 
-          {/* Tab Content */}
           {activeTab === "agents" && selectedAgent && (
             <AgentDetails
               agent={selectedAgent}
@@ -380,7 +418,7 @@ Be concise, friendly, and technical.`,
               onClone={cloneAgent}
               onDelete={deleteAgent}
               onDownload={downloadAgent}
-              API_BASE={API_BASE}
+              API_BASE=""
             />
           )}
 
@@ -428,16 +466,17 @@ Be concise, friendly, and technical.`,
             <AgentAnchoring
               agent={selectedAgent}
               config={anchoringConfig}
+              configLoading={anchoringConfigLoading}
               anchors={anchors}
-              onConfigChange={(newConfig) => setAnchoringConfig({ ...anchoringConfig, ...newConfig })}
+              onConfigChange={(patch) => setAnchoringConfig((prev) => ({ ...prev, ...patch }))}
               onSaveConfig={saveAnchoringConfig}
-              API_BASE={API_BASE}
+              onAnchorData={submitAnchorData}
+              onRefreshAnchors={() => loadAnchors(selectedAgent)}
             />
           )}
         </div>
       </div>
 
-      {/* Modals */}
       <AgentModals
         selectedAgent={selectedAgent}
         showEditModal={showEditModal}
@@ -454,7 +493,6 @@ Be concise, friendly, and technical.`,
           setShowTemplateModal(false);
           setShowNewAgentForm(true);
           setSelectedTemplate(template);
-          // Apply template AI configuration
           setAiConfig({
             ai_mode: template.ai_mode,
             ai_system_prompt: template.system_prompt || "",
@@ -465,7 +503,6 @@ Be concise, friendly, and technical.`,
         testResponse={testResponse}
       />
 
-      {/* AI Chat */}
       <AgentChat
         show={showChat}
         onToggle={() => setShowChat(!showChat)}

@@ -34,10 +34,10 @@ export default function OperationsPage() {
         <div className="card p-4">
           <div className="text-sm font-semibold mb-2">Quick Links</div>
           <div className="space-y-2 text-sm">
-            <a href={`${apiBase}/docs#/verify`} target="_blank" rel="noreferrer" className="block text-slate-600 hover:text-slate-900 underline">
+            <a href={`${apiBase}/docs`} target="_blank" rel="noreferrer" className="block text-slate-600 hover:text-slate-900 underline">
               Verification API Docs
             </a>
-            <a href={`${apiBase}/docs#/statements`} target="_blank" rel="noreferrer" className="block text-slate-600 hover:text-slate-900 underline">
+            <a href={`${apiBase}/docs`} target="_blank" rel="noreferrer" className="block text-slate-600 hover:text-slate-900 underline">
               Statements API Docs
             </a>
           </div>

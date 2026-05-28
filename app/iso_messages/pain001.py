@@ -53,7 +53,24 @@ def _maybe_add_fx(root: etree._Element, receipt: Dict[str, Any], cfg: OrgConfigM
         eq.text = eq_amt
         xri = etree.SubElement(amt_node, "XchgRateInf")
         etree.SubElement(xri, "XchgRate").text = str(fx_rate)
-        # Optional: add rate source fields as needed in future
+
+        # Embed rate provenance so auditors can trace back to the on-chain source
+        fx_source = receipt.get("fx_source")
+        fx_feed = receipt.get("fx_feed")
+        fx_ts = receipt.get("fx_timestamp")
+        if fx_source:
+            # RateSrc / Desc carry the oracle ID and feed ID (ISO 20022 SupplementaryData)
+            etree.SubElement(xri, "RateSrc").text = fx_source
+        if fx_feed:
+            etree.SubElement(xri, "Desc").text = fx_feed
+        if fx_ts:
+            # Store as ISO 8601 timestamp in a custom element
+            from datetime import datetime as _dt, timezone as _tz
+            try:
+                ts_iso = _dt.utcfromtimestamp(int(fx_ts)).replace(tzinfo=_tz.utc).isoformat()
+                etree.SubElement(xri, "Dt").text = ts_iso
+            except Exception:
+                pass
 
         return etree.tostring(root, pretty_print=True, xml_declaration=True, encoding="UTF-8", standalone="yes")
     except Exception:

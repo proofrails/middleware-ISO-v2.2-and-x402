@@ -1,0 +1,30 @@
+# Docker Compose override for demo mode.
+#
+# Run with:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up --build
+#
+# This starts the full middleware stack with simulated blockchain anchoring.
+# No wallet, no private key, no RPC endpoint needed.
+# Visit http://localhost:8000/demo to see the demo landing page.
+
+services:
+  api:
+    environment:
+      DEMO_MODE: "true"
+      DEMO_AUTO_PRODUCE: "true"
+      ANCHOR_PRIVATE_KEY: ""
+      AUTO_CREATE_DB: "1"
+      ALLOW_ORIGINS: "*"
+    ports:
+      - "8000:8000"
+
+  worker:
+    environment:
+      DEMO_MODE: "true"
+      ANCHOR_PRIVATE_KEY: ""
+      # In demo mode the worker does not need to start the anchor poller
+      # since anchoring is simulated inline in process_receipt_job.
+      # Run only the default queue.
+      RQ_QUEUES: "default"
+    # Override command to skip anchor worker startup that requires ANCHOR_PRIVATE_KEY
+    command: python worker.py

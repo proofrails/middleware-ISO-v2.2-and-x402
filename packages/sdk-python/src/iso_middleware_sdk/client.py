@@ -200,6 +200,180 @@ class ISOClient:
         response.raise_for_status()
         return response.json()
 
+    # ── Agent CRUD ────────────────────────────────────────────────────────────
+
+    def create_agent(self, name: str, wallet_address: str, **kwargs) -> Dict[str, Any]:
+        """Create an agent configuration."""
+        payload: Dict[str, Any] = {"name": name, "wallet_address": wallet_address}
+        payload.update(kwargs)
+        response = requests.post(
+            self._url("/v1/agents"),
+            json=payload,
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def list_agents(self) -> list:
+        """List all agents for the current project."""
+        response = requests.get(
+            self._url("/v1/agents"),
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_agent(self, agent_id: str) -> Dict[str, Any]:
+        """Get a single agent by ID."""
+        response = requests.get(
+            self._url(f"/v1/agents/{agent_id}"),
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def update_agent(self, agent_id: str, **fields) -> Dict[str, Any]:
+        """Update an agent's configuration."""
+        response = requests.put(
+            self._url(f"/v1/agents/{agent_id}"),
+            json=fields,
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def delete_agent(self, agent_id: str) -> None:
+        """Delete an agent."""
+        response = requests.delete(
+            self._url(f"/v1/agents/{agent_id}"),
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+
+    # ── Agent anchoring ───────────────────────────────────────────────────────
+
+    def get_agent_anchoring_config(self, agent_id: str) -> Dict[str, Any]:
+        """Get the anchoring configuration for an agent."""
+        response = requests.get(
+            self._url(f"/v1/agents/{agent_id}/anchoring-config"),
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def update_agent_anchoring_config(
+        self,
+        agent_id: str,
+        auto_anchor_enabled: Optional[bool] = None,
+        anchor_on_payment: Optional[bool] = None,
+        anchor_wallet_address: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Update anchoring configuration for an agent."""
+        payload: Dict[str, Any] = {}
+        if auto_anchor_enabled is not None:
+            payload["auto_anchor_enabled"] = auto_anchor_enabled
+        if anchor_on_payment is not None:
+            payload["anchor_on_payment"] = anchor_on_payment
+        if anchor_wallet_address is not None:
+            payload["anchor_wallet_address"] = anchor_wallet_address
+        response = requests.put(
+            self._url(f"/v1/agents/{agent_id}/anchoring-config"),
+            json=payload,
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def anchor_agent_data(
+        self,
+        agent_id: str,
+        data: Dict[str, Any],
+        description: Optional[str] = None,
+        chain: str = "flare",
+        submit_onchain: bool = False,
+    ) -> Dict[str, Any]:
+        """Hash arbitrary JSON data and optionally anchor it on-chain.
+
+        Args:
+            agent_id: Agent ID to associate the anchor with
+            data: Arbitrary JSON-serialisable dict to hash
+            description: Optional human-readable label
+            chain: Target chain (default: flare)
+            submit_onchain: If True, immediately submit anchor transaction
+
+        Returns:
+            Dict with anchor_hash (0x-prefixed SHA-256), id, status
+        """
+        payload: Dict[str, Any] = {
+            "data": data,
+            "chain": chain,
+            "submit_onchain": submit_onchain,
+        }
+        if description:
+            payload["description"] = description
+        response = requests.post(
+            self._url(f"/v1/agents/{agent_id}/anchor-data"),
+            json=payload,
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def list_agent_anchors(self, agent_id: str, days: int = 7) -> list:
+        """List recent anchor records for an agent."""
+        response = requests.get(
+            self._url(f"/v1/agents/{agent_id}/anchors"),
+            params={"days": days},
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    # ── x402 analytics ────────────────────────────────────────────────────────
+
+    def list_x402_payments(self, limit: int = 50) -> list:
+        """List recent x402 micropayments."""
+        response = requests.get(
+            self._url("/v1/x402/payments"),
+            params={"limit": limit},
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_x402_revenue(self, days: int = 7) -> Dict[str, Any]:
+        """Get x402 revenue analytics (admin only)."""
+        response = requests.get(
+            self._url("/v1/x402/revenue"),
+            params={"days": days},
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    # ── Receipt status polling ────────────────────────────────────────────────
+
+    def get_receipt_status(self, receipt_id: str) -> Dict[str, Any]:
+        """Lightweight receipt status check (no ISO XML blobs)."""
+        response = requests.get(
+            self._url(f"/v1/iso/receipts/{receipt_id}/status"),
+            headers=self._headers(),
+            timeout=self.timeout,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def refund(self, original_receipt_id: str, reason_code: Optional[str] = None) -> Dict[str, Any]:
         """Initiate a refund/return for an existing receipt.
         

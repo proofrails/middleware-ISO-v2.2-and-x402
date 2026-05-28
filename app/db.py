@@ -10,7 +10,12 @@ settings = get_settings()
 DATABASE_URL = settings.effective_database_url
 
 # Use a wide type to allow SQLAlchemy engine kwargs mutations (e.g. connect_args for sqlite)
-engine_kwargs: dict[str, object] = {"echo": settings.sql_echo, "future": True}
+engine_kwargs: dict[str, object] = {
+    "echo": settings.sql_echo,
+    "future": True,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,  # Recycle connections every 5 min to avoid stale/corrupt connections
+}
 
 if DATABASE_URL.startswith("sqlite"):
     # Needed for SQLite in multithreaded FastAPI dev
