@@ -324,3 +324,90 @@ def generate_usdt0_payment_payload(
         "amount": amount,
         "settlement_tx_hash": settlement_tx_hash,
     })
+
+
+# ── Flare payment replay protection + persistence ─────────────────────────────
+#
+# These helpers are shared by the x402-premium gating route (app/api/routes/
+# x402_premium.py) for the USDT0 (eip3009_facilitator) and native FLR
+# (native_transfer) paths. The Base USDC path uses X402PaymentVerifier above.
+
+
+async def _check_tx_not_replayed(session, tx_hash: Optional[str]) -> None:
+    """Raise HTTP 409 if a verified payment already exists for ``tx_hash``.
+
+    On-chain settlement / transfer txs are single-use: a client must not be
+    able to unlock multiple paid responses by replaying one payment proof.
+    """
+    if not tx_hash:
+        return
+    existing = (
+        session.query(models.X402Payment)
+        .filter(
+            models.X402Payment.tx_hash == tx_hash,
+            models.X402Payment.status == "verified",
+        )
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="payment_already_used")
+
+
+async def _record_usdt0_payment(
+    session,
+    payment,
+    facilitator_payment_id: Optional[str],
+    endpoint: str,
+    recipient: str,
+    raw_amount: int,
+) -> "models.X402Payment":
+    """Persist a verified USDT0 EIP-3009 facilitator payment."""
+    row = models.X402Payment(
+        payment_type="eip3009_facilitator",
+        tx_hash=payment.settlement_tx_hash,
+        amount=Decimal(payment.amount) if payment.amount else Decimal(0),
+        raw_amount=str(raw_amount),
+        currency="USDT0",
+        chain="flare",
+        chain_id="14",
+        token_address=payment.token,
+        facilitator_address=payment.facilitator,
+        payer_address=payment.from_address,
+        recipient=recipient,
+        eip3009_nonce=payment.nonce,
+        authorization_type=payment.authorization_type,
+        facilitator_payment_id=facilitator_payment_id,
+        endpoint=endpoint,
+        status="verified",
+        verified_at=datetime.utcnow(),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+async def _record_flr_payment(
+    session,
+    payment,
+    endpoint: str,
+    recipient: str,
+) -> "models.X402Payment":
+    """Persist a verified native FLR transfer payment."""
+    row = models.X402Payment(
+        payment_type="native_transfer",
+        tx_hash=payment.tx_hash,
+        amount=Decimal(payment.amount) if payment.amount else Decimal(0),
+        currency="FLR",
+        chain="flare",
+        chain_id="14",
+        payer_address=payment.from_address,
+        recipient=recipient,
+        endpoint=endpoint,
+        status="verified",
+        verified_at=datetime.utcnow(),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row

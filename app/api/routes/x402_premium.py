@@ -44,7 +44,16 @@ router = APIRouter(tags=["x402-premium"])
 
 X402_RECIPIENT = os.getenv("X402_RECIPIENT_ADDRESS", "0x0690d8cFb1897c12B2C0b34660edBDE4E20ff4d8")
 X402_FLR_RECIPIENT = os.getenv("X402_FLR_RECIPIENT", X402_RECIPIENT)
-_MOCK = os.getenv("X402_MOCK_PAYMENTS", "false").lower() == "true"
+
+
+def _mock_enabled() -> bool:
+    """Read the dev/test payment-bypass flag fresh on every request.
+
+    Reading at call time (rather than caching at import) ensures the flag
+    reflects the current environment and never leaks across tests that toggle
+    ``X402_MOCK_PAYMENTS``.
+    """
+    return os.getenv("X402_MOCK_PAYMENTS", "false").lower() == "true"
 
 _FLR_VERIFY    = os.getenv("X402_FLR_VERIFY",    "0.05")
 _FLR_STATEMENT = os.getenv("X402_FLR_STATEMENT", "0.25")
@@ -56,6 +65,140 @@ _FLR_REFUND    = os.getenv("X402_FLR_REFUND",     "0.15")
 
 # ── Payment guard ─────────────────────────────────────────────────────────────
 
+def _payment_required_response(
+    s,
+    usdc_amount: str,
+    usdc_recipient: str,
+    flr_amount: str,
+    flr_recipient: str,
+    endpoint_label: str,
+) -> JSONResponse:
+    """Build the HTTP 402 Payment Required response.
+
+    The body carries the x402-standard ``accepts`` array (structured payment
+    options) plus a legacy ``accepted`` list for backward compatibility with
+    older clients/tests.
+    """
+    from app.x402_flare import build_402_payment_options
+
+    ref = f"x402:{endpoint_label}:{datetime.utcnow().timestamp()}"
+
+    accepts = build_402_payment_options(
+        usdc_enabled=s.x402_enable_base_usdc,
+        usdt0_enabled=s.x402_enable_flare_usdt0,
+        flr_enabled=s.x402_enable_flare_native_flr,
+        usdc_recipient=s.x402_effective_usdc_recipient or usdc_recipient,
+        usdt0_recipient=s.x402_effective_usdt0_recipient,
+        flr_recipient=s.x402_effective_flr_recipient or flr_recipient,
+        usdc_amount=usdc_amount,
+        usdt0_amount=s.x402_usdt0_amount,
+        flr_amount=flr_amount,
+        usdc_token=s.x402_usdc_address,
+        usdt0_token=s.x402_usdt0_flare_address,
+        facilitator=s.x402_flare_facilitator_address,
+        base_chain_id=8453,
+        flare_chain_id=s.x402_flare_chain_id,
+    )
+
+    return JSONResponse(
+        status_code=402,
+        content={
+            "version": "1.0",
+            "error": "payment_required",
+            "accepts": accepts,
+            # Legacy shape — kept for backward compatibility.
+            "accepted": [
+                {"amount": usdc_amount, "recipient": usdc_recipient,
+                 "currency": "USDC", "chain": "base", "reference": ref},
+                {"amount": flr_amount, "recipient": flr_recipient,
+                 "currency": "FLR", "chain": "flare", "reference": ref},
+            ],
+            "amount": usdc_amount,
+            "recipient": usdc_recipient,
+            "reference": ref,
+            "currency": "USDC",
+            "chain": "base",
+        },
+        headers={
+            "X-Payment-Required": "true",
+            "X-Payment-Amount": usdc_amount,
+            "X-Payment-Currency": "USDC",
+        },
+    )
+
+
+async def _verify_flare_payment(
+    s,
+    payment,
+    flr_amount: str,
+    flr_recipient: str,
+    endpoint_label: str,
+) -> JSONResponse | None:
+    """Verify a Flare USDT0 (eip3009_facilitator) or native FLR payment.
+
+    Returns a JSONResponse on failure, or None on success. May raise
+    ``HTTPException`` (e.g. 409 on a replayed settlement tx).
+    """
+    from app import x402, x402_flare
+    from app.db import SessionLocal
+
+    ptype = getattr(payment, "payment_type", "")
+
+    # ── USDT0 via EIP-3009 facilitator ───────────────────────────────────────
+    if ptype == "eip3009_facilitator":
+        expected_token = s.x402_usdt0_flare_address
+        expected_recipient = s.x402_effective_usdt0_recipient
+        facilitator = s.x402_flare_facilitator_address
+
+        # Validate header fields against config before touching the chain.
+        if (payment.token or "").lower() != (expected_token or "").lower():
+            return JSONResponse(status_code=400, content={"detail": "wrong_token_address"})
+        if (payment.facilitator or "").lower() != (facilitator or "").lower():
+            return JSONResponse(status_code=400, content={"detail": "wrong_facilitator_address"})
+
+        raw_amount = x402_flare.usdt0_to_raw(s.x402_usdt0_amount, s.x402_usdt0_decimals)
+        sess = SessionLocal()
+        try:
+            await x402._check_tx_not_replayed(sess, payment.settlement_tx_hash)
+            verifier = x402_flare.FlarePaymentVerifier(
+                rpc_url=s.x402_flare_rpc_url, chain_id=s.x402_flare_chain_id
+            )
+            ok, payment_id, error = await verifier.verify_usdt0_settlement_tx(
+                payment, expected_token, expected_recipient, raw_amount,
+                facilitator, s.x402_flare_confirmations,
+            )
+            if not ok:
+                return JSONResponse(status_code=403, content={"detail": error or "usdt0_verification_failed"})
+            await x402._record_usdt0_payment(
+                sess, payment, payment_id, endpoint_label, expected_recipient, raw_amount
+            )
+        finally:
+            sess.close()
+        return None
+
+    # ── Native FLR transfer ──────────────────────────────────────────────────
+    if ptype == "native_transfer":
+        expected_recipient = s.x402_effective_flr_recipient or flr_recipient
+        min_wei = x402_flare.flr_to_wei(flr_amount)
+        sess = SessionLocal()
+        try:
+            await x402._check_tx_not_replayed(sess, payment.tx_hash)
+            verifier = x402_flare.FlarePaymentVerifier(
+                rpc_url=s.x402_flare_rpc_url, chain_id=s.x402_flare_chain_id
+            )
+            ok, error = await verifier.verify_flr_transfer(
+                payment, expected_recipient, min_wei, s.x402_flare_confirmations
+            )
+            if not ok:
+                return JSONResponse(status_code=403, content={"detail": error or "flr_verification_failed"})
+            await x402._record_flr_payment(sess, payment, endpoint_label, expected_recipient)
+        finally:
+            sess.close()
+        return None
+
+    return JSONResponse(status_code=400, content={"detail": "unsupported_payment_type"})
+
+
 async def _verify_payment(
     request: Request,
     usdc_amount: str,
@@ -65,39 +208,30 @@ async def _verify_payment(
     endpoint_label: str,
 ) -> JSONResponse | None:
     """Check X-PAYMENT header. Returns a JSONResponse on failure, None on success."""
-    from app.x402 import X402PaymentVerifier, PaymentProof
+    from app import x402, x402_flare
+    from app.settings import get_settings
 
+    s = get_settings()
     header = request.headers.get("X-PAYMENT") or request.headers.get("x-payment")
 
     if not header:
-        ref = f"x402:{endpoint_label}:{datetime.utcnow().timestamp()}"
-        return JSONResponse(
-            status_code=402,
-            content={
-                "amount": usdc_amount,
-                "recipient": usdc_recipient,
-                "reference": ref,
-                "currency": "USDC",
-                "chain": "base",
-                "accepted": [
-                    {"amount": usdc_amount, "recipient": usdc_recipient,
-                     "currency": "USDC", "chain": "base", "reference": ref},
-                    {"amount": flr_amount, "recipient": flr_recipient,
-                     "currency": "FLR", "chain": "flare", "reference": ref},
-                ],
-            },
-            headers={
-                "X-Payment-Required": "true",
-                "X-Payment-Amount": usdc_amount,
-                "X-Payment-Currency": "USDC",
-            },
+        return _payment_required_response(
+            s, usdc_amount, usdc_recipient, flr_amount, flr_recipient, endpoint_label
         )
 
     # Dev/test mock bypass — requires explicit opt-in via env var
-    if _MOCK:
+    if _mock_enabled():
         return None
 
-    verifier = X402PaymentVerifier()
+    # Flare-specific paths (USDT0 facilitator / native FLR) take priority.
+    flare_payment = x402_flare.parse_flare_payment(header)
+    if flare_payment is not None:
+        return await _verify_flare_payment(
+            s, flare_payment, flr_amount, flr_recipient, endpoint_label
+        )
+
+    # Fall back to the Base USDC path.
+    verifier = x402.X402PaymentVerifier()
     proof = verifier.parse_payment_header(header)
 
     if not proof:

@@ -98,10 +98,37 @@ class Settings(BaseSettings):
     x402_settlement_mode: str = Field(default="client", alias="X402_SETTLEMENT_MODE")
     x402_settler_private_key: Optional[str] = Field(default=None, alias="X402_SETTLER_PRIVATE_KEY")
 
+    # x402 — Base USDC path
+    x402_enable_base_usdc: bool = Field(default=True, alias="X402_ENABLE_BASE_USDC")
+    x402_usdc_address: str = Field(
+        default="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", alias="X402_USDC_ADDRESS"
+    )
+    x402_usdc_amount: str = Field(default="0.001", alias="X402_USDC_AMOUNT")
+    x402_base_recipient: Optional[str] = Field(default=None, alias="X402_BASE_RECIPIENT")
+
+    # x402 — Flare native FLR path
+    x402_enable_flare_native_flr: bool = Field(default=True, alias="X402_ENABLE_FLARE_NATIVE_FLR")
+    x402_flr_amount: str = Field(default="0.05", alias="X402_FLR_AMOUNT")
+
     # x402 — shared recipient fallback
     x402_recipient_address: Optional[str] = Field(
         default=None, alias="X402_RECIPIENT_ADDRESS"
     )
+
+    @property
+    def x402_effective_usdc_recipient(self) -> Optional[str]:
+        """USDC-on-Base recipient, falling back to the shared recipient."""
+        return self.x402_base_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_usdt0_recipient(self) -> Optional[str]:
+        """USDT0-on-Flare recipient, falling back to the shared recipient."""
+        return self.x402_usdt0_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_flr_recipient(self) -> Optional[str]:
+        """Native-FLR recipient, falling back to the shared recipient."""
+        return self.x402_flr_recipient or self.x402_recipient_address
 
     # Proactive monitor
     monitor_enabled: bool = Field(default=False, alias="MONITOR_ENABLED")

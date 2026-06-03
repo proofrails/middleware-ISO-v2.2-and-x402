@@ -1,44 +1,105 @@
-# x402 Payments
+# x402 Payment Paths in ProofRails
 
-x402 is an HTTP payment protocol that lets clients pay for API access using on-chain transfers. The name refers to HTTP 402 Payment Required, a status code defined in 1996 and left unused until micropayments became practical.
+ProofRails implements three x402-compatible payment paths. Clients and autonomous agents pick one based on their chain preference and tooling.
 
-## Supported chains
+x402 refers to HTTP 402 Payment Required — a status code defined in 1996 and left unused until on-chain micropayments made it practical. A protected endpoint returns `402` with an `accepts` array of payment options; the client pays on-chain and retries with an `X-PAYMENT` header.
 
-| Currency | Chain | Notes |
-|----------|-------|-------|
-| USDC | Base mainnet | ERC-20 transfer, 6 decimals |
-| FLR | Flare C-Chain | Native token transfer |
+---
 
-The server accepts either. The 402 response body lists both options and the client chooses.
+## 1. USDC on Base (`erc20_transfer`)
+
+The simplest path. The client sends USDC to a recipient wallet on Base network and provides the transfer transaction hash.
+
+| Field | Value |
+|---|---|
+| Chain | Base (chainId 8453) |
+| Token | USDC `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` |
+| Mechanism | ERC-20 Transfer event verification |
+| EIP-3009 | No |
+| Server key required | No |
+
+**Flow:** client sends USDC → ProofRails queries Base for the `Transfer` event → endpoint unlocked.
+
+---
+
+## 2. USDT0 on Flare via EIP-3009 Facilitator (`eip3009_facilitator`)
+
+The canonical Flare-native x402-compatible path. USDT0 is the OFT-bridged version of USDT deployed on Flare mainnet by Tether/LayerZero. It supports EIP-3009 (`transferWithAuthorization` / `receiveWithAuthorization`), enabling gasless, off-chain-signed authorizations that an `X402Facilitator` contract can atomically settle.
+
+| Field | Value |
+|---|---|
+| Chain | Flare mainnet (chainId 14) |
+| Token | USDT0 `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
+| Mechanism | EIP-3009 + `X402Facilitator` contract |
+| EIP-3009 signed type | **`TransferWithAuthorization`** |
+| Settlement function | **`settlePayment()`** (payer-callable) |
+| Server key required | Only in server-settlement mode |
+| Audit status | Facilitator unaudited; built on audited OpenZeppelin primitives |
+
+**Flow (client-settled — default):**
+1. Client signs an EIP-3009 **`TransferWithAuthorization`** payload off-chain (no gas). The facilitator calls `USDT0.transferWithAuthorization()` internally, so the signed EIP-712 type must be `TransferWithAuthorization` — signing `ReceiveWithAuthorization` produces a different typehash and the signature is rejected on-chain.
+2. Client calls `X402Facilitator.settlePayment(payload)`. This function is callable by anyone, including the payer.
+3. Client provides the `settlement_tx_hash` in the `X-PAYMENT` header.
+4. ProofRails verifies the `X402PaymentSettled` event (token, recipient, amount) and unlocks the endpoint.
+
+**Flow (server-settled):**
+1. Client signs the `TransferWithAuthorization` payload off-chain.
+2. Client provides the full authorization fields (`from`, `to`, `value`, `validAfter`, `validBefore`, `nonce`, `v`, `r`, `s`) in `X-PAYMENT`.
+3. ProofRails submits the authorization to the facilitator via its own wallet (`X402_SETTLER_PRIVATE_KEY`).
+4. ProofRails verifies the event and unlocks the endpoint.
+
+### Why `settlePayment()` and not `settlePaymentAsPayee()`?
+
+Autonomous agents are **payers**, not recipients. `settlePaymentAsPayee()` requires `msg.sender == payload.to` (the recipient), so a payer cannot call it. `settlePayment()` is callable by anyone — including the payer — and is the correct entry point for client-settled mode. `settlePaymentAsPayee()` is reserved for the recipient (server-settled mode where ProofRails is the payee).
+
+The EIP-712 domain `name` must be read from the token contract at runtime (`name()` returns `"USD₮0"`) — do not hardcode it, or the domain separator will mismatch.
+
+---
+
+## 3. Native FLR Transfer (`native_transfer`)
+
+A simpler HTTP 402 payment gate using the Flare native token. No EIP-3009 is involved — just a standard Flare native transfer.
+
+| Field | Value |
+|---|---|
+| Chain | Flare mainnet (chainId 14) |
+| Token | FLR (native) |
+| Mechanism | Native transfer value verification |
+| EIP-3009 | No |
+| Server key required | No |
+
+**Flow:** client sends FLR to recipient → ProofRails queries Flare for the transaction value → endpoint unlocked.
+
+Note: this path is HTTP 402 payment-gating, not the EIP-3009 authorization pattern used by the canonical x402 protocol.
+
+---
 
 ## Protocol flow
 
 ```
 Client                          ProofRails (server)
   |                                     |
-  |-- POST /v1/x402/premium/verify ---> |
+  |-- POST /v1/x402/premium/fx-lookup ->|
   |                                     |-- (no X-PAYMENT header)
   |<-- 402 Payment Required ------------|
-  |    { "accepted": [                  |
-  |        { "amount": "0.001",         |
-  |          "currency": "USDC",        |
-  |          "chain": "base",           |
-  |          "recipient": "0x..." },    |
-  |        { "amount": "0.05",          |
-  |          "currency": "FLR",         |
-  |          "chain": "flare",          |
-  |          "recipient": "0x..." }     |
+  |    { "version": "1.0",              |
+  |      "error": "payment_required",   |
+  |      "accepts": [                   |
+  |        { "payment_type":            |
+  |            "erc20_transfer", ... },  |
+  |        { "payment_type":            |
+  |            "eip3009_facilitator",.. }|
+  |        { "payment_type":            |
+  |            "native_transfer", ... }  |
   |      ] }                            |
   |                                     |
-  |-- (client sends USDC on Base        |
-  |    OR FLR on Flare) ------------>   Blockchain
+  |-- (client pays on chosen chain) -> Blockchain
   |<-- tx confirmed -------------------|
   |                                     |
-  |-- POST /v1/x402/premium/verify ---> |
-  |    X-PAYMENT: { tx_hash, amount,    |
-  |                 recipient,          |
-  |                 currency, chain }   |
-  |                                     |-- verify tx on correct chain
+  |-- POST /v1/x402/premium/fx-lookup ->|
+  |    X-PAYMENT: { payment_type, ... } |
+  |                                     |-- verify on correct chain/path
+  |                                     |-- reject replayed tx
   |                                     |-- record payment
   |<-- 200 { result... } ---------------|
 ```
@@ -47,11 +108,12 @@ Client                          ProofRails (server)
 
 In production mode, the middleware:
 
-1. Parses the `X-PAYMENT` header as JSON.
-2. Selects the verifier for the declared chain (`base` → USDC ERC-20 log check; `flare` → native FLR value check).
-3. Confirms: correct recipient, correct amount, transaction confirmed.
-4. Rejects reused tx hashes.
-5. Records the payment in `x402_payments`.
+1. Parses the `X-PAYMENT` header as JSON (malformed → `400`).
+2. Routes by `payment_type`: `eip3009_facilitator` / `native_transfer` → `FlarePaymentVerifier`; `erc20_transfer` → Base USDC verifier.
+3. For USDT0: validates the declared token and facilitator against config (`400 wrong_token_address` / `wrong_facilitator_address`), then verifies the `X402PaymentSettled` event.
+4. Confirms correct recipient, amount, and confirmation depth (`403` on failure).
+5. Rejects reused settlement/transfer tx hashes (`409 payment_already_used`).
+6. Records the payment in `x402_payments`.
 
 In development mode (`X402_MOCK_PAYMENTS=true`), on-chain verification is skipped. This is for local development and tests only — never set in production.
 
@@ -60,35 +122,43 @@ In development mode (`X402_MOCK_PAYMENTS=true`), on-chain verification is skippe
 | Endpoint | USDC price | FLR price | Function |
 |----------|-----------|-----------|---------|
 | `POST /v1/x402/premium/verify-bundle` | 0.001 | 0.05 | Verify an evidence bundle |
-| `POST /v1/x402/premium/generate-statement` | 0.005 | 0.25 | Generate a camt.053 statement |
-| `POST /v1/x402/premium/fx-lookup` | 0.0005 | 0.05 | Current FX rate (FTSO) |
-| `POST /v1/x402/premium/bulk-verify` | 0.01 | 0.50 | Verify multiple bundles |
-| `POST /v1/x402/premium/refund` | 0.001 | 0.15 | Initiate a refund |
+| `POST /v1/x402/premium/generate-statement` | 0.005 | 0.25 | Generate a camt.052/053 statement |
+| `POST /v1/x402/premium/fx-lookup` | 0.001 | 0.05 | Current FX rate (FTSO) |
+| `POST /v1/x402/premium/bulk-verify` | 0.010 | 0.50 | Verify multiple bundles |
+| `POST /v1/x402/premium/refund` | 0.003 | 0.15 | Initiate a refund |
 
-FLR prices are configurable via env vars (`X402_FLR_VERIFY`, `X402_FLR_STATEMENT`, etc.). Current pricing: `GET /v1/x402/pricing`.
+FLR prices are configurable via env vars (`X402_FLR_VERIFY`, `X402_FLR_STATEMENT`, etc.). Current pricing: `GET /v1/x402/pricing`. Live facilitator/path config: `GET /v1/x402/facilitator-config` (admin).
 
 ## Environment variables
 
 ```env
-X402_RECIPIENT=0x...          # USDC recipient address on Base
-X402_FLR_RECIPIENT=0x...      # FLR recipient on Flare (defaults to X402_RECIPIENT)
-X402_MOCK_PAYMENTS=true       # DEV ONLY — skip on-chain verification
-X402_FLR_VERIFY=0.05          # FLR price for verify-bundle
-X402_FLR_STATEMENT=0.25       # FLR price for generate-statement
-X402_FLR_ISO_MSG=0.10         # FLR price for iso-message
-X402_FLR_FX_LOOKUP=0.05       # FLR price for fx-lookup
-X402_FLR_BULK=0.50            # FLR price for bulk-verify
-X402_FLR_REFUND=0.15          # FLR price for refund
+X402_RECIPIENT_ADDRESS=0x...        # shared fallback recipient
+X402_BASE_RECIPIENT=0x...           # USDC recipient on Base (falls back to shared)
+X402_USDT0_RECIPIENT=0x...          # USDT0 recipient on Flare (falls back to shared)
+X402_FLR_RECIPIENT=0x...            # FLR recipient on Flare (falls back to shared)
+X402_FLARE_FACILITATOR_ADDRESS=0x...# X402Facilitator contract on Flare
+X402_ENABLE_BASE_USDC=true          # toggle the USDC path in 402 options
+X402_ENABLE_FLARE_USDT0=true        # toggle the USDT0 path
+X402_ENABLE_FLARE_NATIVE_FLR=true   # toggle the native-FLR path
+X402_SETTLEMENT_MODE=client         # client | server
+X402_SETTLER_PRIVATE_KEY=0x...      # server-settled mode only
+X402_MOCK_PAYMENTS=true             # DEV ONLY — skip on-chain verification
 ```
+
+## FXRP status
+
+FXRP does not currently support EIP-3009 — the required `transferWithAuthorization` method is not available on the FXRP token contract. FXRP x402 support is future work, contingent on FXRP gaining EIP-3009 or an equivalent authorization path.
+
+## Correct public language
+
+> ProofRails supports an x402-compatible payment path using USDT0 on Flare via EIP-3009 facilitator settlement, plus native FLR transfer as a separate HTTP 402 payment gate, plus USDC on Base. FXRP x402 is not yet supported because FXRP does not implement EIP-3009.
+
+Do not say "Official x402 is live on Flare" unless formally verified by the x402 upstream. Do not say "FXRP x402 is live."
 
 ## Analytics
 
 - `GET /v1/x402/payments` — list verified payments (auth required)
 - `GET /v1/x402/revenue?days=7` — revenue summary (admin only)
-
-## Agent auto-anchoring
-
-When an agent has `anchor_on_payment=true`, each verified x402 payment automatically triggers a background anchor task that writes the payment hash to the Flare anchor contract.
 
 ## See also
 
