@@ -57,11 +57,9 @@
       ]
     },
     {
-      "group": "Security and limits",
+      "group": "Security",
       "pages": [
-        "security/claims-and-limitations",
-        "security/key-management",
-        "security/known-limitations"
+        "security/key-management"
       ]
     }
   ],
