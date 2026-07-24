@@ -74,13 +74,22 @@ def render(slug: str) -> tuple[str, str]:
     hero = ""
     if slug == "introduction":
         hero = (
-            '<section class="hero"><div class="status"><span></span> LIVE ON FLARE MAINNET</div>'
-            '<div class="hero-brand"><img src="/proofrails-logo.svg" alt="ProofRails logo">'
-            '<strong>ProofRails</strong></div>'
-            '<p>Official product and developer documentation</p>'
-            '<div class="hero-links"><a class="primary" href="/quickstart">Start building</a>'
-            '<a href="/x402/mainnet-proof">Inspect mainnet proof</a>'
-            '<a href="/deployments">Contracts</a></div></section>'
+            '<section class="hero"><div class="hero-copy">'
+            '<div class="hero-eyebrow">ProofRails API</div>'
+            '<h1>Make onchain payments finance-ready.</h1>'
+            '<p>Translate blockchain transactions and agent payments into ISO 20022-style records, signed evidence bundles, and Flare-anchored proof—through one API.</p>'
+            '<div class="hero-links"><a class="primary" href="/create-first-receipt">Create a receipt</a>'
+            '<a href="/api-reference/overview">Explore the API</a>'
+            '<a href="/deployments">Contracts</a></div></div>'
+            '<div class="hero-code"><div class="code-bar"><span>RECEIPT API</span>'
+            '<span class="code-dots"><i></i><i></i><i></i></span></div>'
+            '<pre><span class="method">POST</span> /v1/iso/record-tip\n\n'
+            '{\n  <span class="key">"tx_hash"</span>: <span class="string">"0x63b3…6f92"</span>,\n'
+            '  <span class="key">"chain"</span>: <span class="string">"flare"</span>,\n'
+            '  <span class="key">"amount"</span>: <span class="string">"0.001"</span>,\n'
+            '  <span class="key">"asset"</span>: <span class="string">"USD₮0"</span>,\n'
+            '  <span class="key">"reference"</span>: <span class="string">"order_1842"</span>\n}\n\n'
+            '<span class="comment">→ receipt + ISO artifacts\n→ signed evidence.zip\n→ Flare anchor</span></pre></div></section>'
         )
     top = (
         '<header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a>'
@@ -93,7 +102,7 @@ def render(slug: str) -> tuple[str, str]:
 <title>{html.escape(title)} | ProofRails Docs</title><meta name="description" content="{html.escape(description)}">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
 <body>{top}<div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a>{nav(slug)}</aside>
-<main class="main">{hero}<article class="content">{article}</article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>'''
+<main class="main">{hero}<article class="content">{article}</article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>'''
     return title, page
 
 
