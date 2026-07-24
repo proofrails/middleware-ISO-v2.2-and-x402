@@ -67,6 +67,19 @@ for asset in ["receipt-lifecycle.svg", "evidence-model.svg", "x402-mainnet-flow.
     if not p.is_file() or p.stat().st_size < 1000:
         errors.append(f"missing diagram: {asset}")
 
+robots = SITE / "robots.txt"
+sitemap = SITE / "sitemap.xml"
+if not robots.is_file() or "Sitemap: https://docs.proofrails.com/sitemap.xml" not in robots.read_text(encoding="utf-8"):
+    errors.append("missing or invalid robots.txt")
+if not sitemap.is_file():
+    errors.append("missing sitemap.xml")
+else:
+    sitemap_text = sitemap.read_text(encoding="utf-8")
+    for slug in slugs:
+        expected = "https://docs.proofrails.com/" if slug == "introduction" else f"https://docs.proofrails.com/{slug}"
+        if f"<loc>{expected}</loc>" not in sitemap_text:
+            errors.append(f"sitemap missing: {expected}")
+
 if errors:
     print("STATIC DOCS VERIFICATION FAILED")
     for error in errors:

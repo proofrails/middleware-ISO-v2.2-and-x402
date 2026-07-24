@@ -118,6 +118,20 @@ def main() -> None:
         alias.write_text(page, encoding="utf-8")
         print(f"built {slug}: {title}")
     shutil.copy2(OUT / "introduction" / "index.html", OUT / "index.html")
+    (OUT / "robots.txt").write_text(
+        "User-agent: *\nAllow: /\nSitemap: https://docs.proofrails.com/sitemap.xml\n",
+        encoding="utf-8",
+    )
+    sitemap_urls = ["https://docs.proofrails.com/"] + [
+        f"https://docs.proofrails.com/{slug}" for slug in slugs if slug != "introduction"
+    ]
+    sitemap = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "".join(f"  <url><loc>{url}</loc></url>\n" for url in sitemap_urls)
+        + "</urlset>\n"
+    )
+    (OUT / "sitemap.xml").write_text(sitemap, encoding="utf-8")
     print(f"built {len(slugs)} pages in {OUT}")
 
 
