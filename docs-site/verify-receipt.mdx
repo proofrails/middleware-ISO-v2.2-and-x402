@@ -1,56 +1,89 @@
 ---
 title: Verify a receipt
-description: Verify ProofRails evidence by receipt ID, bundle hash, or bundle URL.
+description: Recompute a bundle hash, validate its signature and compare the onchain commitment.
 ---
 
 # Verify a receipt
 
-Verification checks whether the supplied receipt evidence matches the stored record and onchain anchor data when anchor data exists.
+Verification should answer three separate questions:
 
-```http
-POST /v1/iso/verify
+1. Are the bundle bytes internally intact?
+2. Does the bundle match the receipt record?
+3. Does its hash match the expected onchain event on the expected contract and chain?
+
+## Public verifier
+
+Open:
+
+```text
+https://app.proofrails.com/verify/{receipt_id}
 ```
 
-## Verify by bundle hash
+Public example:
+
+[app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5)
+
+## Verify a bundle URL
 
 ```bash
-curl -X POST http://localhost:8000/v1/iso/verify \
-  -H "X-API-Key: dev-admin-CHANGE_ME" \
-  -H "Content-Type: application/json" \
+curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
+  -H 'X-API-Key: <api_key>' \
+  -H 'Content-Type: application/json' \
   -d '{
-    "bundle_hash": "0x..."
+    "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip"
   }'
 ```
 
-## Verify by bundle URL
+## Verify an expected hash
 
 ```bash
-curl -X POST http://localhost:8000/v1/iso/verify \
-  -H "X-API-Key: dev-admin-CHANGE_ME" \
-  -H "Content-Type: application/json" \
+curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
+  -H 'X-API-Key: <api_key>' \
+  -H 'Content-Type: application/json' \
   -d '{
-    "bundle_url": "http://localhost:8000/files/<receipt_id>/evidence.zip"
+    "bundle_url": "https://example.com/evidence.zip",
+    "bundle_hash": "0x<sha256>"
   }'
 ```
 
-## Verify by CID
+## Response
+
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-23T12:40:00Z",
+  "checksums": {},
+  "errors": []
+}
+```
+
+Treat `errors` as part of the result even when the HTTP request succeeds.
+
+## Verify a CID
 
 ```http
 POST /v1/iso/verify-cid
 ```
 
-Use this when evidence is referenced by content identifier and the deployment supports that storage path.
+```json
+{
+  "cid": "Qm...",
+  "store": "ipfs",
+  "receipt_id": "<optional-receipt-id>"
+}
+```
 
-## Response shape
+Supported store values in the SDK include `ipfs`, `arweave` and `auto`.
 
-A verification response can include:
+## Independent chain check
 
-- `matches_onchain`
-- `bundle_hash`
-- `flare_txid`
-- `anchored_at`
-- verification errors or mismatch details
+For Flare mainnet, verify that:
 
-<Warning>
-Verification is not a claim that the invoice was valid, the payer intended the transfer, a bank accepted the record, or a regulator certified the workflow. It is a claim about the submitted evidence and its anchor consistency.
-</Warning>
+- chain ID is `14`;
+- contract is `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` for the documented hosted deployment;
+- transaction status is successful;
+- the event bundle hash equals your locally recomputed ZIP SHA-256.
+
+Do not accept an explorer link alone as proof of the correct chain. Check its domain, chain ID, contract address and event data.

@@ -1,0 +1,78 @@
+---
+title: SDKs
+description: Use the TypeScript and Python clients from the ProofRails repository.
+---
+
+# SDKs
+
+The repository includes TypeScript and Python clients. They are source packages in the monorepo; confirm registry publication before using a public package-manager install command.
+
+## TypeScript
+
+Build from the repository root:
+
+```bash
+npm --prefix packages/sdk ci
+npm --prefix packages/sdk run build
+```
+
+```ts
+import IsoMiddlewareClient from "iso-middleware-sdk";
+
+const proofrails = new IsoMiddlewareClient({
+  baseUrl: process.env.PROOFRAILS_BASE_URL!,
+  apiKey: process.env.PROOFRAILS_API_KEY!,
+});
+
+const page = await proofrails.listReceipts({
+  status: "anchored",
+  chain: "flare",
+  scope: "mine",
+  page_size: 20,
+});
+
+const receipt = await proofrails.getReceipt(page.items[0].id);
+const anchors = await proofrails.getAnchors(receipt.id);
+const result = await proofrails.verifyBundle({
+  bundle_url: new URL(receipt.bundle_url!, process.env.PROOFRAILS_BASE_URL).toString(),
+});
+```
+
+## Python
+
+Install locally from the checked-out repository:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e packages/sdk-python
+```
+
+```python
+import os
+from iso_middleware_sdk import ISOClient
+
+proofrails = ISOClient(
+    base_url=os.environ["PROOFRAILS_BASE_URL"],
+    api_key=os.environ["PROOFRAILS_API_KEY"],
+)
+
+page = proofrails.list_receipts(
+    status="anchored",
+    chain="flare",
+    scope="mine",
+    page_size=20,
+)
+
+receipt = proofrails.get_receipt(page["items"][0]["id"])
+anchors = proofrails.get_anchors(receipt["id"])
+result = proofrails.verify_bundle(bundle_url=receipt["bundle_url"])
+```
+
+## Available client groups
+
+Both clients cover receipts, verification, project configuration, statements, refunds, tenant anchoring, agent management, agent anchors and x402 analytics. The TypeScript client also exports the EvidenceAnchor ABI for tenant-side anchoring.
+
+## Server-side key handling
+
+Do not bundle a ProofRails API key into browser JavaScript. The hosted frontend uses a server-side proxy pattern so the browser never receives the key.

@@ -1,13 +1,11 @@
 ---
 title: x402 API
-description: x402 pricing, payment verification, and premium endpoints.
+description: Pricing, payment records, facilitator configuration and paid actions.
 ---
 
 # x402 API
 
-ProofRails includes x402-style payment-gated endpoint support.
-
-## Pricing and payments
+## Management and analytics
 
 ```http
 GET  /v1/x402/pricing
@@ -18,21 +16,46 @@ GET  /v1/x402/facilitator-config
 POST /v1/x402/verify-payment
 ```
 
-## Premium endpoints
+`POST /pricing`, revenue and facilitator configuration are admin surfaces in current source. Payment listing requires authentication.
+
+Payment filters:
+
+```text
+limit
+offset
+currency
+chain
+status
+payment_type
+```
+
+A payment record can include transaction hash, amount, currency, chain ID, token, facilitator, payer, recipient, EIP-3009 nonce, authorization type, facilitator payment ID, endpoint, status and verification time.
+
+## Hosted payment-specific routes
+
+The hosted OpenAPI checked on 24 July also includes:
+
+```http
+GET  /v1/x402/payments/{payment_id}
+POST /v1/x402/payments/{payment_id}/receipt
+GET  /v1/x402/payments/{payment_id}/compliance-checks
+```
+
+Use the live schema for exact request and response bodies because these routes differ from the current public branch snapshot.
+
+## Premium routes
 
 ```http
 POST /v1/x402/premium/verify-bundle
 POST /v1/x402/premium/generate-statement
-GET  /v1/x402/premium/iso-message/{receipt_id}/{msg_type}
+GET  /v1/x402/premium/iso-message/{receipt_id}/{type}
 POST /v1/x402/premium/fx-lookup
 POST /v1/x402/premium/bulk-verify
 POST /v1/x402/premium/refund
 ```
 
-## Local mock mode
+A request without the required payment returns HTTP 402 and the deployment's accepted payment options.
 
-```env
-X402_MOCK_PAYMENTS=true
-```
+## Protocol compatibility
 
-Use mock mode for local development only.
+These endpoints currently use a custom challenge and `X-PAYMENT` handling. They are not yet standard x402 V2 compatible. See [x402 status and compatibility](/x402/status-and-compatibility).

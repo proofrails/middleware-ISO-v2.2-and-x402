@@ -1,0 +1,45 @@
+---
+title: Webhooks API
+description: Source-branch webhook subscription and HMAC delivery contract.
+---
+
+# Webhooks API
+
+The current `agentic` branch provides project-scoped webhook management:
+
+```http
+POST   /v1/webhooks
+GET    /v1/webhooks
+GET    /v1/webhooks/{webhook_id}
+PUT    /v1/webhooks/{webhook_id}
+DELETE /v1/webhooks/{webhook_id}
+POST   /v1/webhooks/{webhook_id}/test
+```
+
+This group was not present in the hosted OpenAPI checked on 24 July 2026.
+
+## Create
+
+```json
+{
+  "url": "https://example.com/proofrails/webhook",
+  "events": ["receipt.anchored", "receipt.failed"],
+  "description": "Production receipt events"
+}
+```
+
+Valid source-branch topics are `receipt.pending`, `receipt.anchored`, `receipt.failed`, `agent.anchored` and `*`.
+
+## Delivery contract
+
+```http
+Content-Type: application/json
+X-ISO-Event: receipt.anchored
+X-ISO-Delivery: <uuid>
+X-ISO-Timestamp: <unix-seconds>
+X-ISO-Signature-256: sha256=<hmac-hex>
+```
+
+The HMAC key is the subscription secret. Store it in a secret manager, verify the raw body in constant time, reject stale timestamps and deduplicate the delivery UUID.
+
+See [Webhooks and events](/guides/webhooks) for verification code.

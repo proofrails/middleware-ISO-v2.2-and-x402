@@ -1,59 +1,75 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>API overview | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
-<a class="" href="introduction.html">Introduction</a>
-<a class="" href="quickstart.html">Quickstart</a>
-<a class="" href="create-first-receipt.html">Create your first receipt</a>
-<a class="" href="verify-receipt.html">Verify a receipt</a>
-</div>
-<div class="nav-group"><div class="nav-title">Core concepts</div>
-<a class="" href="concepts__receipts.html">Receipts</a>
-<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
-<a class="" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
-<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
-<a class="" href="concepts__verification-model.html">Verification model</a>
-</div>
-<div class="nav-group"><div class="nav-title">API Reference</div>
-<a class="active" href="api-reference__overview.html">API overview</a>
-<a class="" href="api-reference__authentication.html">Authentication</a>
-<a class="" href="api-reference__receipts.html">Receipts API</a>
-<a class="" href="api-reference__verification.html">Verification API</a>
-<a class="" href="api-reference__projects.html">Projects API</a>
-<a class="" href="api-reference__agents.html">Agents API</a>
-<a class="" href="api-reference__x402.html">x402 API</a>
-</div>
-<div class="nav-group"><div class="nav-title">Guides</div>
-<a class="" href="guides__local-development.html">Local development</a>
-<a class="" href="guides__production-deployment.html">Production deployment</a>
-<a class="" href="guides__agent-workflows.html">Agent workflows</a>
-<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
-</div>
-<div class="nav-group"><div class="nav-title">x402</div>
-<a class="" href="x402__overview.html">x402 overview</a>
-<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
-</div>
-<div class="nav-group"><div class="nav-title">Security</div>
-<a class="" href="security__key-management.html">Key management</a>
-</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>API overview</h1><p>Official documentation for ProofRails — the open evidence and translation layer for onchain payments.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>API overview</h1>
-<p>ProofRails exposes a REST API served by FastAPI.</p>
-<h2>Base URLs</h2>
-<pre><code>http://localhost:8000          # local development
-https://app.proofrails.com     # hosted app/API when configured</code></pre>
-<h2>Interactive docs</h2>
-<p>FastAPI generates:</p>
-<pre><code>GET /docs
-GET /redoc
-GET /openapi.json</code></pre>
-<h2>Authentication</h2>
-<p>Most endpoints require:</p>
-<pre><code>X-API-Key: &lt;your_project_api_key&gt;</code></pre>
-<p>Project-scoped keys can be generated through project registration or the app settings flow, depending on deployment.</p>
-<h2>API groups</h2>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API overview | ProofRails Docs</title><meta name="description" content="Hosted base URL, authentication, runtime discovery and API groups.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a class="active" href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="api-overview">API overview</h1>
+<p>ProofRails exposes a FastAPI REST API.</p>
+<h2 id="base-urls">Base URLs</h2>
+<pre><code class="language-text">https://app.proofrails.com    # hosted API
+http://localhost:8000         # default local API
+</code></pre>
+<p>Runtime references:</p>
 <ul>
-<li>Receipts</li>
-<li>Verification</li>
-<li>Projects and API keys</li>
-<li>Agents</li>
-<li>x402</li>
-<li>Anchoring</li>
-<li>Monitoring</li>
-<li>Webhooks</li>
-</ul></article></main></div></body></html>
+<li><a href="https://app.proofrails.com/docs">Swagger UI</a></li>
+<li><a href="https://app.proofrails.com/redoc">ReDoc</a></li>
+<li><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a></li>
+<li><a href="https://app.proofrails.com/v1/health">Health</a></li>
+</ul>
+<p>The hosted OpenAPI is the source of truth for deployed routes. The <code>agentic</code> branch can contain capabilities that have not yet rolled out to the hosted service.</p>
+<h2 id="authentication">Authentication</h2>
+<p>Use a server-side API key unless a route is explicitly public:</p>
+<pre><code class="language-http">X-API-Key: &lt;api_key&gt;
+</code></pre>
+<p>Project-scoped keys limit access to that tenant. Admin keys can access cross-project, configuration and analytics routes. Some deployments also support SIWE for wallet-linked access and key minting.</p>
+<h2 id="common-headers">Common headers</h2>
+<pre><code class="language-http">Content-Type: application/json
+X-API-Key: &lt;api_key&gt;
+Idempotency-Key: &lt;unique-logical-operation-id&gt;
+</code></pre>
+<p>Responses can include request identifiers and rate-limit metadata depending on deployment configuration.</p>
+<h2 id="api-groups">API groups</h2>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Main purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Receipts</td>
+<td>Create, list, fetch, poll and retry receipt operations.</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Verify bundle URLs, hashes, CIDs and anchors.</td>
+</tr>
+<tr>
+<td>ISO artifacts</td>
+<td>List and generate payment, status, statement, return and investigation messages.</td>
+</tr>
+<tr>
+<td>Projects and auth</td>
+<td>Tenant configuration, API keys and SIWE.</td>
+</tr>
+<tr>
+<td>Agents</td>
+<td>Agent records, AI settings, templates, tests, stats and anchoring.</td>
+</tr>
+<tr>
+<td>x402</td>
+<td>Pricing, payment verification, paid actions, receipts and analytics.</td>
+</tr>
+<tr>
+<td>Events</td>
+<td>SSE and source-branch webhooks.</td>
+</tr>
+<tr>
+<td>Operations</td>
+<td>Health, metrics, audit events and optional monitoring.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="version-reality">Version reality</h2>
+<p>The hosted OpenAPI checked on 24 July 2026 identified itself as version <code>0.1.0</code>, while the current application factory in source identifies the service as <code>2.2.0</code>. Do not use either string alone to infer route availability. Discover the runtime schema and pin the API behavior your integration depends on.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

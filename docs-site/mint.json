@@ -2,6 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "ProofRails",
+  "description": "Verifiable receipts and finance-readable evidence for onchain payments",
   "colors": {
     "primary": "#e11d8a",
     "light": "#f8fafc",
@@ -13,23 +14,59 @@
       "group": "Start here",
       "pages": [
         "introduction",
+        "platform-status",
+        "capabilities",
         "quickstart",
         "create-first-receipt",
         "verify-receipt"
       ]
     },
     {
-      "group": "Core concepts",
+      "group": "Architecture",
       "pages": [
+        "architecture/system-overview",
+        "architecture/evidence-model",
         "concepts/receipts",
         "concepts/evidence-bundles",
-        "concepts/iso-20022-artifacts",
         "concepts/anchoring",
         "concepts/verification-model"
       ]
     },
     {
-      "group": "API Reference",
+      "group": "Deployments",
+      "pages": [
+        "deployments",
+        "guides/flare-anchoring",
+        "guides/production-deployment",
+        "guides/local-development"
+      ]
+    },
+    {
+      "group": "ISO 20022-style artifacts",
+      "pages": [
+        "concepts/iso-20022-artifacts",
+        "api-reference/iso-artifacts"
+      ]
+    },
+    {
+      "group": "x402 and paid resources",
+      "pages": [
+        "x402/overview",
+        "x402/status-and-compatibility",
+        "x402/mainnet-proof",
+        "x402/coston2-testnet-demo"
+      ]
+    },
+    {
+      "group": "Agents and integrations",
+      "pages": [
+        "guides/agent-workflows",
+        "guides/sdks",
+        "guides/webhooks"
+      ]
+    },
+    {
+      "group": "API reference",
       "pages": [
         "api-reference/overview",
         "api-reference/authentication",
@@ -37,29 +74,15 @@
         "api-reference/verification",
         "api-reference/projects",
         "api-reference/agents",
-        "api-reference/x402"
-      ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        "guides/local-development",
-        "guides/production-deployment",
-        "guides/agent-workflows",
-        "guides/flare-anchoring"
-      ]
-    },
-    {
-      "group": "x402",
-      "pages": [
-        "x402/overview",
-        "x402/coston2-testnet-demo"
+        "api-reference/x402",
+        "api-reference/webhooks"
       ]
     },
     {
       "group": "Security",
       "pages": [
-        "security/key-management"
+        "security/key-management",
+        "security/limitations"
       ]
     }
   ],
@@ -68,6 +91,11 @@
       "name": "App",
       "url": "https://app.proofrails.com",
       "icon": "square-arrow-up-right"
+    },
+    {
+      "name": "OpenAPI",
+      "url": "https://app.proofrails.com/docs",
+      "icon": "brackets-curly"
     },
     {
       "name": "GitHub",

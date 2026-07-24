@@ -1,23 +1,39 @@
 ---
 title: Evidence bundles
-description: Portable verification artifacts for ProofRails receipts.
+description: Signed portable proof packages for ProofRails receipts.
 ---
 
 # Evidence bundles
 
-An evidence bundle is the portable proof package for a receipt.
+An evidence bundle is the portable proof package for a receipt. It carries the receipt and selected supporting artifacts outside the database while preserving a deterministic inventory of the committed files.
 
-It can include:
+<img src="/assets/evidence-model.svg" alt="ProofRails evidence bundle and onchain hash commitment" />
 
-- receipt metadata
-- generated ISO XML files
-- checksums
-- manifest data
-- signature material
-- references to the anchor transaction
+## Standard files
 
-The important property is hash sensitivity. If the bundle changes, its hash changes. That lets a verifier compare the supplied evidence against the onchain anchor.
+```text
+manifest.json
+manifest.sig
+public_key.pem
+pain001.xml
+receipt.json
+tip.json
+```
 
-## Why bundles matter
+Optional configuration can add credentials, IVMS data or other files. A generated artifact is part of the anchored proof only if it appears in the manifest or otherwise influences the exact ZIP bytes whose hash was anchored.
 
-Block explorers show transactions. They do not automatically package the business context, ISO-style artifacts, metadata, and verification trail needed for finance operations. Evidence bundles make that context portable.
+## Integrity layers
+
+- ZIP CRC detects basic archive corruption.
+- The manifest records file names, sizes and SHA-256 values.
+- Ed25519 verifies the canonical manifest signature.
+- The ZIP SHA-256 identifies the exact bundle bytes.
+- EvidenceAnchor commits that hash onchain.
+
+## Delivery evidence
+
+If a receipt is meant to prove delivery of a file, API response or model output, include the exact content hash in `receipt.json` and the signed manifest before anchoring. Merely recording a URL or a successful HTTP status does not prove which bytes were delivered.
+
+## Portability
+
+A verifier does not need the original ProofRails database to inspect the ZIP. External trust still depends on knowing which signing key, contract, chain and application policy are authoritative.

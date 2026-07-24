@@ -1,0 +1,50 @@
+---
+title: Mainnet proof walkthrough
+description: Inspect the public payment, receipt, bundle hash and anchor from a verified Flare-mainnet run.
+---
+
+# Mainnet proof walkthrough
+
+This walkthrough uses public artifacts from the verified ProofRails-specific paid-resource run. It does not submit a payment.
+
+## 1. Inspect the payment
+
+Open the [Flare explorer transaction](https://flare-explorer.flare.network/tx/0x63b30e4b096331e520cb19a80f7461b0cf2ee37756b513c88032e0e178ce6f92).
+
+Expected facts:
+
+| Field | Value |
+|---|---|
+| Status | Success |
+| Token | USD₮0 `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
+| Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| Raw amount | `1000` (6 decimals) |
+| Payment ID | `0x7dff3f2b93ea6e27e3ae511cee9d88520cf950b97b70beb14284d4e33742ffae` |
+
+## 2. Inspect the receipt
+
+Open the [public receipt](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5).
+
+Expected receipt status: `anchored`.
+
+Expected bundle hash:
+
+```text
+0xf95bb00ef24410243605db07c3c4c46ad64790c191f2dcd020f9e670b88d0c41
+```
+
+## 3. Inspect the anchor
+
+Open the [Flare-mainnet anchor transaction](https://flare-explorer.flare.network/tx/0x55a3e0481af795e3a2d38bc5a28db741897034cd017ada061a30a13c65a8ecf4).
+
+The EvidenceAnchor event's hash must equal the receipt bundle hash above. The contract is:
+
+```text
+0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
+```
+
+## 4. Understand the proof boundary
+
+The test cross-checked the payment event, facilitator record, nonce consumption, token delta, downloaded artifacts, receipt, ZIP signature, manifest inventory, refetched ZIP and anchor event.
+
+The PDF and Markdown SHA-256 values were measured during the test, but they were not included in the signed manifest. Therefore the anchor proves the receipt bundle, not the exact delivered content bytes.

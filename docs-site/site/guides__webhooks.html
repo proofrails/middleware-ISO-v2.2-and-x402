@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Webhooks and events | ProofRails Docs</title><meta name="description" content="Receive signed receipt lifecycle notifications without tight polling.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a class="active" href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="webhooks-and-events">Webhooks and events</h1>
+<p>The current <code>agentic</code> source supports HMAC-signed webhook subscriptions. This group was not present in the hosted OpenAPI snapshot checked on 24 July 2026, so confirm hosted rollout before registering a production callback.</p>
+<h2 id="event-topics">Event topics</h2>
+<pre><code class="language-text">receipt.pending
+receipt.anchored
+receipt.failed
+agent.anchored
+*
+</code></pre>
+<h2 id="manage-subscriptions">Manage subscriptions</h2>
+<pre><code class="language-http">POST   /v1/webhooks
+GET    /v1/webhooks
+GET    /v1/webhooks/{webhook_id}
+PUT    /v1/webhooks/{webhook_id}
+DELETE /v1/webhooks/{webhook_id}
+POST   /v1/webhooks/{webhook_id}/test
+</code></pre>
+<p>Create a subscription:</p>
+<pre><code class="language-json">{
+  &quot;url&quot;: &quot;https://merchant.example/proofrails/webhook&quot;,
+  &quot;events&quot;: [&quot;receipt.anchored&quot;, &quot;receipt.failed&quot;],
+  &quot;description&quot;: &quot;Receipt completion&quot;
+}
+</code></pre>
+<p>The source limits a project to 10 subscriptions.</p>
+<h2 id="verify-signatures">Verify signatures</h2>
+<p>ProofRails sends the raw JSON body with:</p>
+<pre><code class="language-text">X-ISO-Event
+X-ISO-Delivery
+X-ISO-Timestamp
+X-ISO-Signature-256: sha256=&lt;hex&gt;
+</code></pre>
+<p>Python verification:</p>
+<pre><code class="language-python">import hashlib
+import hmac
+
+def valid(raw_body: bytes, signature_header: str, secret: str) -&gt; bool:
+    supplied = signature_header.removeprefix(&quot;sha256=&quot;)
+    expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, supplied)
+</code></pre>
+<p>Verify the signature against the raw body before parsing JSON. Also reject stale timestamps and deduplicate on <code>X-ISO-Delivery</code>.</p>
+<h2 id="sse">SSE</h2>
+<p>For a single receipt, the source also exposes:</p>
+<pre><code class="language-http">GET /v1/iso/events/{receipt_id}
+Accept: text/event-stream
+</code></pre>
+<p>Use webhooks for durable server-to-server delivery, SSE for a live UI, and status polling as a fallback.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

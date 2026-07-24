@@ -1,20 +1,56 @@
 ---
 title: ISO 20022-style artifacts
-description: How ProofRails maps payment evidence into finance-readable messages.
+description: Message families, generation paths and validation boundaries.
 ---
 
 # ISO 20022-style artifacts
 
-ProofRails generates ISO 20022-style artifacts around onchain payments. These artifacts are intended to make crypto payment activity easier to reconcile, explain, and audit.
+ProofRails translates onchain payment evidence into finance-readable XML. These documents preserve familiar ISO 20022 message names and namespaces, but availability and validation depth vary by generator.
 
-Examples include:
+## Message map
 
-- `pain.001`: payment initiation style artifact
-- `pacs.008`: credit transfer style artifact
-- `camt.053`: statement style artifact
-- `camt.054`: notification style artifact
-- refund and investigation related messages where supported
+| Message | Purpose in ProofRails | Typical generation path |
+|---|---|---|
+| `pain.001` | Customer credit transfer initiation-style record | Core receipt processing |
+| `pain.002` | Payment status report | Post-processing / receipt status |
+| `pain.007` | Customer cancellation request | Supporting generator |
+| `pain.008` | Direct debit initiation-style record | Supporting generator |
+| `pacs.002` | FI payment status | Interbank workflow |
+| `pacs.004` | Payment return / refund | Refund receipt workflow |
+| `pacs.007` | FI payment reversal | `POST /v1/iso/pacs007/{receipt_id}` |
+| `pacs.008` | FI customer credit transfer | Interbank workflow |
+| `pacs.009` | FI credit transfer | `POST /v1/iso/pacs009/{receipt_id}` |
+| `camt.029` | Resolution of investigation | `POST /v1/iso/camt029/{receipt_id}` |
+| `camt.052` | Intraday account report | Statement job / SDK |
+| `camt.053` | Daily account statement | Statement job / SDK |
+| `camt.054` | Debit/credit notification | Post-anchor receipt workflow |
+| `camt.056` | FI cancellation request | `POST /v1/iso/camt056/{receipt_id}` |
+| `remt.001` | Remittance information | Optional structured-remittance configuration |
 
-<Note>
-Use “ISO 20022-style” unless a stricter compliance or certification claim has been independently verified for the target deployment.
-</Note>
+## Fetch receipt artifacts
+
+```bash
+curl --fail 'https://app.proofrails.com/v1/iso/messages/<receipt_id>' \
+  -H 'X-API-Key: <api_key>'
+```
+
+Filter by type where supported:
+
+```text
+GET /v1/iso/messages/{receipt_id}?type=pain.001
+```
+
+The response lists artifact type, path or URL and SHA-256 metadata.
+
+## Generation quality
+
+`pain.001.001.09` has a dedicated generator and schema path in the repository. Other generators explicitly describe themselves as minimal, pragmatic or best-effort, and some do not enforce XSD validation.
+
+A well-formed XML response is not the same as:
+
+- conformance to every ISO 20022 XSD rule;
+- conformance to a specific market-practice guide;
+- semantic acceptance by a bank or clearing system;
+- ISO registration, certification or network connectivity.
+
+Validate the exact message version, schema, business rules and market practice required by your recipient before production exchange.

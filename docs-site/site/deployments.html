@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Networks and contracts | ProofRails Docs</title><meta name="description" content="Verified ProofRails deployments, token addresses and explorer links.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a class="active" href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="networks-and-contracts">Networks and contracts</h1>
+<p>Always verify the chain ID and contract bytecode before signing or sending value. Addresses below describe the currently verified ProofRails Flare-mainnet flow.</p>
+<h2 id="flare-mainnet">Flare mainnet</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Address</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EvidenceAnchor</td>
+<td><a href="https://flare-explorer.flare.network/address/0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA"><code>0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA</code></a></td>
+<td>Stores bundle-hash commitments for receipts.</td>
+</tr>
+<tr>
+<td>X402Facilitator</td>
+<td><a href="https://flare-explorer.flare.network/address/0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE"><code>0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE</code></a></td>
+<td>Verifies and settles bounded USD₮0 EIP-3009 authorizations.</td>
+</tr>
+<tr>
+<td>USD₮0</td>
+<td><a href="https://flare-explorer.flare.network/address/0xe7cd86e13AC4309349F30B3435a9d337750fC82D"><code>0xe7cd86e13AC4309349F30B3435a9d337750fC82D</code></a></td>
+<td>Payment asset used by the verified paid-resource flow; 6 decimals.</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Network parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chain ID</td>
+<td><code>14</code></td>
+</tr>
+<tr>
+<td>RPC</td>
+<td><code>https://flare-api.flare.network/ext/C/rpc</code></td>
+</tr>
+<tr>
+<td>Explorer</td>
+<td><code>https://flare-explorer.flare.network</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="evidenceanchor-deployment-record">EvidenceAnchor deployment record</h2>
+<p>The repository deployment artifact records:</p>
+<pre><code class="language-json">{
+  &quot;contract&quot;: &quot;EvidenceAnchor&quot;,
+  &quot;address&quot;: &quot;0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA&quot;,
+  &quot;txHash&quot;: &quot;0x2095d3aa397176cc3673a3396784f6a8a2416ab65da14cbcdc32cdc149d874ec&quot;,
+  &quot;blockNumber&quot;: 50524035,
+  &quot;chainId&quot;: &quot;14&quot;
+}
+</code></pre>
+<p>The later mainnet receipt test independently matched a bundle hash against an event emitted by this contract.</p>
+<h2 id="base-mainnet-asset-support">Base mainnet asset support</h2>
+<p>The source also contains a Base USDC verification path.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chain ID</td>
+<td><code>8453</code></td>
+</tr>
+<tr>
+<td>USDC</td>
+<td><a href="https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"><code>0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code></a></td>
+</tr>
+</tbody>
+</table>
+<p>Do not infer that every self-hosted payment option is enabled in the hosted service. Query deployment configuration where authorized, and use the first 402 response as the runtime source for accepted options.</p>
+<h2 id="self-hosted-deployments">Self-hosted deployments</h2>
+<p>Self-hosters can deploy separate EvidenceAnchor and X402Facilitator contracts. Keep those addresses out of application source and configure them through environment variables:</p>
+<pre><code class="language-env">FLARE_RPC_URL=https://flare-api.flare.network/ext/C/rpc
+ANCHOR_CONTRACT_ADDR=0x...
+X402_FLARE_FACILITATOR_ADDRESS=0x...
+X402_USDT0_FLARE_ADDRESS=0xe7cd86e13AC4309349F30B3435a9d337750fC82D
+</code></pre>
+<p>Never place a private key in documentation, client-side code or a committed <code>.env</code> file.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

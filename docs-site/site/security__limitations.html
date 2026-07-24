@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Security and limitations | ProofRails Docs</title><meta name="description" content="Production boundaries, key handling and claim-safe use of ProofRails evidence.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a class="active" href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="security-and-limitations">Security and limitations</h1>
+<h2 id="key-handling">Key handling</h2>
+<ul>
+<li>Keep API keys and signing keys server-side.</li>
+<li>Use a secret manager and inject secrets at runtime.</li>
+<li>Never commit <code>.env</code>, private keys or bearer tokens.</li>
+<li>Separate development, staging and production credentials.</li>
+<li>Give worker, API and deployment identities only the permissions they require.</li>
+<li>Rotate exposed keys and publish signing-key rotation history.</li>
+</ul>
+<p>The current source's agent anchoring configuration accepts private-key input. Review that implementation before production use: secret storage must use authenticated encryption or an external signing service, not reversible encoding.</p>
+<h2 id="hosted-and-source-drift">Hosted and source drift</h2>
+<p>The public branch can be ahead of or behind the hosted API. Generate a client against the hosted OpenAPI and pin tested behavior. Do not assume a source route exists in production until runtime discovery confirms it.</p>
+<h2 id="evidence-boundary">Evidence boundary</h2>
+<p>ProofRails establishes integrity relationships between receipt data, files, signatures, bundle hashes and onchain commitments. It does not independently validate every business fact supplied to it.</p>
+<h2 id="iso-boundary">ISO boundary</h2>
+<p>Many message generators are minimal or best-effort. Validate XSD, market-practice and semantic requirements for the institution or network that will consume the artifact. Do not market the platform as ISO 20022 certified based only on message names or namespaces.</p>
+<h2 id="credential-envelope-boundary">Credential-envelope boundary</h2>
+<p>The source credential helper can fall back to an unsigned <code>alg: none</code> envelope when Ed25519 dependencies or a signing key are unavailable. Reject unsigned envelopes in production and do not market them as verifiable credentials.</p>
+<h2 id="x402-boundary">x402 boundary</h2>
+<p>The ProofRails-specific Flare-mainnet product flow works, but standard x402 V2 client compatibility is incomplete. The tested bundle also omitted delivered-resource hashes.</p>
+<h2 id="contract-and-chain-checks">Contract and chain checks</h2>
+<p>Before sending value:</p>
+<ul>
+<li>verify chain ID;</li>
+<li>verify token decimals and EIP-712 domain;</li>
+<li>verify facilitator and recipient addresses;</li>
+<li>bound amount, validity window, nonce and maximum fee;</li>
+<li>simulate or perform read-only verification;</li>
+<li>ensure replay protection is active;</li>
+<li>confirm the deployed bytecode and supported-token state.</li>
+</ul>
+<h2 id="public-verifier-caveat">Public verifier caveat</h2>
+<p>During the verified mainnet run, the public page linked the anchor to Coston2 even though the transaction was on Flare mainnet. Verify explorer domain and chain independently rather than following a UI link blindly.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

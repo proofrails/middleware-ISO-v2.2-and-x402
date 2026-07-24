@@ -1,24 +1,70 @@
 ---
-title: Flare anchoring
-description: Configure and operate Flare EVM evidence anchoring.
+title: Flare integration
+description: EvidenceAnchor, USD₮0 settlement, FTSO and FDC helper surfaces.
 ---
 
-# Flare anchoring
+# Flare integration
 
-ProofRails can anchor evidence bundle hashes on Flare EVM-compatible networks.
+ProofRails uses Flare for tamper-evident receipt commitments and the verified USD₮0 paid-resource flow. The current source also includes FTSO v2 data helpers and FDC attestation preparation.
 
-Configuration usually requires:
+## Evidence anchoring
 
-- Flare RPC URL
-- EvidenceAnchor contract address
-- anchoring private key
-- funded anchoring wallet
-- confirmation and retry settings
+Hosted mainnet contract:
 
-Use retry anchoring when a receipt fails because of transient RPC, gas, or worker issues.
+```text
+0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
+```
+
+An anchor writes the bundle hash to EvidenceAnchor. Applications should store the resulting transaction hash with the receipt and independently confirm the emitted hash.
+
+Self-hosted configuration:
+
+```env
+FLARE_RPC_URL=https://flare-api.flare.network/ext/C/rpc
+ANCHOR_CONTRACT_ADDR=0x...
+ANCHOR_PRIVATE_KEY=<runtime-secret-reference>
+```
+
+Do not place a literal private key in an image, document, repository or browser build.
+
+## Platform and tenant modes
+
+- **Platform anchoring:** the ProofRails worker signs and submits the anchor.
+- **Tenant anchoring:** the tenant submits the transaction and calls `POST /v1/iso/confirm-anchor` with the receipt ID, chain and transaction hash.
+
+Use tenant mode when your organization must control the signing key or gas policy.
+
+## Retry
+
+Current source:
 
 ```http
 POST /v1/iso/receipts/{receipt_id}/retry-anchor
 ```
 
-Future Flare-facing paths such as FDC-backed verification and FAssets ISO flows should be described as proposed unless verified in the deployed implementation.
+Retry only after fixing the underlying RPC, funding, key, contract or worker problem.
+
+## FTSO helpers
+
+Current source routes:
+
+```http
+GET /v1/flare/feeds
+GET /v1/flare/feeds/{symbol}
+```
+
+These return FTSO v2 feed information and live values. Availability in the hosted API should be confirmed at runtime.
+
+## FDC preparation
+
+Current source:
+
+```http
+POST /v1/flare/fdc/prepare-attestation
+```
+
+This prepares an FDC attestation request body for a transaction. Preparing a request is not the same as obtaining and verifying a finalized FDC proof. Document the full attestation lifecycle separately when that production flow is deployed and tested.
+
+## USD₮0 settlement
+
+See [Networks and contracts](/deployments) and [x402 status](/x402/status-and-compatibility) for the verified facilitator, token and mainnet flow.

@@ -1,21 +1,35 @@
 ---
 title: Verification API
-description: Verify receipts, bundles, URLs, and CIDs.
+description: Verify evidence bundles, expected hashes and content-addressed storage.
 ---
 
 # Verification API
 
-## Verify evidence
+## Verify bundle evidence
 
 ```http
 POST /v1/iso/verify
 ```
 
-Accepted verification inputs include:
+```json
+{
+  "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip",
+  "bundle_hash": "0x<optional-expected-sha256>"
+}
+```
 
-- `receipt_id`
-- `bundle_hash`
-- `bundle_url`
+At least one input must be present. Supplying both lets the service download the bundle and compare it with your expected hash.
+
+Response fields:
+
+| Field | Meaning |
+|---|---|
+| `matches_onchain` | Whether the service found a matching anchor under its configured chain and contract. |
+| `bundle_hash` | SHA-256 computed or supplied for the bundle. |
+| `flare_txid` | Matching anchor transaction when found. |
+| `anchored_at` | Anchor time when available. |
+| `checksums` | Optional file-level verification details. |
+| `errors` | Download, ZIP, signature, manifest or chain lookup failures. |
 
 ## Verify CID
 
@@ -23,12 +37,24 @@ Accepted verification inputs include:
 POST /v1/iso/verify-cid
 ```
 
-## Expected response data
+Use this for evidence stored on IPFS or Arweave. The SDK supports `ipfs`, `arweave` and `auto` selectors.
 
-Verification responses can include:
+## List receipt anchors
 
-- `matches_onchain`
-- `bundle_hash`
-- `flare_txid`
-- `anchored_at`
-- errors or mismatch details
+```http
+GET /v1/anchors/{receipt_id}
+```
+
+```json
+[
+  {
+    "chain": "flare",
+    "txid": "0x...",
+    "anchored_at": "2026-07-23T12:01:00Z"
+  }
+]
+```
+
+## Verification discipline
+
+A hosted `matches_onchain: true` result is useful, but independent verification should also check chain ID, EvidenceAnchor address, transaction status, decoded event hash and the locally recomputed ZIP SHA-256.

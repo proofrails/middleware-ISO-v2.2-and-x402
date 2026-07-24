@@ -1,49 +1,45 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Agent workflows | ProofRails Docs</title><link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
-<a class="" href="/introduction">Introduction</a>
-<a class="" href="/quickstart">Quickstart</a>
-<a class="" href="/create-first-receipt">Create your first receipt</a>
-<a class="" href="/verify-receipt">Verify a receipt</a>
-</div>
-<div class="nav-group"><div class="nav-title">Core concepts</div>
-<a class="" href="/concepts/receipts">Receipts</a>
-<a class="" href="/concepts/evidence-bundles">Evidence bundles</a>
-<a class="" href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a>
-<a class="" href="/concepts/anchoring">Onchain anchoring</a>
-<a class="" href="/concepts/verification-model">Verification model</a>
-</div>
-<div class="nav-group"><div class="nav-title">API Reference</div>
-<a class="" href="/api-reference/overview">API overview</a>
-<a class="" href="/api-reference/authentication">Authentication</a>
-<a class="" href="/api-reference/receipts">Receipts API</a>
-<a class="" href="/api-reference/verification">Verification API</a>
-<a class="" href="/api-reference/projects">Projects API</a>
-<a class="" href="/api-reference/agents">Agents API</a>
-<a class="" href="/api-reference/x402">x402 API</a>
-</div>
-<div class="nav-group"><div class="nav-title">Guides</div>
-<a class="" href="/guides/local-development">Local development</a>
-<a class="" href="/guides/production-deployment">Production deployment</a>
-<a class="active" href="/guides/agent-workflows">Agent workflows</a>
-<a class="" href="/guides/flare-anchoring">Flare anchoring</a>
-</div>
-<div class="nav-group"><div class="nav-title">x402</div>
-<a class="" href="/x402/overview">x402 overview</a>
-<a class="" href="/x402/coston2-testnet-demo">Coston2 testnet demo</a>
-</div>
-<div class="nav-group"><div class="nav-title">Security</div>
-<a class="" href="/security/key-management">Key management</a>
-</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Agent workflows</h1><p>Official documentation for ProofRails — the open evidence and translation layer for onchain payments.</p><div class="toplinks"><a class="primary" href="/introduction">Start here</a><a class="secondary" href="/api-reference/overview">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>Agent workflows</h1>
-<p>Agents can use ProofRails to produce receipts for autonomous actions and verify the evidence behind payment or workflow events.</p>
-<p>Common capabilities:</p>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent workflows | ProofRails Docs</title><meta name="description" content="Create receipts for agent purchases and anchor task or data evidence.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a class="active" href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="agent-workflows">Agent workflows</h1>
+<p>Agents need evidence for more than the transfer itself. A useful receipt records what the agent paid, which resource or API it requested, what result identifier it received and which evidence was committed.</p>
+<h2 id="purchase-receipt-pattern">Purchase receipt pattern</h2>
+<pre><code class="language-text">agent chooses resource
+→ payment authorization or transaction
+→ merchant/facilitator settles
+→ service returns resource identifier
+→ ProofRails creates receipt
+→ bundle records payment + workflow context
+→ bundle hash is anchored
+</code></pre>
+<p>Recommended receipt metadata:</p>
+<pre><code class="language-json">{
+  &quot;agent_id&quot;: &quot;agent-uuid&quot;,
+  &quot;task_id&quot;: &quot;research-0042&quot;,
+  &quot;endpoint&quot;: &quot;/premium/data&quot;,
+  &quot;resource_id&quot;: &quot;dataset-2026-07&quot;,
+  &quot;payment_id&quot;: &quot;0x...&quot;,
+  &quot;result_hash&quot;: &quot;0x...&quot;
+}
+</code></pre>
+<p>Only include a <code>result_hash</code> if it is computed over the exact delivered bytes or canonical result object. A URL or label is not a content commitment.</p>
+<h2 id="read-and-verify">Read and verify</h2>
+<p>Agents can:</p>
 <ul>
-<li>list receipts</li>
-<li>fetch receipt details</li>
-<li>check receipt status</li>
-<li>verify bundles</li>
-<li>generate statements</li>
-<li>create refund records</li>
-<li>anchor arbitrary JSON evidence</li>
-<li>list previous anchors</li>
-<li>verify an anchor hash</li>
+<li>list receipts with cursor pagination;</li>
+<li>use lightweight status polling when available;</li>
+<li>fetch receipts and anchors;</li>
+<li>verify bundle URLs, hashes or CIDs;</li>
+<li>retrieve ISO-style artifacts;</li>
+<li>create refund evidence;</li>
+<li>query x402 payments and revenue where authorized.</li>
 </ul>
-<p>Use agents when the workflow needs a durable evidence trail without a human operating the dashboard.</p></article></main></div></body></html>
+<h2 id="anchor-arbitrary-task-data">Anchor arbitrary task data</h2>
+<p>Current source supports canonical JSON hashing:</p>
+<pre><code class="language-http">POST /v1/agents/{agent_id}/anchor-data
+</code></pre>
+<p>Use this for non-payment evidence such as task completion, data provenance or model-output commitments. The raw <code>data</code> object is hashed; the anchor record stores the hash, not the supplied object.</p>
+<h2 id="delivery-and-retries">Delivery and retries</h2>
+<p>Use idempotency keys for writes. Prefer signed webhooks for terminal events, SSE for live UI updates and 2–5 second polling only as a fallback. Never let an agent retry a value transfer merely because a receipt or callback timed out; reconcile payment state first.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

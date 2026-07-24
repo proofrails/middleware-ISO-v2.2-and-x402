@@ -1,46 +1,70 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>x402 overview | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
-<a class="" href="introduction.html">Introduction</a>
-<a class="" href="quickstart.html">Quickstart</a>
-<a class="" href="create-first-receipt.html">Create your first receipt</a>
-<a class="" href="verify-receipt.html">Verify a receipt</a>
-</div>
-<div class="nav-group"><div class="nav-title">Core concepts</div>
-<a class="" href="concepts__receipts.html">Receipts</a>
-<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
-<a class="" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
-<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
-<a class="" href="concepts__verification-model.html">Verification model</a>
-</div>
-<div class="nav-group"><div class="nav-title">API Reference</div>
-<a class="" href="api-reference__overview.html">API overview</a>
-<a class="" href="api-reference__authentication.html">Authentication</a>
-<a class="" href="api-reference__receipts.html">Receipts API</a>
-<a class="" href="api-reference__verification.html">Verification API</a>
-<a class="" href="api-reference__projects.html">Projects API</a>
-<a class="" href="api-reference__agents.html">Agents API</a>
-<a class="" href="api-reference__x402.html">x402 API</a>
-</div>
-<div class="nav-group"><div class="nav-title">Guides</div>
-<a class="" href="guides__local-development.html">Local development</a>
-<a class="" href="guides__production-deployment.html">Production deployment</a>
-<a class="" href="guides__agent-workflows.html">Agent workflows</a>
-<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
-</div>
-<div class="nav-group"><div class="nav-title">x402</div>
-<a class="active" href="x402__overview.html">x402 overview</a>
-<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
-</div>
-<div class="nav-group"><div class="nav-title">Security</div>
-<a class="" href="security__key-management.html">Key management</a>
-</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>x402 overview</h1><p>Official documentation for ProofRails — the open evidence and translation layer for onchain payments.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>x402 overview</h1>
-<p>ProofRails includes x402-style payment-gated API endpoints. The x402 layer is separate from the core receipt model: it controls access to premium actions, while ProofRails records and verifies evidence around payment activity.</p>
-<p>Premium endpoint examples:</p>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>x402 payment-gated actions | ProofRails Docs</title><meta name="description" content="Payment paths, premium routes and the ProofRails-specific mainnet flow.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a class="active" href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="x402-payment-gated-actions">x402 payment-gated actions</h1>
+<p>ProofRails can require payment before executing selected API actions or unlocking a protected resource. It then records the payment and can create receipt evidence around it.</p>
+<h2 id="payment-paths-in-current-source">Payment paths in current source</h2>
+<table>
+<thead>
+<tr>
+<th>Network</th>
+<th>Asset</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flare mainnet</td>
+<td>USD₮0</td>
+<td>EIP-3009 <code>TransferWithAuthorization</code> through X402Facilitator</td>
+</tr>
+<tr>
+<td>Flare mainnet</td>
+<td>FLR</td>
+<td>Native transfer verification</td>
+</tr>
+<tr>
+<td>Base mainnet</td>
+<td>USDC</td>
+<td>ERC-20 transfer-event verification</td>
+</tr>
+</tbody>
+</table>
+<p>Deployment operators can enable or disable paths independently.</p>
+<h2 id="premium-actions">Premium actions</h2>
+<pre><code class="language-http">POST /v1/x402/premium/verify-bundle
+POST /v1/x402/premium/generate-statement
+GET  /v1/x402/premium/iso-message/{receipt_id}/{type}
+POST /v1/x402/premium/fx-lookup
+POST /v1/x402/premium/bulk-verify
+POST /v1/x402/premium/refund
+</code></pre>
+<p>Management and reporting:</p>
+<pre><code class="language-http">GET  /v1/x402/pricing
+POST /v1/x402/pricing
+GET  /v1/x402/payments
+GET  /v1/x402/revenue
+GET  /v1/x402/facilitator-config
+POST /v1/x402/verify-payment
+</code></pre>
+<p>The hosted OpenAPI also exposes payment-specific receipt and compliance-check routes. Authorization varies by route and deployment.</p>
+<h2 id="flare-usd0-configuration">Flare USD₮0 configuration</h2>
+<p>See <a href="/deployments">Networks and contracts</a> for verified mainnet addresses.</p>
+<p>The EIP-3009 authorization must bind at least:</p>
 <ul>
-<li>paid bundle verification</li>
-<li>statement generation</li>
-<li>ISO artifact access</li>
-<li>FX lookup</li>
-<li>bulk verification</li>
-<li>refund workflow access</li>
+<li>token and chain ID;</li>
+<li>payer and recipient;</li>
+<li>exact raw amount;</li>
+<li>validity window;</li>
+<li>unique nonce;</li>
+<li>facilitator contract.</li>
 </ul>
-<p>Use precise language: “x402 payment-gated API endpoints” is accurate. Do not imply unsupported payment networks or production settlement paths are live unless deployment configuration proves it.</p></article></main></div></body></html>
+<p>The facilitator verifies the authorization, rejects invalid or reused nonces, settles the transfer and records a payment ID.</p>
+<h2 id="compatibility-warning">Compatibility warning</h2>
+<p>The proven x402test path uses custom product configuration and unlock calls. It is not a standard x402 V2 integration. Do not plug in an official v2 client and assume it will work. Read <a href="/x402/status-and-compatibility">x402 status and compatibility</a> before integration.</p>
+<h2 id="local-mock-mode">Local mock mode</h2>
+<pre><code class="language-env">X402_MOCK_PAYMENTS=true
+</code></pre>
+<p>Mock mode skips onchain verification. Use it only for local development and automated tests. A mock success is not payment evidence.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

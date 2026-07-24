@@ -1,0 +1,53 @@
+---
+title: Security and limitations
+description: Production boundaries, key handling and claim-safe use of ProofRails evidence.
+---
+
+# Security and limitations
+
+## Key handling
+
+- Keep API keys and signing keys server-side.
+- Use a secret manager and inject secrets at runtime.
+- Never commit `.env`, private keys or bearer tokens.
+- Separate development, staging and production credentials.
+- Give worker, API and deployment identities only the permissions they require.
+- Rotate exposed keys and publish signing-key rotation history.
+
+The current source's agent anchoring configuration accepts private-key input. Review that implementation before production use: secret storage must use authenticated encryption or an external signing service, not reversible encoding.
+
+## Hosted and source drift
+
+The public branch can be ahead of or behind the hosted API. Generate a client against the hosted OpenAPI and pin tested behavior. Do not assume a source route exists in production until runtime discovery confirms it.
+
+## Evidence boundary
+
+ProofRails establishes integrity relationships between receipt data, files, signatures, bundle hashes and onchain commitments. It does not independently validate every business fact supplied to it.
+
+## ISO boundary
+
+Many message generators are minimal or best-effort. Validate XSD, market-practice and semantic requirements for the institution or network that will consume the artifact. Do not market the platform as ISO 20022 certified based only on message names or namespaces.
+
+## Credential-envelope boundary
+
+The source credential helper can fall back to an unsigned `alg: none` envelope when Ed25519 dependencies or a signing key are unavailable. Reject unsigned envelopes in production and do not market them as verifiable credentials.
+
+## x402 boundary
+
+The ProofRails-specific Flare-mainnet product flow works, but standard x402 V2 client compatibility is incomplete. The tested bundle also omitted delivered-resource hashes.
+
+## Contract and chain checks
+
+Before sending value:
+
+- verify chain ID;
+- verify token decimals and EIP-712 domain;
+- verify facilitator and recipient addresses;
+- bound amount, validity window, nonce and maximum fee;
+- simulate or perform read-only verification;
+- ensure replay protection is active;
+- confirm the deployed bytecode and supported-token state.
+
+## Public verifier caveat
+
+During the verified mainnet run, the public page linked the anchor to Coston2 even though the transaction was on Flare mainnet. Verify explorer domain and chain independently rather than following a UI link blindly.

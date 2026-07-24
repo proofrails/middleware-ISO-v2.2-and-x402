@@ -1,47 +1,112 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ISO 20022-style artifacts | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
-<a class="" href="introduction.html">Introduction</a>
-<a class="" href="quickstart.html">Quickstart</a>
-<a class="" href="create-first-receipt.html">Create your first receipt</a>
-<a class="" href="verify-receipt.html">Verify a receipt</a>
-</div>
-<div class="nav-group"><div class="nav-title">Core concepts</div>
-<a class="" href="concepts__receipts.html">Receipts</a>
-<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
-<a class="active" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
-<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
-<a class="" href="concepts__verification-model.html">Verification model</a>
-</div>
-<div class="nav-group"><div class="nav-title">API Reference</div>
-<a class="" href="api-reference__overview.html">API overview</a>
-<a class="" href="api-reference__authentication.html">Authentication</a>
-<a class="" href="api-reference__receipts.html">Receipts API</a>
-<a class="" href="api-reference__verification.html">Verification API</a>
-<a class="" href="api-reference__projects.html">Projects API</a>
-<a class="" href="api-reference__agents.html">Agents API</a>
-<a class="" href="api-reference__x402.html">x402 API</a>
-</div>
-<div class="nav-group"><div class="nav-title">Guides</div>
-<a class="" href="guides__local-development.html">Local development</a>
-<a class="" href="guides__production-deployment.html">Production deployment</a>
-<a class="" href="guides__agent-workflows.html">Agent workflows</a>
-<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
-</div>
-<div class="nav-group"><div class="nav-title">x402</div>
-<a class="" href="x402__overview.html">x402 overview</a>
-<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
-</div>
-<div class="nav-group"><div class="nav-title">Security</div>
-<a class="" href="security__key-management.html">Key management</a>
-</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>ISO 20022-style artifacts</h1><p>Official documentation for ProofRails — the open evidence and translation layer for onchain payments.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>ISO 20022-style artifacts</h1>
-<p>ProofRails generates ISO 20022-style artifacts around onchain payments. These artifacts are intended to make crypto payment activity easier to reconcile, explain, and audit.</p>
-<p>Examples include:</p>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ISO 20022-style artifacts | ProofRails Docs</title><meta name="description" content="Message families, generation paths and validation boundaries.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a class="active" href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="iso-20022-style-artifacts">ISO 20022-style artifacts</h1>
+<p>ProofRails translates onchain payment evidence into finance-readable XML. These documents preserve familiar ISO 20022 message names and namespaces, but availability and validation depth vary by generator.</p>
+<h2 id="message-map">Message map</h2>
+<table>
+<thead>
+<tr>
+<th>Message</th>
+<th>Purpose in ProofRails</th>
+<th>Typical generation path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pain.001</code></td>
+<td>Customer credit transfer initiation-style record</td>
+<td>Core receipt processing</td>
+</tr>
+<tr>
+<td><code>pain.002</code></td>
+<td>Payment status report</td>
+<td>Post-processing / receipt status</td>
+</tr>
+<tr>
+<td><code>pain.007</code></td>
+<td>Customer cancellation request</td>
+<td>Supporting generator</td>
+</tr>
+<tr>
+<td><code>pain.008</code></td>
+<td>Direct debit initiation-style record</td>
+<td>Supporting generator</td>
+</tr>
+<tr>
+<td><code>pacs.002</code></td>
+<td>FI payment status</td>
+<td>Interbank workflow</td>
+</tr>
+<tr>
+<td><code>pacs.004</code></td>
+<td>Payment return / refund</td>
+<td>Refund receipt workflow</td>
+</tr>
+<tr>
+<td><code>pacs.007</code></td>
+<td>FI payment reversal</td>
+<td><code>POST /v1/iso/pacs007/{receipt_id}</code></td>
+</tr>
+<tr>
+<td><code>pacs.008</code></td>
+<td>FI customer credit transfer</td>
+<td>Interbank workflow</td>
+</tr>
+<tr>
+<td><code>pacs.009</code></td>
+<td>FI credit transfer</td>
+<td><code>POST /v1/iso/pacs009/{receipt_id}</code></td>
+</tr>
+<tr>
+<td><code>camt.029</code></td>
+<td>Resolution of investigation</td>
+<td><code>POST /v1/iso/camt029/{receipt_id}</code></td>
+</tr>
+<tr>
+<td><code>camt.052</code></td>
+<td>Intraday account report</td>
+<td>Statement job / SDK</td>
+</tr>
+<tr>
+<td><code>camt.053</code></td>
+<td>Daily account statement</td>
+<td>Statement job / SDK</td>
+</tr>
+<tr>
+<td><code>camt.054</code></td>
+<td>Debit/credit notification</td>
+<td>Post-anchor receipt workflow</td>
+</tr>
+<tr>
+<td><code>camt.056</code></td>
+<td>FI cancellation request</td>
+<td><code>POST /v1/iso/camt056/{receipt_id}</code></td>
+</tr>
+<tr>
+<td><code>remt.001</code></td>
+<td>Remittance information</td>
+<td>Optional structured-remittance configuration</td>
+</tr>
+</tbody>
+</table>
+<h2 id="fetch-receipt-artifacts">Fetch receipt artifacts</h2>
+<pre><code class="language-bash">curl --fail 'https://app.proofrails.com/v1/iso/messages/&lt;receipt_id&gt;' \
+  -H 'X-API-Key: &lt;api_key&gt;'
+</code></pre>
+<p>Filter by type where supported:</p>
+<pre><code class="language-text">GET /v1/iso/messages/{receipt_id}?type=pain.001
+</code></pre>
+<p>The response lists artifact type, path or URL and SHA-256 metadata.</p>
+<h2 id="generation-quality">Generation quality</h2>
+<p><code>pain.001.001.09</code> has a dedicated generator and schema path in the repository. Other generators explicitly describe themselves as minimal, pragmatic or best-effort, and some do not enforce XSD validation.</p>
+<p>A well-formed XML response is not the same as:</p>
 <ul>
-<li><code>pain.001</code>: payment initiation style artifact</li>
-<li><code>pacs.008</code>: credit transfer style artifact</li>
-<li><code>camt.053</code>: statement style artifact</li>
-<li><code>camt.054</code>: notification style artifact</li>
-<li>refund and investigation related messages where supported</li>
+<li>conformance to every ISO 20022 XSD rule;</li>
+<li>conformance to a specific market-practice guide;</li>
+<li>semantic acceptance by a bank or clearing system;</li>
+<li>ISO registration, certification or network connectivity.</li>
 </ul>
-<div class="callout note"><strong>Note</strong>
-<p>Use “ISO 20022-style” unless a stricter compliance or certification claim has been independently verified for the target deployment.</p>
-</div></article></main></div></body></html>
+<p>Validate the exact message version, schema, business rules and market practice required by your recipient before production exchange.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>

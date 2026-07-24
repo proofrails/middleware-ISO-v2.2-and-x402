@@ -1,46 +1,61 @@
 ---
 title: API overview
-description: Base URL, auth, response model, and API sections.
+description: Hosted base URL, authentication, runtime discovery and API groups.
 ---
 
 # API overview
 
-ProofRails exposes a REST API served by FastAPI.
+ProofRails exposes a FastAPI REST API.
 
 ## Base URLs
 
 ```text
-http://localhost:8000          # local development
-https://app.proofrails.com     # hosted app/API when configured
+https://app.proofrails.com    # hosted API
+http://localhost:8000         # default local API
 ```
 
-## Interactive docs
+Runtime references:
 
-FastAPI generates:
+- [Swagger UI](https://app.proofrails.com/docs)
+- [ReDoc](https://app.proofrails.com/redoc)
+- [OpenAPI JSON](https://app.proofrails.com/openapi.json)
+- [Health](https://app.proofrails.com/v1/health)
 
-```text
-GET /docs
-GET /redoc
-GET /openapi.json
-```
+The hosted OpenAPI is the source of truth for deployed routes. The `agentic` branch can contain capabilities that have not yet rolled out to the hosted service.
 
 ## Authentication
 
-Most endpoints require:
+Use a server-side API key unless a route is explicitly public:
 
-```text
-X-API-Key: <your_project_api_key>
+```http
+X-API-Key: <api_key>
 ```
 
-Project-scoped keys can be generated through project registration or the app settings flow, depending on deployment.
+Project-scoped keys limit access to that tenant. Admin keys can access cross-project, configuration and analytics routes. Some deployments also support SIWE for wallet-linked access and key minting.
+
+## Common headers
+
+```http
+Content-Type: application/json
+X-API-Key: <api_key>
+Idempotency-Key: <unique-logical-operation-id>
+```
+
+Responses can include request identifiers and rate-limit metadata depending on deployment configuration.
 
 ## API groups
 
-- Receipts
-- Verification
-- Projects and API keys
-- Agents
-- x402
-- Anchoring
-- Monitoring
-- Webhooks
+| Group | Main purpose |
+|---|---|
+| Receipts | Create, list, fetch, poll and retry receipt operations. |
+| Verification | Verify bundle URLs, hashes, CIDs and anchors. |
+| ISO artifacts | List and generate payment, status, statement, return and investigation messages. |
+| Projects and auth | Tenant configuration, API keys and SIWE. |
+| Agents | Agent records, AI settings, templates, tests, stats and anchoring. |
+| x402 | Pricing, payment verification, paid actions, receipts and analytics. |
+| Events | SSE and source-branch webhooks. |
+| Operations | Health, metrics, audit events and optional monitoring. |
+
+## Version reality
+
+The hosted OpenAPI checked on 24 July 2026 identified itself as version `0.1.0`, while the current application factory in source identifies the service as `2.2.0`. Do not use either string alone to infer route availability. Discover the runtime schema and pin the API behavior your integration depends on.

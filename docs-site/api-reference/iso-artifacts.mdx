@@ -1,0 +1,57 @@
+---
+title: ISO and financial-message API
+description: Retrieve generated XML and create cancellation, investigation, reversal, transfer and refund artifacts.
+---
+
+# ISO and financial-message API
+
+## List receipt artifacts
+
+```http
+GET /v1/iso/messages/{receipt_id}
+GET /v1/iso/messages/{receipt_id}?type=pain.001
+```
+
+## Generate FI messages
+
+```http
+POST /v1/iso/camt056/{receipt_id}
+POST /v1/iso/camt029/{receipt_id}
+POST /v1/iso/pacs007/{receipt_id}
+POST /v1/iso/pacs009/{receipt_id}
+```
+
+`camt.056`, `camt.029` and `pacs.007` accept a small request object containing the relevant reason or resolution code. `pacs.009` derives its data from the receipt.
+
+Example:
+
+```bash
+curl --fail-with-body -X POST \
+  https://app.proofrails.com/v1/iso/camt056/<receipt_id> \
+  -H 'X-API-Key: <api_key>' \
+  -H 'Content-Type: application/json' \
+  -d '{"reason_code":"CUST"}'
+```
+
+Response:
+
+```json
+{
+  "message_id": "camt056-<uuid>",
+  "type": "camt.056",
+  "receipt_id": "<uuid>",
+  "url": "/files/<uuid>/camt056.xml"
+}
+```
+
+## Refund workflow
+
+```http
+POST /v1/iso/refund
+```
+
+The refund route creates a receipt linked to the original and generates a `pacs.004` return-style artifact instead of a normal `pain.001` path.
+
+## Important boundary
+
+These endpoints generate evidence and message artifacts. They do not cancel, reverse or refund value on the underlying blockchain by themselves.

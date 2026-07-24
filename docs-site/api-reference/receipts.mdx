@@ -1,70 +1,81 @@
 ---
 title: Receipts API
-description: Create, list, fetch, poll, and retry ProofRails receipts.
+description: Create, list, fetch, poll and retry ProofRails receipts.
 ---
 
 # Receipts API
 
-## Create receipt
+## Create
 
 ```http
 POST /v1/iso/record-tip
 ```
 
-Creates a receipt from an onchain payment reference.
+See [Create a receipt](/create-first-receipt) for the complete payload.
 
-## Poll operation
-
-```http
-GET /v1/operations/{operation_id}
-```
-
-Returns processing status for a receipt operation.
-
-## List receipts
+## List
 
 ```http
 GET /v1/receipts
 ```
 
-Common filters:
+| Query | Description |
+|---|---|
+| `status` | Filter by lifecycle status. |
+| `chain` | Filter by chain name. |
+| `reference` | Filter by external reference. |
+| `since`, `until` | ISO-formatted date boundaries. |
+| `tags` | Comma-separated tags; source requires all listed tags. |
+| `scope` | `mine` by default; `all` requires admin access. |
+| `cursor` | Stable cursor for agents and concurrent insert workloads. |
+| `page`, `page_size` | Legacy offset pagination. |
 
-- `status`
-- `chain`
-- `reference`
-- `since`
-- `until`
-- `scope`
-- `page`
-- `page_size`
-- `cursor`
+Use `next_cursor` for subsequent calls. Cursor pagination is safer than page numbers while receipts are being inserted.
 
-## Get receipt
+## Poll status
+
+Current source:
+
+```http
+GET /v1/operations/{operation_id}
+GET /v1/iso/receipts/{receipt_id}/status
+```
+
+These lightweight endpoints return status, bundle hash, anchor transaction and timestamps without the full receipt payload. They were not present in the hosted OpenAPI snapshot checked on 24 July 2026; hosted clients should discover support at runtime.
+
+## Fetch full receipt
 
 ```http
 GET /v1/iso/receipts/{receipt_id}
 ```
 
-## Get receipt status
-
-```http
-GET /v1/iso/receipts/{receipt_id}/status
+```json
+{
+  "id": "<uuid>",
+  "status": "anchored",
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "xml_url": "/files/<uuid>/pain001.xml",
+  "bundle_url": "/files/<uuid>/evidence.zip",
+  "created_at": "2026-07-23T12:00:00Z",
+  "anchored_at": "2026-07-23T12:01:00Z"
+}
 ```
 
-## Generated ISO messages
+## Artifacts and anchors
 
 ```http
 GET /v1/iso/messages/{receipt_id}
+GET /v1/anchors/{receipt_id}
+GET /v1/iso/events/{receipt_id}
 ```
 
-Optional query:
+## Retry failed anchoring
 
-```text
-type=pacs.008
-```
-
-## Retry anchoring
+Current source:
 
 ```http
 POST /v1/iso/receipts/{receipt_id}/retry-anchor
 ```
+
+The receipt must be `failed` and already have a bundle hash. A successful retry request resets it to `awaiting_anchor` and queues the anchor job.

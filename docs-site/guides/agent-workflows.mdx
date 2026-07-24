@@ -1,22 +1,61 @@
 ---
 title: Agent workflows
-description: Use ProofRails with autonomous agents and XMTP-style flows.
+description: Create receipts for agent purchases and anchor task or data evidence.
 ---
 
 # Agent workflows
 
-Agents can use ProofRails to produce receipts for autonomous actions and verify the evidence behind payment or workflow events.
+Agents need evidence for more than the transfer itself. A useful receipt records what the agent paid, which resource or API it requested, what result identifier it received and which evidence was committed.
 
-Common capabilities:
+## Purchase receipt pattern
 
-- list receipts
-- fetch receipt details
-- check receipt status
-- verify bundles
-- generate statements
-- create refund records
-- anchor arbitrary JSON evidence
-- list previous anchors
-- verify an anchor hash
+```text
+agent chooses resource
+→ payment authorization or transaction
+→ merchant/facilitator settles
+→ service returns resource identifier
+→ ProofRails creates receipt
+→ bundle records payment + workflow context
+→ bundle hash is anchored
+```
 
-Use agents when the workflow needs a durable evidence trail without a human operating the dashboard.
+Recommended receipt metadata:
+
+```json
+{
+  "agent_id": "agent-uuid",
+  "task_id": "research-0042",
+  "endpoint": "/premium/data",
+  "resource_id": "dataset-2026-07",
+  "payment_id": "0x...",
+  "result_hash": "0x..."
+}
+```
+
+Only include a `result_hash` if it is computed over the exact delivered bytes or canonical result object. A URL or label is not a content commitment.
+
+## Read and verify
+
+Agents can:
+
+- list receipts with cursor pagination;
+- use lightweight status polling when available;
+- fetch receipts and anchors;
+- verify bundle URLs, hashes or CIDs;
+- retrieve ISO-style artifacts;
+- create refund evidence;
+- query x402 payments and revenue where authorized.
+
+## Anchor arbitrary task data
+
+Current source supports canonical JSON hashing:
+
+```http
+POST /v1/agents/{agent_id}/anchor-data
+```
+
+Use this for non-payment evidence such as task completion, data provenance or model-output commitments. The raw `data` object is hashed; the anchor record stores the hash, not the supplied object.
+
+## Delivery and retries
+
+Use idempotency keys for writes. Prefer signed webhooks for terminal events, SSE for live UI updates and 2–5 second polling only as a fallback. Never let an agent retry a value transfer merely because a receipt or callback timed out; reconcile payment state first.

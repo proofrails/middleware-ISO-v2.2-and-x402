@@ -1,19 +1,19 @@
 ---
 title: Quickstart
-description: Run ProofRails locally and create your first receipt.
+description: Create, poll and verify a ProofRails receipt.
 ---
 
 # Quickstart
 
-This quickstart gets the backend running locally, creates a receipt, polls status, and verifies the resulting evidence.
+This guide runs the current source locally with mock payment checks, creates a receipt and follows it to evidence generation. No blockchain transaction is required for the local flow.
 
 ## Prerequisites
 
 - Git
-- Docker and Docker Compose, or Python 3.11+
-- A terminal with access to the ProofRails repository
+- Docker with Compose
+- `curl`
 
-## Clone
+## 1. Start the stack
 
 ```bash
 git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
@@ -22,7 +22,7 @@ git checkout agentic
 cp .env.example .env
 ```
 
-For local development, set:
+Set local-only values in `.env`:
 
 ```env
 API_KEYS=dev-admin-CHANGE_ME
@@ -31,39 +31,76 @@ RATE_LIMIT_ENABLED=false
 AUTO_CREATE_DB=true
 ```
 
-## Run with Docker Compose
-
 ```bash
 docker compose up --build
 ```
 
-The local API should be available at:
-
-```text
-http://localhost:8000
-```
-
-Interactive OpenAPI docs:
-
-```text
-http://localhost:8000/docs
-```
-
-## Run backend directly
+Check readiness:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+curl --fail http://localhost:8000/v1/health
 ```
 
-## Health check
+OpenAPI is available at `http://localhost:8000/docs`.
+
+## 2. Create a receipt
 
 ```bash
-curl http://localhost:8000/v1/health
+curl --fail-with-body -X POST http://localhost:8000/v1/iso/record-tip \
+  -H 'X-API-Key: dev-admin-CHANGE_ME' \
+  -H 'Idempotency-Key: quickstart-invoice-001' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "reference": "invoice-001",
+    "tip_tx_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+    "chain": "flare",
+    "amount": "100.00",
+    "currency": "FLR",
+    "sender_wallet": "0x1111111111111111111111111111111111111111",
+    "receiver_wallet": "0x2222222222222222222222222222222222222222",
+    "metadata": {"invoice_id": "invoice-001", "environment": "local"},
+    "tags": ["quickstart", "invoice"]
+  }'
 ```
 
-## Next step
+Save the returned `receipt_id`. In the current source, `operation_id` is the same UUID.
 
-Create a receipt with [Create your first receipt](/create-first-receipt).
+## 3. Poll processing
+
+```bash
+curl --fail http://localhost:8000/v1/operations/<receipt_id> \
+  -H 'X-API-Key: dev-admin-CHANGE_ME'
+```
+
+Expected lifecycle:
+
+```text
+pending → processing → awaiting_anchor → anchored
+                                ↘ failed
+```
+
+Use 2–5 second polling intervals in development. Prefer webhooks in production.
+
+## 4. Fetch the outputs
+
+```bash
+curl --fail http://localhost:8000/v1/iso/receipts/<receipt_id> \
+  -H 'X-API-Key: dev-admin-CHANGE_ME'
+
+curl --fail http://localhost:8000/v1/iso/messages/<receipt_id> \
+  -H 'X-API-Key: dev-admin-CHANGE_ME'
+
+curl --fail --output evidence.zip \
+  http://localhost:8000/files/<receipt_id>/evidence.zip
+```
+
+## 5. Verify the bundle
+
+```bash
+curl --fail-with-body -X POST http://localhost:8000/v1/iso/verify \
+  -H 'X-API-Key: dev-admin-CHANGE_ME' \
+  -H 'Content-Type: application/json' \
+  -d '{"bundle_url":"http://localhost:8000/files/<receipt_id>/evidence.zip"}'
+```
+
+A local mock run can validate bundle integrity but cannot prove a real mainnet anchor. For a public read-only example, follow the [mainnet proof walkthrough](/x402/mainnet-proof).

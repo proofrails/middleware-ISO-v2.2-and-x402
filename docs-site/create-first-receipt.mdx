@@ -1,85 +1,78 @@
 ---
-title: Create your first receipt
-description: Submit an onchain payment reference and create a ProofRails receipt.
+title: Create a receipt
+description: Submit a payment reference and follow the ProofRails receipt pipeline.
 ---
 
-# Create your first receipt
+# Create a receipt
 
-The core ProofRails action is receipt creation.
-
-```http
-POST /v1/iso/record-tip
-```
+`POST /v1/iso/record-tip` records evidence about an existing payment. It does not broadcast, settle or custody that payment.
 
 ## Request
 
 ```bash
-curl -X POST http://localhost:8000/v1/iso/record-tip \
-  -H "X-API-Key: dev-admin-CHANGE_ME" \
-  -H "Content-Type: application/json" \
+curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/record-tip \
+  -H 'X-API-Key: <api_key>' \
+  -H 'Idempotency-Key: order-2026-0042' \
+  -H 'Content-Type: application/json' \
   -d '{
-    "reference": "invoice-001",
-    "tip_tx_hash": "0xabc123",
+    "reference": "order-2026-0042",
+    "tip_tx_hash": "0x<64-hex-transaction-hash>",
     "chain": "flare",
-    "amount": "100.0",
-    "currency": "FLR",
-    "sender_wallet": "0xSender",
-    "receiver_wallet": "0xReceiver",
+    "amount": "42.50",
+    "currency": "USD₮0",
+    "sender_wallet": "0x<payer>",
+    "receiver_wallet": "0x<recipient>",
     "metadata": {
-      "invoice_id": "invoice-001",
-      "source": "merchant_checkout"
+      "order_id": "order-2026-0042",
+      "product": "data-access"
     },
-    "tags": ["invoice", "demo"]
+    "tags": ["commerce", "agent-purchase"]
   }'
 ```
 
-## Required fields
+## Fields
 
-- `reference`
-- `tip_tx_hash`
-- `chain`
-- `amount`
-- `currency`
-- `sender_wallet`
-- `receiver_wallet`
+| Field | Required | Meaning |
+|---|---:|---|
+| `reference` | Yes | Your stable external identifier. |
+| `tip_tx_hash` | Yes | Blockchain transaction hash being documented. |
+| `chain` | Yes | Chain name such as `flare`, `base` or another configured network. |
+| `amount` | Yes | Decimal string; do not use floating-point serialization. |
+| `currency` | Yes | Asset symbol or currency code. |
+| `sender_wallet` | Yes | Payer address. |
+| `receiver_wallet` | Yes | Recipient address. |
+| `callback_url` | No | Legacy completion callback. Prefer registered webhooks where available. |
+| `metadata` | No | Business and workflow context. Avoid secrets and unnecessary personal data. |
+| `tags` | No | Search and filtering labels. |
 
 ## Response
 
 ```json
 {
-  "receipt_id": "<uuid>",
+  "receipt_id": "5f28a66d-7259-4d4f-8e50-2a1e978fef38",
   "status": "pending",
-  "operation_id": "<uuid>"
+  "operation_id": "5f28a66d-7259-4d4f-8e50-2a1e978fef38"
 }
 ```
 
-`operation_id` is used to poll the processing workflow.
+The current `agentic` source returns the receipt UUID as both identifiers. Older hosted deployments may not expose the operation polling route; use the receipt GET endpoint or hosted UI if `/v1/operations/{id}` is absent from live OpenAPI.
 
-## Poll operation status
+## Retrieve results
 
-```bash
-curl http://localhost:8000/v1/operations/<operation_id> \
-  -H "X-API-Key: dev-admin-CHANGE_ME"
+```http
+GET /v1/operations/{operation_id}
+GET /v1/iso/receipts/{receipt_id}
+GET /v1/iso/messages/{receipt_id}
+GET /v1/anchors/{receipt_id}
 ```
 
-Common statuses:
+Generated files are served under:
 
-- `pending`
-- `processing`
-- `awaiting_anchor`
-- `anchored`
-- `failed`
-
-## Fetch the receipt
-
-```bash
-curl http://localhost:8000/v1/iso/receipts/<receipt_id> \
-  -H "X-API-Key: dev-admin-CHANGE_ME"
+```text
+/files/{receipt_id}/pain001.xml
+/files/{receipt_id}/evidence.zip
 ```
 
-## Fetch generated ISO artifacts
+## Idempotency
 
-```bash
-curl http://localhost:8000/v1/iso/messages/<receipt_id> \
-  -H "X-API-Key: dev-admin-CHANGE_ME"
-```
+Use a unique `Idempotency-Key` for every logical creation request. Retrying the same operation with the same key should return the original result rather than creating another receipt when idempotency middleware is enabled.

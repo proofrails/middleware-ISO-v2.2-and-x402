@@ -1,0 +1,40 @@
+---
+title: System architecture
+description: How ProofRails moves from API input to signed evidence and onchain verification.
+---
+
+# System architecture
+
+ProofRails separates payment movement from payment evidence. The payer and settlement network move value. ProofRails receives a reference to that activity, processes a receipt asynchronously, writes portable artifacts, and anchors a digest.
+
+<img src="/assets/receipt-lifecycle.svg" alt="ProofRails architecture and receipt lifecycle" />
+
+## Components
+
+| Layer | Responsibilities |
+|---|---|
+| API | Authentication, projects, receipt submission, lookup, verification, x402 and agent routes. |
+| Receipt processor | Normalizes the submitted payment context and advances the lifecycle. |
+| ISO generators | Produce payment initiation, status, notification, statement, cancellation, investigation, reversal, return and remittance-style XML. |
+| Bundle builder | Writes canonical manifest data, SHA-256 file inventory, Ed25519 signature material and `evidence.zip`. |
+| Storage | Persists receipts, projects, payments, anchors and generated artifacts. |
+| Queue and workers | Run processing and anchoring outside the request path. |
+| Anchor service | Sends the bundle hash to EvidenceAnchor and stores the resulting transaction reference. |
+| Verification | Recomputes evidence hashes, validates signatures and checks onchain matches. |
+| Integrations | SDKs, agents, SSE, webhooks, monitoring and paid endpoint workflows. |
+
+## Data path
+
+1. A client submits `POST /v1/iso/record-tip` with a unique reference, transaction hash, chain, amount, currency and wallet addresses.
+2. ProofRails creates the receipt and queues processing.
+3. A worker generates `pain.001` and any configured companion artifacts.
+4. The bundle builder creates an inventory, signs the manifest and writes `evidence.zip`.
+5. The bundle's SHA-256 becomes the onchain commitment.
+6. EvidenceAnchor emits a transaction/event that can be checked independently.
+7. Clients fetch the receipt, artifacts and bundle or subscribe to lifecycle updates.
+
+## Hosted versus self-hosted
+
+The hosted service exposes the production app, API, console and verifier. The repository can also run locally or in a private deployment with separate database, Redis, worker queues, storage and contracts.
+
+Some current-source capabilities, including webhooks, operation polling, FTSO/FDC helpers and proactive monitoring, were not present in the hosted OpenAPI snapshot checked on 24 July 2026. Confirm rollout before treating a source route as a hosted route.

@@ -1,0 +1,54 @@
+---
+title: x402 status and compatibility
+description: The proven ProofRails paid-resource flow and the current standard x402 V2 boundary.
+---
+
+# x402 status and compatibility
+
+ProofRails has a working mainnet payment-to-resource product sequence on Flare. The current HTTP exchange is ProofRails-specific and is not yet compatible with the standard x402 V2 client flow.
+
+<img src="/assets/x402-mainnet-flow.svg" alt="ProofRails-specific x402 paid-resource flow on Flare mainnet" />
+
+## What is proven
+
+A bounded live run completed this sequence:
+
+1. fetch the deployed product configuration;
+2. validate chain, token, facilitator, recipient, amount and resource;
+3. sign a USD₮0 `TransferWithAuthorization` payload;
+4. settle exactly `0.001 USD₮0` through the ProofRails X402Facilitator on Flare mainnet;
+5. call the x402test unlock endpoint;
+6. download the protected PDF and Markdown;
+7. create receipt `dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5`;
+8. generate a signed bundle and ISO-style artifacts;
+9. anchor the matching bundle hash on Flare mainnet.
+
+A repeated unlock was idempotent and did not submit another transfer.
+
+## What is not yet proven
+
+The canonical x402 V2 interaction is normally:
+
+```text
+request protected URL
+→ receive a standard 402 + PAYMENT-REQUIRED
+→ client signs PAYMENT-SIGNATURE
+→ retry the same URL
+→ receive resource + PAYMENT-RESPONSE
+```
+
+A clean test using official `@x402/fetch` and `@x402/evm` version `2.19.0` failed before payment authorization because the production response did not include the standard `PAYMENT-REQUIRED` header. It returned the custom `X-PAYMENT-REQUIRED: true` header and a JSON body with `version: "1.0"`. The official client reported `Invalid payment required response`. No signature, retry or transaction followed.
+
+## Integration guidance
+
+- Use the current flow only with the ProofRails-specific config and unlock contract documented by the product application.
+- Do not describe it as drop-in x402 V2 support.
+- Do not send value from an automated test unless the exact chain, asset, amount, recipient, facilitator and maximum gas exposure are bounded and approved.
+- Treat payment verification, resource delivery and receipt evidence as separate acceptance checks.
+- The tested receipt did not commit the protected PDF and Markdown hashes. Delivery integrity requires those hashes to be added to the receipt and manifest before anchoring.
+
+## Mainnet references
+
+- Payment: [`0x63b30e4b…e6f92`](https://flare-explorer.flare.network/tx/0x63b30e4b096331e520cb19a80f7461b0cf2ee37756b513c88032e0e178ce6f92)
+- Receipt: [`dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5`](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5)
+- Anchor: [`0x55a3e048…a8ecf4`](https://flare-explorer.flare.network/tx/0x55a3e0481af795e3a2d38bc5a28db741897034cd017ada061a30a13c65a8ecf4)

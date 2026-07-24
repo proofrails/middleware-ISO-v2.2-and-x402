@@ -1,0 +1,97 @@
+---
+title: Capabilities
+description: A complete map of ProofRails product, API and self-hosted capabilities.
+---
+
+# Capabilities
+
+## Receipt and evidence core
+
+- submit onchain payment references with structured metadata and tags;
+- process receipts asynchronously;
+- list and filter receipts by status, chain, reference, date and tags;
+- use cursor pagination for agent-safe iteration;
+- retrieve lightweight status or full receipt data;
+- generate signed evidence ZIPs;
+- serve receipt JSON, payment context, XML and bundle files;
+- retry failed anchoring jobs;
+- stream receipt events over SSE.
+
+## Verification
+
+- verify a bundle by URL or expected hash;
+- verify content addressed by IPFS or Arweave CID;
+- recompute ZIP SHA-256;
+- validate CRC, manifest inventory and Ed25519 signature;
+- query receipt anchors;
+- compare with the expected Flare transaction and EvidenceAnchor event;
+- expose public receipt pages and embeddable receipt views.
+
+## ISO 20022-style artifacts
+
+The source includes generators for:
+
+| Family | Artifacts |
+|---|---|
+| Customer payment | `pain.001`, `pain.002`, `pain.007`, `pain.008` |
+| FI-to-FI payment | `pacs.002`, `pacs.004`, `pacs.007`, `pacs.008`, `pacs.009` |
+| Cash management | `camt.029`, `camt.052`, `camt.053`, `camt.054`, `camt.056` |
+| Remittance | `remt.001` |
+
+Availability depends on the receipt path and deployment. Some are generated automatically; others use explicit APIs or statement jobs. Several generators are minimal and best-effort rather than XSD-certified implementations.
+
+## Projects, tenants and access
+
+- project registration and project-specific configuration;
+- environment or database-backed API keys;
+- key creation and revocation;
+- SIWE nonce, wallet verification and linked-wallet management;
+- per-project receipt scoping;
+- admin-only cross-project operations;
+- optional compliance-policy hooks and external provider callbacks;
+- structured errors, request IDs, rate limiting and idempotency middleware.
+
+## Storage and credential envelopes
+
+- local filesystem, IPFS and Arweave bundle-storage backends;
+- CID-based verification for content-addressed evidence;
+- source-level verifiable-credential envelope generation around a receipt bundle hash.
+
+The credential helper can emit an unsigned `alg: none` envelope when Ed25519 support or a signing key is unavailable. Treat that result as data packaging, not a verifiable credential, and require a signed algorithm in production.
+
+## Agents and automation
+
+- create and manage agent records;
+- configure agent AI settings and test behavior;
+- parse natural-language agent commands through the optional server-side AI provider;
+- export agent templates;
+- discover source-branch Flare capabilities as tool schemas;
+- attach x402 payments and anchor activity to agents;
+- hash arbitrary canonical JSON and optionally anchor it;
+- list agent anchors and unified payment/anchor activity;
+- use HMAC-signed webhooks in the current source branch;
+- monitor lifecycle through polling, SSE or webhooks.
+
+## Flare integrations
+
+- EvidenceAnchor commitments on Flare;
+- FTSO v2 feed lookup helpers in the current source branch;
+- FDC attestation request preparation in the current source branch;
+- native FLR payment verification path;
+- USD₮0 EIP-3009 settlement through X402Facilitator;
+- mainnet explorer-verifiable payment and anchor records.
+
+## x402 and paid actions
+
+- endpoint pricing configuration;
+- payment records and revenue analytics;
+- Base USDC, Flare native FLR and Flare USD₮0 payment paths in current source;
+- paid bundle verification, statement generation, ISO retrieval, FX lookup, bulk verification and refund routes;
+- receipt generation from x402 payment records;
+- ProofRails-specific paid-resource unlock flow.
+
+Standard x402 V2 compatibility is not yet complete. See [x402 status](/x402/status-and-compatibility).
+
+## Operations
+
+The current source supports PostgreSQL or local SQLite, Redis-backed queues, workers, artifact storage, Alembic migrations, health checks, metrics, webhook delivery and optional proactive monitoring. A hosted route should only be assumed available if it appears in the live OpenAPI or is confirmed by the service owner.

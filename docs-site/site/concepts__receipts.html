@@ -1,38 +1,9 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Receipts | ProofRails Docs</title><link rel="icon" href="favicon.svg"><link rel="stylesheet" href="style.css"></head><body><div class="shell"><aside class="sidebar"><div class="brand"><div class="logo"><img src="/proofrails-logo.svg" alt="ProofRails logo"></div><div><h1>ProofRails</h1><p>Official documentation</p></div></div><div class="nav-group"><div class="nav-title">Start here</div>
-<a class="" href="introduction.html">Introduction</a>
-<a class="" href="quickstart.html">Quickstart</a>
-<a class="" href="create-first-receipt.html">Create your first receipt</a>
-<a class="" href="verify-receipt.html">Verify a receipt</a>
-</div>
-<div class="nav-group"><div class="nav-title">Core concepts</div>
-<a class="active" href="concepts__receipts.html">Receipts</a>
-<a class="" href="concepts__evidence-bundles.html">Evidence bundles</a>
-<a class="" href="concepts__iso-20022-artifacts.html">ISO 20022-style artifacts</a>
-<a class="" href="concepts__anchoring.html">Onchain anchoring</a>
-<a class="" href="concepts__verification-model.html">Verification model</a>
-</div>
-<div class="nav-group"><div class="nav-title">API Reference</div>
-<a class="" href="api-reference__overview.html">API overview</a>
-<a class="" href="api-reference__authentication.html">Authentication</a>
-<a class="" href="api-reference__receipts.html">Receipts API</a>
-<a class="" href="api-reference__verification.html">Verification API</a>
-<a class="" href="api-reference__projects.html">Projects API</a>
-<a class="" href="api-reference__agents.html">Agents API</a>
-<a class="" href="api-reference__x402.html">x402 API</a>
-</div>
-<div class="nav-group"><div class="nav-title">Guides</div>
-<a class="" href="guides__local-development.html">Local development</a>
-<a class="" href="guides__production-deployment.html">Production deployment</a>
-<a class="" href="guides__agent-workflows.html">Agent workflows</a>
-<a class="" href="guides__flare-anchoring.html">Flare anchoring</a>
-</div>
-<div class="nav-group"><div class="nav-title">x402</div>
-<a class="" href="x402__overview.html">x402 overview</a>
-<a class="" href="x402__coston2-testnet-demo.html">Coston2 testnet demo</a>
-</div>
-<div class="nav-group"><div class="nav-title">Security</div>
-<a class="" href="security__key-management.html">Key management</a>
-</div></aside><main class="main"><section class="hero"><div class="hero-mark"><img src="/proofrails-logo.svg" alt="ProofRails logo"><span>ProofRails Docs</span></div><div class="eyebrow">Evidence layer for onchain payments</div><h1>Receipts</h1><p>Official documentation for ProofRails — the open evidence and translation layer for onchain payments.</p><div class="toplinks"><a class="primary" href="introduction.html">Start here</a><a class="secondary" href="api-reference__overview.html">API reference</a><a class="secondary" href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></div></section><article class="content"><h1>Receipts</h1>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Receipts | ProofRails Docs</title><meta name="description" content="The primary ProofRails record object.">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">ProofRails documentation</a><a href="/platform-status">Platform status</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a class="active" href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 status and compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<main class="main"><article class="content"><h1 id="receipts">Receipts</h1>
 <p>A ProofRails receipt is the canonical record for an onchain payment reference plus its business context and verification state.</p>
 <p>A receipt can include:</p>
 <ul>
@@ -49,5 +20,5 @@
 <li>processing status</li>
 </ul>
 <p>Receipts are designed for reconciliation, audit trails, agent workflows, and user-facing proof pages.</p>
-<h2>Idempotency</h2>
-<p>Duplicate <code>chain + tip_tx_hash</code> or duplicate <code>reference</code> should return the existing receipt rather than creating an accidental duplicate. Use idempotency headers for client retries where enabled.</p></article></main></div></body></html>
+<h2 id="idempotency">Idempotency</h2>
+<p>Duplicate <code>chain + tip_tx_hash</code> or duplicate <code>reference</code> should return the existing receipt rather than creating an accidental duplicate. Use idempotency headers for client retries where enabled.</p></article><footer>ProofRails · Verifiable receipts for onchain payments</footer></main></div></body></html>
