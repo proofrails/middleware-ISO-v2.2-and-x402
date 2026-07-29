@@ -1,38 +1,47 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>x402 compatibility | ProofRails Docs</title><meta name="description" content="Integrate the current ProofRails paid-resource exchange and understand standard x402 V2 client compatibility.">
+<title>x402 compatibility | ProofRails Docs</title><meta name="description" content="Standard x402 client compatibility for the verified ProofRails Flare-mainnet path.">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a class="active" href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Coston2 testnet demo</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a class="active" href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
 <main class="main"><article class="content"><h1 id="x402-compatibility">x402 compatibility</h1>
-<p>ProofRails supports a Flare-mainnet paid-resource sequence that combines USD₮0 settlement, protected-resource delivery, receipt creation, signed evidence packaging and bundle anchoring.</p>
-<p><img src="/assets/x402-mainnet-flow.svg" alt="ProofRails paid-resource integration on Flare mainnet" /></p>
-<h2 id="proofrails-integration">ProofRails integration</h2>
-<p>Use the product configuration and unlock endpoints exposed by the ProofRails paid-resource application:</p>
-<ol>
-<li>read the active chain, token, facilitator, recipient, amount and resource configuration;</li>
-<li>sign a USD₮0 <code>TransferWithAuthorization</code> payload;</li>
-<li>submit the authorization to the ProofRails X402Facilitator on Flare;</li>
-<li>call the unlock endpoint with the settlement reference;</li>
-<li>receive the protected resource and ProofRails receipt;</li>
-<li>retrieve the signed bundle and Flare anchor.</li>
-</ol>
-<p>Unlock requests are idempotent for a completed payment reference.</p>
-<h2 id="standard-x402-v2-clients">Standard x402 V2 clients</h2>
-<p>The current HTTP challenge is a ProofRails-specific exchange. It uses <code>X-PAYMENT-REQUIRED</code> and a version <code>1.0</code> response body rather than the standard x402 V2 <code>PAYMENT-REQUIRED</code>, <code>PAYMENT-SIGNATURE</code> and <code>PAYMENT-RESPONSE</code> header exchange.</p>
-<p>Official <code>@x402/fetch</code> and <code>@x402/evm</code> clients therefore cannot be used as drop-in clients for this endpoint. Integrate against the ProofRails configuration and unlock APIs until the protected endpoint exposes the standard V2 challenge format.</p>
-<h2 id="developer-checks">Developer checks</h2>
-<p>Before submitting an authorization:</p>
+<p><Warning>
+This integration uses real USD₮0 on Flare mainnet. It is not a testnet faucet flow or a payment simulation.
+</Warning></p>
+<h2 id="current-compatibility">Current compatibility</h2>
+<p>The hosted ProofRails paid FX endpoint completed the standard x402 V2 exchange with unmodified <code>@x402/fetch</code> and <code>@x402/evm</code> version 2.19.0 on 29 July 2026.</p>
+<p>The live-verified sequence covered:</p>
 <ul>
-<li>match chain ID <code>14</code> and the configured USD₮0 contract;</li>
-<li>validate the facilitator, recipient, amount, resource and authorization deadline;</li>
-<li>set explicit value and gas bounds;</li>
-<li>use an idempotency key for receipt writes;</li>
-<li>verify resource-delivery hashes when the delivered files must be covered by the evidence bundle.</li>
+<li>HTTP 402 and <code>PAYMENT-REQUIRED</code>;</li>
+<li>official-client <code>PAYMENT-SIGNATURE</code> generation;</li>
+<li>server-submitted settlement through the ProofRails X402Facilitator;</li>
+<li>an HTTP 200 protected FX response;</li>
+<li>standard <code>PAYMENT-RESPONSE</code> with an actual receipt ID and verifier URL;</li>
+<li>resource hash capture in the receipt and signed bundle;</li>
+<li>ISO 20022-style artifacts;</li>
+<li>Ed25519 manifest verification;</li>
+<li>a Flare EvidenceAnchor event matching the current bundle hash.</li>
 </ul>
-<h2 id="mainnet-example">Mainnet example</h2>
+<h2 id="integration-boundary">Integration boundary</h2>
+<p>ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.</p>
+<p>ProofRails does not expose a generic public HTTP <code>/verify</code> and <code>/settle</code> facilitator service for unrelated merchant APIs. Integrate against the payment-gated routes that appear in the hosted OpenAPI or deploy the source for your own environment.</p>
+<h2 id="replay-behavior">Replay behavior</h2>
+<p>The verified payment nonce was rejected after settlement with HTTP 409 <code>nonce_already_used</code>. Sequential replay and two concurrent duplicate requests produced no second payment transaction.</p>
+<p>The source verifier also checks chain, token, recipient, minimum amount, transaction status and confirmation policy. New payment paths should repeat the complete production evidence and adversarial test matrix before they are described as validated.</p>
+<h2 id="developer-checks">Developer checks</h2>
+<p>Before a client signs:</p>
 <ul>
-<li><a href="https://flare-explorer.flare.network/tx/0x63b30e4b096331e520cb19a80f7461b0cf2ee37756b513c88032e0e178ce6f92">Payment transaction</a></li>
-<li><a href="https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5">ProofRails receipt</a></li>
-<li><a href="https://flare-explorer.flare.network/tx/0x55a3e0481af795e3a2d38bc5a28db741897034cd017ada061a30a13c65a8ecf4">EvidenceAnchor transaction</a></li>
+<li>confirm Flare chain ID <code>14</code>;</li>
+<li>match the live USD₮0 contract, facilitator and recipient;</li>
+<li>inspect the exact raw amount and authorization deadline;</li>
+<li>apply explicit fee and value bounds;</li>
+<li>keep one nonce per authorization;</li>
+<li>preserve <code>PAYMENT-RESPONSE</code> and the returned receipt reference;</li>
+<li>verify the delivered resource hash against the receipt and signed bundle.</li>
+</ul>
+<h2 id="evidence">Evidence</h2>
+<ul>
+<li><a href="https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340">Settlement transaction</a></li>
+<li><a href="https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7">Public ProofRails receipt</a></li>
+<li><a href="https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28">EvidenceAnchor transaction</a></li>
 <li><a href="/x402/mainnet-proof">Complete walkthrough</a></li>
 </ul></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>

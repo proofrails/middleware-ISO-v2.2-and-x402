@@ -47,14 +47,14 @@ required_text = {
         "0xe7cd86e13AC4309349F30B3435a9d337750fC82D",
     ],
     "x402/status-and-compatibility/index.html": [
-        "current HTTP challenge is a ProofRails-specific exchange",
+        "standard x402 V2 exchange",
         "PAYMENT-REQUIRED",
-        "cannot be used as drop-in clients",
+        "0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340",
     ],
     "introduction/index.html": [
         "Make onchain payments finance-ready.",
-        "One API. A complete payment evidence trail.",
-        "ISO 20022-style records",
+        "One backend, two ways to use it",
+        "ISO 20022-style artifacts",
     ],
 }
 for rel, needles in required_text.items():
