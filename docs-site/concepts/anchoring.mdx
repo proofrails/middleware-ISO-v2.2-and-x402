@@ -1,20 +1,34 @@
 ---
 title: Onchain anchoring
-description: How ProofRails uses onchain commitments for tamper-evident receipts.
+description: How ProofRails guarantees an onchain hash commitment for completed receipts.
 ---
 
 # Onchain anchoring
 
-Anchoring commits the evidence bundle hash onchain. The anchor is not the whole receipt; it is a timestamped commitment to the evidence state.
+Anchoring commits the current evidence-bundle hash onchain. The anchor contains a timestamped commitment to the evidence state rather than the whole receipt.
 
-ProofRails can use Flare EVM anchoring for bundle hashes. A verified anchor means the submitted bundle hash matches the committed value associated with the receipt or anchor record.
+## Completion invariant
+
+A hosted ProofRails receipt is complete only when the hash of its current evidence bundle has been committed through EvidenceAnchor and the receipt exposes the matching anchor transaction.
+
+Before that point, the receipt must show its real lifecycle state, such as `pending`, `processing`, `awaiting_anchor` or `failed`. An application must not present an unanchored receipt as complete.
+
+If any signed bundle bytes change after an anchor, ProofRails must create a new bundle hash and anchor that new hash before treating the updated receipt as complete.
+
+## What verification means
+
+A verified anchor supports this statement:
+
+> The supplied bundle bytes hash to the same value committed by the identified onchain anchor transaction.
+
+It does not independently establish the truth of offchain data, legal sufficiency, accounting treatment or ISO 20022 compliance.
 
 ## Failure handling
 
-Receipts can temporarily fail to anchor because of RPC, gas, private key, contract, or worker issues. Use:
+RPC, gas, funding, key, contract or worker failures can delay anchoring. Keep the receipt in `awaiting_anchor` or `failed`, expose the error operationally and retry only after fixing the underlying cause.
 
 ```http
 POST /v1/iso/receipts/{receipt_id}/retry-anchor
 ```
 
-when the underlying issue has been fixed.
+The public verifier should display `anchored` only after the current bundle hash and the onchain event match.

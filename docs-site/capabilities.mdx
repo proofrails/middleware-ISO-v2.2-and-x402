@@ -7,6 +7,8 @@ description: A complete map of ProofRails product, API and self-hosted capabilit
 
 ## Receipt and evidence core
 
+The hosted receipt path has been live-verified through receipt creation, resource-hash capture, signed evidence packaging and a matching Flare anchor. A hosted receipt is complete only after its current bundle hash is anchored.
+
 - submit onchain payment references with structured metadata and tags;
 - process receipts asynchronously;
 - list and filter receipts by status, chain, reference, date and tags;
@@ -77,20 +79,21 @@ The credential helper can emit an unsigned `alg: none` envelope when Ed25519 sup
 - EvidenceAnchor commitments on Flare;
 - FTSO v2 feed lookup helpers in the current source branch;
 - FDC attestation request preparation in the current source branch;
-- native FLR payment verification path;
-- USD₮0 EIP-3009 settlement through X402Facilitator;
-- mainnet explorer-verifiable payment and anchor records.
+- native FLR payment verification path in source, currently experimental;
+- live-verified USD₮0 EIP-3009 settlement through X402Facilitator;
+- explorer-verifiable Flare-mainnet payment and anchor records.
 
 ## x402 and paid actions
 
 - endpoint pricing configuration;
 - payment records and revenue analytics;
-- Base USDC, Flare native FLR and Flare USD₮0 payment paths in current source;
+- a live-verified Flare USD₮0 path using the standard x402 2.19.0 client exchange;
+- Base USDC and native FLR adapters in source, currently experimental;
 - paid bundle verification, statement generation, ISO retrieval, FX lookup, bulk verification and refund routes;
 - receipt generation from x402 payment records;
 - ProofRails-specific paid-resource unlock flow.
 
-Standard x402 V2 compatibility is not yet complete. See [x402 status](/x402/status-and-compatibility).
+See [x402 compatibility](/x402/status-and-compatibility) for the verified scope and public evidence.
 
 ## Operations
 

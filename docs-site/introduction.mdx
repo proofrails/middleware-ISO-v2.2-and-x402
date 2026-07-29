@@ -1,45 +1,37 @@
 ---
 title: Overview
-description: Translate onchain payments into ISO 20022-style records, signed evidence bundles, and Flare-anchored proof.
+description: Turn onchain payments into finance-readable receipts, ISO 20022-style artifacts, signed evidence bundles and Flare-anchored proof.
 ---
 
-## One API. A complete payment evidence trail.
+## Make onchain payments finance-ready
 
-Settlement confirms that value moved. ProofRails adds the financial context and portable evidence developers need after settlement: a normalized receipt, ISO 20022-style artifacts, a signed file inventory, and an independently checkable onchain commitment.
+Settlement confirms that value moved. ProofRails records the payment context and delivery evidence needed after settlement, then produces a finance-readable receipt, ISO 20022-style artifacts, a signed evidence bundle and an onchain hash anchor.
 
-<img src="/assets/receipt-lifecycle.svg" alt="ProofRails pipeline from blockchain payment to finance-ready evidence" />
+<img src="/assets/receipt-lifecycle.svg" alt="ProofRails pipeline from blockchain payment to finance-readable evidence" />
 
 ## What your integration receives
 
 | Output | Developer interface | What it gives you |
 |---|---|---|
-| Receipt record | `GET /v1/iso/receipts/{receipt_id}` | Payment parties, chain, asset, amount, business reference, metadata and processing state. |
-| Financial messages | `GET /v1/iso/messages/{receipt_id}` | ISO 20022-style payment, status, statement, return and investigation artifacts. |
-| Signed evidence bundle | `/files/{receipt_id}/evidence.zip` | Receipt data, XML, canonical manifest, file hashes, Ed25519 signature and public key. |
-| Onchain commitment | `GET /v1/anchors/{receipt_id}` | The bundle SHA-256 committed through EvidenceAnchor on Flare. |
-| Verification result | `POST /v1/iso/verify` | Bundle integrity and comparison with the expected onchain commitment. |
+| Receipt record | `GET /v1/iso/receipts/{receipt_id}` | Payment parties, chain, asset, amount, business reference, resource hash, metadata and processing state. |
+| Financial messages | `GET /v1/iso/messages/{receipt_id}` | ISO 20022-style payment, status and cash-management artifacts generated for the receipt path. |
+| Signed evidence bundle | `/files/{receipt_id}/evidence.zip` | Receipt data, generated files, canonical manifest, file hashes, Ed25519 signature and public key. |
+| Onchain commitment | Public receipt and anchor transaction | The current bundle SHA-256 committed through EvidenceAnchor on Flare. |
+| Verification result | `POST /v1/iso/verify` and the public verifier | Bundle integrity and comparison with the expected onchain commitment. |
 
-## Built for payment and agent workflows
+## One backend, two ways to use it
 
-ProofRails works behind merchant checkouts, treasury and reconciliation systems, paid APIs, agent purchases, and x402-enabled resources. Your application supplies the payment reference and business context; ProofRails creates the evidence layer around it.
+Developers can integrate ProofRails through the REST API, SDKs and x402 payment flow. Finance, operations and other non-technical users can create, inspect and share receipts through the hosted application and public verifier.
 
-### REST API
+A receipt can move through `pending`, `processing`, `awaiting_anchor` and `failed` states. Under the hosted ProofRails receipt policy, a receipt is complete only when the current evidence-bundle hash is anchored. The public page shows the actual lifecycle state.
 
-Create and retrieve receipts over FastAPI, discover the deployed schema through OpenAPI, and use idempotency keys for safe write retries.
+## Verified hosted x402 path
 
-[Create your first receipt →](/create-first-receipt)
+The hosted Flare-mainnet path has been exercised with the official x402 2.19.0 client. The verified sequence covered the HTTP 402 challenge, USD₮0 authorization, server settlement, protected API response, `PAYMENT-RESPONSE`, receipt creation, resource hashing, signed evidence packaging and a matching Flare anchor.
 
-### TypeScript and Python
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
 
-Use the repository SDKs for receipt retrieval, verification, statements, refunds, agent anchoring and x402 analytics.
-
-[Use the SDKs →](/guides/sdks)
-
-### Events and automation
-
-Follow asynchronous processing through operation polling, SSE or HMAC-signed webhooks where supported by your deployment.
-
-[Integrate events →](/guides/webhooks)
+[Inspect the verified mainnet run](/x402/mainnet-proof)
 
 ## Start building
 
@@ -48,3 +40,7 @@ Follow asynchronous processing through operation polling, SSE or HMAC-signed web
 - [Verify evidence](/verify-receipt)
 - [Explore the API](/api-reference/overview)
 - [Review networks and contracts](/deployments)
+
+## Evidence boundary
+
+A matching onchain anchor proves the integrity and timing of a committed bundle hash. It does not prove that every offchain statement is true, that the record satisfies a legal or accounting requirement, or that an ISO 20022 message has been certified for a specific market practice.

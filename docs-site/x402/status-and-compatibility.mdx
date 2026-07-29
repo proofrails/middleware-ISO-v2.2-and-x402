@@ -1,46 +1,57 @@
 ---
 title: x402 compatibility
-description: Integrate the current ProofRails paid-resource exchange and understand standard x402 V2 client compatibility.
+description: Standard x402 client compatibility for the verified ProofRails Flare-mainnet path.
 ---
 
 # x402 compatibility
 
-ProofRails supports a Flare-mainnet paid-resource sequence that combines USD₮0 settlement, protected-resource delivery, receipt creation, signed evidence packaging and bundle anchoring.
+<Warning>
+This integration uses real USD₮0 on Flare mainnet. It is not a testnet faucet flow or a payment simulation.
+</Warning>
 
-<img src="/assets/x402-mainnet-flow.svg" alt="ProofRails paid-resource integration on Flare mainnet" />
+## Current compatibility
 
-## ProofRails integration
+The hosted ProofRails paid FX endpoint completed the standard x402 V2 exchange with unmodified `@x402/fetch` and `@x402/evm` version 2.19.0 on 29 July 2026.
 
-Use the product configuration and unlock endpoints exposed by the ProofRails paid-resource application:
+The live-verified sequence covered:
 
-1. read the active chain, token, facilitator, recipient, amount and resource configuration;
-2. sign a USD₮0 `TransferWithAuthorization` payload;
-3. submit the authorization to the ProofRails X402Facilitator on Flare;
-4. call the unlock endpoint with the settlement reference;
-5. receive the protected resource and ProofRails receipt;
-6. retrieve the signed bundle and Flare anchor.
+- HTTP 402 and `PAYMENT-REQUIRED`;
+- official-client `PAYMENT-SIGNATURE` generation;
+- server-submitted settlement through the ProofRails X402Facilitator;
+- an HTTP 200 protected FX response;
+- standard `PAYMENT-RESPONSE` with an actual receipt ID and verifier URL;
+- resource hash capture in the receipt and signed bundle;
+- ISO 20022-style artifacts;
+- Ed25519 manifest verification;
+- a Flare EvidenceAnchor event matching the current bundle hash.
 
-Unlock requests are idempotent for a completed payment reference.
+## Integration boundary
 
-## Standard x402 V2 clients
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
 
-The current HTTP challenge is a ProofRails-specific exchange. It uses `X-PAYMENT-REQUIRED` and a version `1.0` response body rather than the standard x402 V2 `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` header exchange.
+ProofRails does not expose a generic public HTTP `/verify` and `/settle` facilitator service for unrelated merchant APIs. Integrate against the payment-gated routes that appear in the hosted OpenAPI or deploy the source for your own environment.
 
-Official `@x402/fetch` and `@x402/evm` clients therefore cannot be used as drop-in clients for this endpoint. Integrate against the ProofRails configuration and unlock APIs until the protected endpoint exposes the standard V2 challenge format.
+## Replay behavior
+
+The verified payment nonce was rejected after settlement with HTTP 409 `nonce_already_used`. Sequential replay and two concurrent duplicate requests produced no second payment transaction.
+
+The source verifier also checks chain, token, recipient, minimum amount, transaction status and confirmation policy. New payment paths should repeat the complete production evidence and adversarial test matrix before they are described as validated.
 
 ## Developer checks
 
-Before submitting an authorization:
+Before a client signs:
 
-- match chain ID `14` and the configured USD₮0 contract;
-- validate the facilitator, recipient, amount, resource and authorization deadline;
-- set explicit value and gas bounds;
-- use an idempotency key for receipt writes;
-- verify resource-delivery hashes when the delivered files must be covered by the evidence bundle.
+- confirm Flare chain ID `14`;
+- match the live USD₮0 contract, facilitator and recipient;
+- inspect the exact raw amount and authorization deadline;
+- apply explicit fee and value bounds;
+- keep one nonce per authorization;
+- preserve `PAYMENT-RESPONSE` and the returned receipt reference;
+- verify the delivered resource hash against the receipt and signed bundle.
 
-## Mainnet example
+## Evidence
 
-- [Payment transaction](https://flare-explorer.flare.network/tx/0x63b30e4b096331e520cb19a80f7461b0cf2ee37756b513c88032e0e178ce6f92)
-- [ProofRails receipt](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5)
-- [EvidenceAnchor transaction](https://flare-explorer.flare.network/tx/0x55a3e0481af795e3a2d38bc5a28db741897034cd017ada061a30a13c65a8ecf4)
+- [Settlement transaction](https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340)
+- [Public ProofRails receipt](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7)
+- [EvidenceAnchor transaction](https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28)
 - [Complete walkthrough](/x402/mainnet-proof)

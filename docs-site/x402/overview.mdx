@@ -1,64 +1,47 @@
 ---
 title: x402 payment-gated actions
-description: Payment paths, premium routes and the ProofRails-specific mainnet flow.
+description: Use the verified Flare-mainnet USD₮0 path and understand the source-only payment adapters.
 ---
 
 # x402 payment-gated actions
 
-ProofRails can require payment before executing selected API actions or unlocking a protected resource. It then records the payment and can create receipt evidence around it.
+<Warning>
+The hosted ProofRails x402 path uses Flare mainnet. A successful request spends real USD₮0 and creates irreversible blockchain transactions. Verify the chain, token, facilitator, recipient, amount and fee policy before signing.
+</Warning>
 
-## Payment paths in current source
+ProofRails can require payment before executing selected API actions. A successful hosted request records the payment, hashes the delivered API result, returns a receipt reference and creates a signed evidence bundle whose current hash is anchored on Flare.
 
-| Network | Asset | Mechanism |
-|---|---|---|
-| Flare mainnet | USD₮0 | EIP-3009 `TransferWithAuthorization` through X402Facilitator |
-| Flare mainnet | FLR | Native transfer verification |
-| Base mainnet | USDC | ERC-20 transfer-event verification |
+## Verified hosted path
 
-Deployment operators can enable or disable paths independently.
+| Network | Asset | Mechanism | Evidence status |
+|---|---|---|---|
+| Flare mainnet | USD₮0 | EIP-3009 `TransferWithAuthorization` through X402Facilitator | Live-verified with the official x402 2.19.0 client |
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
+
+The current verified addresses and chain parameters are listed in [Networks and contracts](/deployments).
+
+## Standard client exchange
+
+The hosted paid FX endpoint completed this exchange with unmodified `@x402/fetch` and `@x402/evm` version 2.19.0:
+
+1. The client sends the original API request.
+2. ProofRails returns HTTP 402 with `PAYMENT-REQUIRED`.
+3. The client signs the selected Flare USD₮0 authorization.
+4. The client retries the same request with `PAYMENT-SIGNATURE`.
+5. ProofRails settles through X402Facilitator and returns the protected HTTP 200 response.
+6. `PAYMENT-RESPONSE` identifies the settlement and the ProofRails receipt.
+7. The receipt pipeline packages the evidence and anchors the current bundle hash.
+
+See [x402 compatibility](/x402/status-and-compatibility) and the [mainnet proof walkthrough](/x402/mainnet-proof).
+
+## Current source adapters
+
+The source tree also contains native FLR and Base USDC verification paths. They have not passed the same published evidence gate and should be treated as experimental until each path has its own transaction, delivery, receipt and anchor evidence.
 
 ## Premium actions
 
-```http
-POST /v1/x402/premium/verify-bundle
-POST /v1/x402/premium/generate-statement
-GET  /v1/x402/premium/iso-message/{receipt_id}/{type}
-POST /v1/x402/premium/fx-lookup
-POST /v1/x402/premium/bulk-verify
-POST /v1/x402/premium/refund
-```
-
-Management and reporting:
-
-```http
-GET  /v1/x402/pricing
-POST /v1/x402/pricing
-GET  /v1/x402/payments
-GET  /v1/x402/revenue
-GET  /v1/x402/facilitator-config
-POST /v1/x402/verify-payment
-```
-
-The hosted OpenAPI also exposes payment-specific receipt and compliance-check routes. Authorization varies by route and deployment.
-
-## Flare USD₮0 configuration
-
-See [Networks and contracts](/deployments) for verified mainnet addresses.
-
-The EIP-3009 authorization must bind at least:
-
-- token and chain ID;
-- payer and recipient;
-- exact raw amount;
-- validity window;
-- unique nonce;
-- facilitator contract.
-
-The facilitator verifies the authorization, rejects invalid or reused nonces, settles the transfer and records a payment ID.
-
-## Compatibility warning
-
-The proven x402test path uses custom product configuration and unlock calls. It is not a standard x402 V2 integration. Do not plug in an official v2 client and assume it will work. Read [x402 status and compatibility](/x402/status-and-compatibility) before integration.
+The hosted OpenAPI is the runtime source for available routes. Current source includes paid actions for bundle verification, statement generation, ISO retrieval, FX lookup, bulk verification and refund handling. Authorization and deployment availability vary by route.
 
 ## Local mock mode
 
@@ -66,4 +49,4 @@ The proven x402test path uses custom product configuration and unlock calls. It 
 X402_MOCK_PAYMENTS=true
 ```
 
-Mock mode skips onchain verification. Use it only for local development and automated tests. A mock success is not payment evidence.
+Mock mode skips onchain verification. Use it only for local development and automated tests. A mock success is not payment evidence, and production configuration must keep mock payment mode disabled.

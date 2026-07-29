@@ -15,7 +15,9 @@ Hosted mainnet contract:
 0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
 ```
 
-An anchor writes the bundle hash to EvidenceAnchor. Applications should store the resulting transaction hash with the receipt and independently confirm the emitted hash.
+An anchor writes the current bundle hash to EvidenceAnchor. Applications should store the resulting transaction hash with the receipt and independently confirm the emitted hash.
+
+For hosted ProofRails receipts, anchoring is a completion requirement. Keep a receipt in `awaiting_anchor` or `failed` until the current bundle hash is committed and independently matched. If signed bundle bytes change, anchor the new hash before presenting the updated receipt as complete.
 
 Self-hosted configuration:
 
@@ -42,7 +44,7 @@ Current source:
 POST /v1/iso/receipts/{receipt_id}/retry-anchor
 ```
 
-Retry only after fixing the underlying RPC, funding, key, contract or worker problem.
+Retry only after fixing the underlying RPC, funding, key, contract or worker problem. An anchor proves the integrity and timing of the committed hash, not the truth of offchain data.
 
 ## FTSO helpers
 

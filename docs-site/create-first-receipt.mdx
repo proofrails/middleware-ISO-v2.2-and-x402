@@ -73,6 +73,12 @@ Generated files are served under:
 /files/{receipt_id}/evidence.zip
 ```
 
+## Completion state
+
+A receipt can move through `pending`, `processing`, `awaiting_anchor` and `failed`. Under the hosted ProofRails policy, `anchored` is the completed state. The current evidence ZIP hash must match the hash emitted by the receipt's EvidenceAnchor transaction.
+
+Do not treat settlement alone as receipt completion. If delivery, receipt generation, bundle creation or anchoring fails after settlement, preserve the real state and retry the failed stage rather than reporting a completed receipt.
+
 ## Idempotency
 
 Use a unique `Idempotency-Key` for every logical creation request. Retrying the same operation with the same key should return the original result rather than creating another receipt when idempotency middleware is enabled.

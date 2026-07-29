@@ -43,6 +43,8 @@ GET /v1/iso/receipts/{receipt_id}/status
 
 These lightweight endpoints return status, bundle hash, anchor transaction and timestamps without the full receipt payload. They were not present in the hosted OpenAPI snapshot checked on 24 July 2026; hosted clients should discover support at runtime.
 
+For hosted ProofRails receipts, `anchored` is the completed state. The receipt remains incomplete while it is `pending`, `processing`, `awaiting_anchor` or `failed`.
+
 ## Fetch full receipt
 
 ```http

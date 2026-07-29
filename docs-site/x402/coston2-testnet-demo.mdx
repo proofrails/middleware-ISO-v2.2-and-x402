@@ -1,19 +1,25 @@
 ---
-title: Coston2 testnet demo
-description: The x402test app flow for Coston2 payments and ProofRails receipts.
+title: Historical Coston2 testnet flow
+description: A historical mock-token workflow that is separate from the current hosted Flare-mainnet x402 path.
 ---
 
-# Coston2 testnet demo
+# Historical Coston2 testnet flow
 
-The x402test app demonstrates a Coston2 payment unlock flow:
+<Warning>
+The current hosted ProofRails x402 USD₮0 path uses Flare mainnet and real value. Do not use this historical Coston2 page as configuration for the hosted mainnet service.
+</Warning>
 
-1. Connect wallet.
+An earlier x402test workflow used Coston2 and MockUSDT0:
+
+1. Connect a wallet.
 2. Switch to Coston2.
-3. Fund gas.
+3. Fund testnet gas.
 4. Mint MockUSDT0.
-5. Settle the x402-style payment.
+5. Settle the x402-style test payment.
 6. Verify settlement with the backend.
 7. Unlock the resource.
 8. Create and verify a ProofRails receipt.
 
-The settlement transaction is not the same object as a ProofRails receipt or bundle hash. A verifier should receive a receipt ID or bundle hash once receipt creation completes.
+This page remains as implementation history for self-hosted test environments. Current chain, token, facilitator, recipient and amount values must come from the hosted 402 challenge and [Networks and contracts](/deployments).
+
+A settlement transaction is separate from a ProofRails receipt or evidence-bundle hash. The current hosted mainnet flow returns a receipt reference in `PAYMENT-RESPONSE` after a successful paid request.

@@ -35,18 +35,18 @@ The repository deployment artifact records:
 }
 ```
 
-The later mainnet receipt test independently matched a bundle hash against an event emitted by this contract.
+The 29 July 2026 standard-x402 run independently matched the current served evidence ZIP hash against an event emitted by this contract.
 
-## Base mainnet asset support
+## Source-only Base adapter
 
-The source also contains a Base USDC verification path.
+The source contains a Base USDC verification path, but it has not passed the same published payment, delivery, receipt and anchor evidence gate as the hosted Flare USD₮0 path. Treat it as experimental.
 
 | Component | Value |
 |---|---|
 | Chain ID | `8453` |
 | USDC | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) |
 
-Do not infer that every self-hosted payment option is enabled in the hosted service. Query deployment configuration where authorized, and use the first 402 response as the runtime source for accepted options.
+Do not infer that every source adapter is validated or enabled in the hosted service. Use the first 402 response as the runtime source for accepted options and verify the exact tuple before signing.
 
 ## Self-hosted deployments
 

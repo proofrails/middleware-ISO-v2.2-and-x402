@@ -1,50 +1,90 @@
 ---
 title: Mainnet proof walkthrough
-description: Inspect the public payment, receipt, bundle hash and anchor from a verified Flare-mainnet run.
+description: Inspect the settlement, protected result, receipt, signed bundle and Flare anchor from a verified standard-x402 run.
 ---
 
 # Mainnet proof walkthrough
 
-This walkthrough uses public artifacts from the verified ProofRails-specific paid-resource run. It does not submit a payment.
+<Warning>
+The linked transactions are on Flare mainnet and used real USD₮0. This page only inspects existing public evidence and does not submit a payment.
+</Warning>
+
+This walkthrough covers the standard-client run completed on 29 July 2026 with unmodified x402 2.19.0 packages.
 
 ## 1. Inspect the payment
 
-Open the [Flare explorer transaction](https://flare-explorer.flare.network/tx/0x63b30e4b096331e520cb19a80f7461b0cf2ee37756b513c88032e0e178ce6f92).
+Open the [Flare settlement transaction](https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340).
 
-Expected facts:
-
-| Field | Value |
+| Field | Expected value |
 |---|---|
 | Status | Success |
+| Chain | Flare mainnet, chain ID `14` |
 | Token | USD₮0 `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
 | Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
-| Raw amount | `1000` (6 decimals) |
-| Payment ID | `0x7dff3f2b93ea6e27e3ae511cee9d88520cf950b97b70beb14284d4e33742ffae` |
+| Payer | `0xa52D9C74Bb82bf3Ae62288389f90e55a6E45Dc2c` |
+| Recipient | `0x0A617D605a1010a74B8dA756E48D75bCef110ef4` |
+| Raw amount | `1000` with 6 decimals, equal to `0.001 USD₮0` |
+| Payment ID | `0x77c2ae30329f09773e24287433cdbe1c11a51c99ff6b91883d5637a08e139fc6` |
 
-## 2. Inspect the receipt
+The facilitator record reports `settled: true`, and the EIP-3009 authorization nonce is used.
 
-Open the [public receipt](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5).
+## 2. Inspect the protected result
 
-Expected receipt status: `anchored`.
+The paid endpoint returned:
 
-Expected bundle hash:
-
-```text
-0xf95bb00ef24410243605db07c3c4c46ad64790c191f2dcd020f9e670b88d0c41
+```json
+{"rate":"0.00628055","source":"coingecko"}
 ```
 
-## 3. Inspect the anchor
+The SHA-256 of those exact response bytes is:
 
-Open the [Flare-mainnet anchor transaction](https://flare-explorer.flare.network/tx/0x55a3e0481af795e3a2d38bc5a28db741897034cd017ada061a30a13c65a8ecf4).
+```text
+0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
+```
 
-The EvidenceAnchor event's hash must equal the receipt bundle hash above. The contract is:
+That value matches the live receipt and `delivery.json` inside the signed evidence bundle.
+
+## 3. Inspect the receipt and bundle
+
+Open receipt [`dec5a106-3216-4543-bfb6-e669dc83f4d7`](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7).
+
+Expected status: `anchored`.
+
+Expected current bundle hash:
+
+```text
+0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+```
+
+Independent checks of the served ZIP confirmed:
+
+- ZIP integrity;
+- the ZIP SHA-256 matches the receipt bundle hash;
+- the Ed25519 signature validates over `manifest.json`;
+- every manifest file matches its declared hash and size;
+- the served `pain.001`, `pain.002` and `camt.054` files parse and match their API-declared hashes;
+- the result resource hash appears in the receipt and signed bundle.
+
+These are ISO 20022-style artifacts. Their presence does not establish certification or compliance with a specific institution's market practice.
+
+## 4. Inspect the anchor
+
+Open the [Flare EvidenceAnchor transaction](https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28).
+
+The transaction called EvidenceAnchor at:
 
 ```text
 0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
 ```
 
-## 4. Understand the proof boundary
+Its `EvidenceAnchored` event committed:
 
-The test cross-checked the payment event, facilitator record, nonce consumption, token delta, downloaded artifacts, receipt, ZIP signature, manifest inventory, refetched ZIP and anchor event.
+```text
+0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+```
 
-The PDF and Markdown SHA-256 values were measured during the test, but they were not included in the signed manifest. Therefore the anchor proves the receipt bundle, not the exact delivered content bytes.
+That value equals the hash of the currently served evidence ZIP.
+
+## 5. Understand the proof boundary
+
+This evidence supports the integrity and timing of the committed receipt bundle and its recorded payment and resource hashes. The anchor does not independently prove that every offchain field is true, that the exchange satisfies a legal obligation, or that the generated XML is certified for a specific ISO 20022 market practice.
