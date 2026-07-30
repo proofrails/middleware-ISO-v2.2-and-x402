@@ -11,6 +11,7 @@ import {
   RUN_DIR,
   BROADCAST_LOCK,
   AMOUNT_DISPLAY,
+  payerPrivateKey,
 } from './config.mjs';
 import { preflight } from './preflight.mjs';
 import { title, field, note, rule, check } from './format.mjs';
@@ -52,7 +53,8 @@ async function pollReceipt(receiptId, onState) {
 export async function record({ approvalToken } = {}) {
   mkdirSync(RUN_DIR, { recursive: true });
 
-  if (!process.env.PAYER_PRIVATE_KEY) throw new Error('PAYER_PRIVATE_KEY is not set');
+  const privateKey = payerPrivateKey();
+  if (!privateKey) throw new Error('PAYER_PRIVATE_KEY is not set');
   if (!approvalToken) {
     throw new Error('APPROVED_PAYMENT_ID is not set: one real payment requires explicit approval');
   }
@@ -68,7 +70,7 @@ export async function record({ approvalToken } = {}) {
     throw new Error(`Preflight not clean, refusing to pay: ${failed.join(', ')}`);
   }
 
-  const account = privateKeyToAccount(process.env.PAYER_PRIVATE_KEY);
+  const account = privateKeyToAccount(privateKey);
   const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
     schemes: [{ network: NETWORK, client: new ExactEvmScheme(account) }],
   });

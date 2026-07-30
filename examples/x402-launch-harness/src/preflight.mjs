@@ -16,6 +16,7 @@ import {
   MAX_GAS_WEI,
   RUN_DIR,
   CLIENT_VERSIONS,
+  payerPrivateKey,
 } from './config.mjs';
 import { publicClient, facilitatorAbi, erc20Abi, formatUnits } from './chain.mjs';
 import { fetchChallenge, selectFlareOption, assertExpectedTuple } from './challenge.mjs';
@@ -23,7 +24,8 @@ import { title, field, check, note, rule } from './format.mjs';
 
 function payerAddress() {
   if (process.env.PAYER_ADDRESS) return getAddress(process.env.PAYER_ADDRESS);
-  if (process.env.PAYER_PRIVATE_KEY) return privateKeyToAccount(process.env.PAYER_PRIVATE_KEY).address;
+  const key = payerPrivateKey();
+  if (key) return privateKeyToAccount(key).address;
   return null;
 }
 

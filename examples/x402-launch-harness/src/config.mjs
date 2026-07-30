@@ -23,6 +23,14 @@ export const MAX_GAS_WEI = 2n * 10n ** 18n; // only relevant on a client-submitt
 export const RUN_DIR = process.env.RUN_DIR || new URL('../runs/', import.meta.url).pathname;
 export const BROADCAST_LOCK = `${RUN_DIR}broadcast.lock`;
 
+export function payerPrivateKey() {
+  const raw = (process.env.PAYER_PRIVATE_KEY || '').trim();
+  if (!raw) return null;
+  const hex = raw.startsWith('0x') ? raw.slice(2) : raw;
+  if (!/^[0-9a-fA-F]{64}$/.test(hex)) throw new Error('PAYER_PRIVATE_KEY is not a 32-byte hex key');
+  return `0x${hex}`;
+}
+
 export const CLIENT_VERSIONS = {
   '@x402/fetch': '2.19.0',
   '@x402/evm': '2.19.0',
