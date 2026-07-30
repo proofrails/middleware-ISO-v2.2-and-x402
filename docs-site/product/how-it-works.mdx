@@ -1,0 +1,37 @@
+---
+title: How ProofRails works
+description: Follow a payment from settlement reference to anchored receipt.
+---
+
+# How ProofRails works
+
+ProofRails builds a record around a payment. It does not replace the payment rail or take custody of funds.
+
+## Inputs
+
+A receipt starts with:
+
+- a transaction hash and chain;
+- amount, asset and payer/recipient addresses;
+- a business reference such as an order, invoice or API request ID;
+- an optional SHA-256 hash of the delivered file or API result;
+- project settings that control storage and anchoring.
+
+## Processing sequence
+
+1. **Accept the payment record.** The API validates the required fields and assigns the receipt to the authenticated project.
+2. **Deduplicate it.** The same chain and transaction hash, or the same business reference, returns the existing receipt instead of creating another one.
+3. **Normalize the receipt.** ProofRails stores a consistent record for later lookup and reconciliation.
+4. **Generate artifacts.** The worker creates the applicable ISO 20022-style files and receipt evidence.
+5. **Build and sign the bundle.** The service writes a manifest of file names, byte sizes and SHA-256 hashes, then signs the manifest with Ed25519.
+6. **Hash the ZIP.** The SHA-256 of `evidence.zip` becomes the bundle hash.
+7. **Anchor the current hash.** EvidenceAnchor emits the bundle hash on Flare. A hosted receipt is complete only after this step succeeds.
+8. **Expose verification.** The receipt page and API return the bundle URL, bundle hash, anchor transaction and timestamps.
+
+## What each user gets
+
+A developer gets stable identifiers, JSON responses, downloadable artifacts and verification endpoints. A finance or operations user gets a receipt page that connects the payment to its business reference and generated files. A third party can use the public verifier without receiving the project's API key.
+
+## What the anchor establishes
+
+The anchor establishes that the committed bundle hash existed no later than the block timestamp and that a later bundle can be compared with it. It does not establish the truth, completeness, authorization or legal effect of the offchain information inside the bundle.

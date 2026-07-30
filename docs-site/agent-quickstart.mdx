@@ -1,0 +1,57 @@
+---
+title: AI agent quickstart
+description: Give an autonomous client a safe, deterministic ProofRails workflow.
+---
+
+# AI agent quickstart
+
+An agent should treat ProofRails as a stateful evidence service. It must persist identifiers, bound retries and distinguish a payment from a completed receipt.
+
+## Choose the workflow
+
+| Goal | Interface | Can move value? |
+|---|---|---:|
+| Inspect a public receipt | Receipt and Verification APIs | No |
+| Record an existing payment | Receipt API with `X-API-Key` | No payment movement; hosted anchoring can submit a platform transaction |
+| Buy a protected API result | x402 paid endpoint | Yes, real USD₮0 on the hosted Flare path |
+| Develop without hosted credentials | Local Docker deployment | No when mock mode is enabled |
+
+## Discover capabilities
+
+Fetch `https://app.proofrails.com/openapi.json` and require the intended operation to exist. Do not infer hosted availability from a repository route or an old example.
+
+Machine indexes:
+
+```text
+https://docs.proofrails.com/llms.txt
+https://docs.proofrails.com/llms-full.txt
+https://docs.proofrails.com/.well-known/proofrails.json
+https://docs.proofrails.com/contracts.json
+https://docs.proofrails.com/capabilities.json
+https://docs.proofrails.com/sitemap.json
+```
+
+## Receipt state machine
+
+Persist `receipt_id`, transaction hash and business reference. Poll `GET /v1/iso/receipts/{rid}` with bounded exponential backoff.
+
+```text
+pending          continue polling
+awaiting_anchor  continue polling
+anchored         completed
+failed           stop and escalate
+```
+
+Do not invent a `/status` route and do not treat a polling timeout as failure of the receipt itself.
+
+## x402 state machine
+
+Before signing, allowlist chain ID, token contract, recipient, facilitator, amount and validity window. After signing, persist the authorization nonce. If the response is lost, reconcile nonce and settlement state before any new action.
+
+A 409 `nonce_already_used` must never cause an automatic second payment.
+
+## Verification
+
+After `anchored`, download the current bundle URL, recompute SHA-256, verify the manifest inventory and signature, then compare the ZIP hash with the expected EvidenceAnchor event on chain ID 14.
+
+An agent should record the exact checks that passed. It should not summarize a hash match as proof that every offchain statement is true.

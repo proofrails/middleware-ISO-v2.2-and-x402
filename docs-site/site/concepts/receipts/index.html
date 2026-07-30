@@ -1,24 +1,41 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Receipts | ProofRails Docs</title><meta name="description" content="The primary ProofRails record object.">
+<title>Receipt data model | ProofRails Docs</title><meta name="description" content="Understand receipt identity, payment fields, lifecycle and deduplication.">
+<link rel="canonical" href="https://docs.proofrails.com/concepts/receipts"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a class="active" href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
-<main class="main"><article class="content"><h1 id="receipts">Receipts</h1>
-<p>A ProofRails receipt is the canonical record for an onchain payment reference plus its business context and verification state.</p>
-<p>A receipt can include:</p>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a class="active" href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="receipt-data-model">Receipt data model</h1>
+<p>A ProofRails receipt is the stable record that connects a payment to its evidence.</p>
+<h2 id="identity-and-scope">Identity and scope</h2>
+<p>Each receipt has a UUID and belongs to the project that created it. The project boundary controls receipt listings and write operations. Public lookup uses the receipt ID so a recipient can inspect a shared record without receiving the project's API key.</p>
+<h2 id="payment-and-business-fields">Payment and business fields</h2>
+<p>The stored record includes:</p>
 <ul>
-<li>payment reference</li>
-<li>transaction hash</li>
-<li>chain</li>
-<li>amount and currency</li>
-<li>sender wallet</li>
-<li>receiver wallet</li>
-<li>metadata and tags</li>
-<li>generated ISO-style artifacts</li>
-<li>evidence bundle URL or hash</li>
-<li>anchor transaction reference</li>
-<li>processing status</li>
+<li>chain and settlement transaction hash;</li>
+<li>amount and currency label;</li>
+<li>payer and recipient wallet addresses;</li>
+<li>external business reference;</li>
+<li>optional resource hash;</li>
+<li>creation and anchor timestamps;</li>
+<li>evidence bundle path and hash;</li>
+<li>anchor transaction;</li>
+<li>lifecycle status.</li>
 </ul>
-<p>Receipts are designed for reconciliation, audit trails, agent workflows, and user-facing proof pages.</p>
-<h2 id="idempotency">Idempotency</h2>
-<p>Duplicate <code>chain + tip_tx_hash</code> or duplicate <code>reference</code> should return the existing receipt rather than creating an accidental duplicate. Use idempotency headers for client retries where enabled.</p></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>
+<p>The public <code>ReceiptResponse</code> is deliberately smaller. It returns the fields needed to retrieve and verify the evidence:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;&lt;uuid&gt;&quot;,
+  &quot;status&quot;: &quot;anchored&quot;,
+  &quot;bundle_hash&quot;: &quot;0x...&quot;,
+  &quot;flare_txid&quot;: &quot;0x...&quot;,
+  &quot;xml_url&quot;: &quot;https://app.proofrails.com/files/&lt;uuid&gt;/pain001.xml&quot;,
+  &quot;bundle_url&quot;: &quot;https://app.proofrails.com/files/&lt;uuid&gt;/evidence.zip&quot;,
+  &quot;resource_hash&quot;: &quot;0x...&quot;,
+  &quot;created_at&quot;: &quot;2026-07-29T10:13:22Z&quot;,
+  &quot;anchored_at&quot;: &quot;2026-07-29T10:13:26Z&quot;
+}
+</code></pre>
+<h2 id="lifecycle">Lifecycle</h2>
+<p>The deployed schema exposes four states: <code>pending</code>, <code>awaiting_anchor</code>, <code>anchored</code> and <code>failed</code>. The hosted completion state is <code>anchored</code>.</p>
+<h2 id="deduplication">Deduplication</h2>
+<p>Receipt creation checks both the chain/transaction pair and the external reference. A duplicate returns the existing receipt ID and current status. Integrations should keep the first receipt ID and reuse the original reference when retrying a network request.</p></article><nav class="page-nav"><a href="/guides/local-development"><span>Previous</span><strong>Run locally</strong></a><a class="next" href="/concepts/evidence-bundles"><span>Next</span><strong>Evidence bundles</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

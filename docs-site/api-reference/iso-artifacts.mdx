@@ -1,57 +1,36 @@
 ---
-title: ISO and financial-message API
-description: Retrieve generated XML and create cancellation, investigation, reversal, transfer and refund artifacts.
+title: Financial artifact API
+description: Retrieve and generate ISO 20022-style receipt artifacts.
 ---
 
-# ISO and financial-message API
+# Financial artifact API
 
-## List receipt artifacts
+## List artifacts for a receipt
 
 ```http
-GET /v1/iso/messages/{receipt_id}
-GET /v1/iso/messages/{receipt_id}?type=pain.001
+GET /v1/iso/messages/{rid}
 ```
 
-## Generate FI messages
+This public route returns artifact records with message type, URL, optional hash and creation time.
+
+## Workflow-specific generators
+
+The hosted OpenAPI exposes:
 
 ```http
-POST /v1/iso/camt056/{receipt_id}
 POST /v1/iso/camt029/{receipt_id}
+POST /v1/iso/camt056/{receipt_id}
 POST /v1/iso/pacs007/{receipt_id}
 POST /v1/iso/pacs009/{receipt_id}
-```
-
-`camt.056`, `camt.029` and `pacs.007` accept a small request object containing the relevant reason or resolution code. `pacs.009` derives its data from the receipt.
-
-Example:
-
-```bash
-curl --fail-with-body -X POST \
-  https://app.proofrails.com/v1/iso/camt056/<receipt_id> \
-  -H 'X-API-Key: <api_key>' \
-  -H 'Content-Type: application/json' \
-  -d '{"reason_code":"CUST"}'
-```
-
-Response:
-
-```json
-{
-  "message_id": "camt056-<uuid>",
-  "type": "camt.056",
-  "receipt_id": "<uuid>",
-  "url": "/files/<uuid>/camt056.xml"
-}
-```
-
-## Refund workflow
-
-```http
 POST /v1/iso/refund
 ```
 
-The refund route creates a receipt linked to the original and generates a `pacs.004` return-style artifact instead of a normal `pain.001` path.
+The operation bodies and authentication requirements differ. Generate a client from the live OpenAPI or inspect the corresponding schema before calling one.
 
-## Important boundary
+These endpoints create records and files. They do not cancel, reverse, refund or transfer blockchain funds merely because the message name represents such a financial workflow. Any actual value movement requires a separate authorized payment or contract action.
 
-These endpoints generate evidence and message artifacts. They do not cancel, reverse or refund value on the underlying blockchain by themselves.
+## Integrity handling
+
+When an artifact record provides `sha256`, recompute it over the downloaded bytes. Do not assume every artifact returned by this route is inside the anchored evidence ZIP. In the validated x402 receipt, `pain.002` and `camt.054` were served after anchoring and were outside the ZIP committed by the anchor.
+
+All files are ISO 20022-style artifacts. Institutional conformance requires separate validation against the target schema and usage rules.

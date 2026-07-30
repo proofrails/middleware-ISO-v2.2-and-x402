@@ -1,61 +1,50 @@
 ---
 title: Agent workflows
-description: Create receipts for agent purchases and anchor task or data evidence.
+description: Reliable patterns for agents that create receipts or buy x402 resources.
 ---
 
 # Agent workflows
 
-Agents need evidence for more than the transfer itself. A useful receipt records what the agent paid, which resource or API it requested, what result identifier it received and which evidence was committed.
+## Record a completed payment
 
-## Purchase receipt pattern
+1. Create a stable business reference before calling ProofRails.
+2. Submit only the deployed `TipRecordRequest` fields.
+3. Persist `receipt_id`, transaction hash and reference atomically.
+4. Poll the public receipt route until `anchored` or `failed`.
+5. Download and verify the current bundle.
+6. Store the verification result with the task log.
 
-```text
-agent chooses resource
-→ payment authorization or transaction
-→ merchant/facilitator settles
-→ service returns resource identifier
-→ ProofRails creates receipt
-→ bundle records payment + workflow context
-→ bundle hash is anchored
-```
+If the write response is lost, retry with the same chain, transaction hash and reference. ProofRails returns the existing receipt for those duplicate identities.
 
-Recommended receipt metadata:
+## Buy an x402 resource
+
+1. Send an unsigned request to obtain the 402 challenge.
+2. Validate network, asset contract, amount, recipient, facilitator and deadline against policy.
+3. Require explicit value authorization.
+4. Sign once and retry the same request.
+5. Persist the authorization nonce before transmission.
+6. Parse `PAYMENT-RESPONSE` and store its transaction and `receiptId`.
+7. If the HTTP response is lost, reconcile onchain state before doing anything else.
+8. Poll the receipt until `anchored`.
+
+The hosted x402 path uses real USD₮0 on Flare mainnet. Automatic repayment after a timeout is unsafe.
+
+## Data model for an agent run
+
+At minimum, retain:
 
 ```json
 {
-  "agent_id": "agent-uuid",
-  "task_id": "research-0042",
-  "endpoint": "/premium/data",
-  "resource_id": "dataset-2026-07",
-  "payment_id": "0x...",
-  "result_hash": "0x..."
+  "task_id": "task-1842",
+  "business_reference": "order-1842",
+  "payment_transaction": "0x...",
+  "payment_nonce": "0x...",
+  "receipt_id": "<uuid>",
+  "resource_hash": "0x...",
+  "bundle_hash": "0x...",
+  "anchor_transaction": "0x...",
+  "verification_status": "anchored-and-matched"
 }
 ```
 
-Only include a `result_hash` if it is computed over the exact delivered bytes or canonical result object. A URL or label is not a content commitment.
-
-## Read and verify
-
-Agents can:
-
-- list receipts with cursor pagination;
-- use lightweight status polling when available;
-- fetch receipts and anchors;
-- verify bundle URLs, hashes or CIDs;
-- retrieve ISO-style artifacts;
-- create refund evidence;
-- query x402 payments and revenue where authorized.
-
-## Anchor arbitrary task data
-
-Current source supports canonical JSON hashing:
-
-```http
-POST /v1/agents/{agent_id}/anchor-data
-```
-
-Use this for non-payment evidence such as task completion, data provenance or model-output commitments. The raw `data` object is hashed; the anchor record stores the hash, not the supplied object.
-
-## Delivery and retries
-
-Use idempotency keys for writes. Prefer signed webhooks for terminal events, SSE for live UI updates and 2–5 second polling only as a fallback. Never let an agent retry a value transfer merely because a receipt or callback timed out; reconcile payment state first.
+Do not store private keys, API keys or raw reusable signatures in the task record.

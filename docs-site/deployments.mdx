@@ -1,62 +1,31 @@
 ---
-title: Networks and contracts
-description: Verified ProofRails deployments, token addresses and explorer links.
+title: Networks and environments
+description: Hosted network identity and the boundary between validated and experimental payment paths.
 ---
 
-# Networks and contracts
+# Networks and environments
 
-Always verify the chain ID and contract bytecode before signing or sending value. Addresses below describe the currently verified ProofRails Flare-mainnet flow.
+## Hosted Flare path
 
-## Flare mainnet
-
-| Component | Address | Purpose |
-|---|---|---|
-| EvidenceAnchor | [`0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA`](https://flare-explorer.flare.network/address/0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA) | Stores bundle-hash commitments for receipts. |
-| X402Facilitator | [`0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE`](https://flare-explorer.flare.network/address/0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE) | Verifies and settles bounded USD₮0 EIP-3009 authorizations. |
-| USD₮0 | [`0xe7cd86e13AC4309349F30B3435a9d337750fC82D`](https://flare-explorer.flare.network/address/0xe7cd86e13AC4309349F30B3435a9d337750fC82D) | Payment asset used by the verified paid-resource flow; 6 decimals. |
-
-| Network parameter | Value |
+| Property | Value |
 |---|---|
+| Network | Flare mainnet |
 | Chain ID | `14` |
+| CAIP-2 | `eip155:14` |
 | RPC | `https://flare-api.flare.network/ext/C/rpc` |
 | Explorer | `https://flare-explorer.flare.network` |
+| EvidenceAnchor | `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` |
+| X402Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| USD₮0 | `0xe7cd86e13AC4309349F30B3435a9d337750fC82D`, 6 decimals |
+| Hosted recipient | `0x0A617D605a1010a74B8dA756E48D75bCef110ef4` |
+| Validated minimum | `1000` raw units |
 
-## EvidenceAnchor deployment record
+Use [Flare contracts](/contracts/flare) for functions and events. Use `/contracts.json` for machine-readable identity tuples.
 
-The repository deployment artifact records:
+## Experimental adapters
 
-```json
-{
-  "contract": "EvidenceAnchor",
-  "address": "0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA",
-  "txHash": "0x2095d3aa397176cc3673a3396784f6a8a2416ab65da14cbcdc32cdc149d874ec",
-  "blockNumber": 50524035,
-  "chainId": "14"
-}
-```
+Base USDC and native FLR payment adapters remain experimental. Do not enable them unless the intended deployment advertises the exact tuple and your own end-to-end validation covers payment, delivery, receipt, bundle and anchor.
 
-The 29 July 2026 standard-x402 run independently matched the current served evidence ZIP hash against an event emitted by this contract.
+## Local development
 
-## Source-only Base adapter
-
-The source contains a Base USDC verification path, but it has not passed the same published payment, delivery, receipt and anchor evidence gate as the hosted Flare USD₮0 path. Treat it as experimental.
-
-| Component | Value |
-|---|---|
-| Chain ID | `8453` |
-| USDC | [`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`](https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) |
-
-Do not infer that every source adapter is validated or enabled in the hosted service. Use the first 402 response as the runtime source for accepted options and verify the exact tuple before signing.
-
-## Self-hosted deployments
-
-Self-hosters can deploy separate EvidenceAnchor and X402Facilitator contracts. Keep those addresses out of application source and configure them through environment variables:
-
-```env
-FLARE_RPC_URL=https://flare-api.flare.network/ext/C/rpc
-ANCHOR_CONTRACT_ADDR=0x...
-X402_FLARE_FACILITATOR_ADDRESS=0x...
-X402_USDT0_FLARE_ADDRESS=0xe7cd86e13AC4309349F30B3435a9d337750fC82D
-```
-
-Never place a private key in documentation, client-side code or a committed `.env` file.
+Mock mode performs no onchain verification. Local addresses, mock tokens and Coston2 examples are development fixtures and must not be presented as the hosted payment path.

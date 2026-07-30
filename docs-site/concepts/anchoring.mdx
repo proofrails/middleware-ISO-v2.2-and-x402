@@ -1,34 +1,46 @@
 ---
 title: Onchain anchoring
-description: How ProofRails guarantees an onchain hash commitment for completed receipts.
+description: Understand the EvidenceAnchor contract, receipt completion rule and independent event check.
 ---
 
 # Onchain anchoring
 
-Anchoring commits the current evidence-bundle hash onchain. The anchor contains a timestamped commitment to the evidence state rather than the whole receipt.
+ProofRails commits the SHA-256 of `evidence.zip` to an `EvidenceAnchor` contract on Flare.
 
-## Completion invariant
+## Contract operation
 
-A hosted ProofRails receipt is complete only when the hash of its current evidence bundle has been committed through EvidenceAnchor and the receipt exposes the matching anchor transaction.
+The contract exposes one write function:
 
-Before that point, the receipt must show its real lifecycle state, such as `pending`, `processing`, `awaiting_anchor` or `failed`. An application must not present an unanchored receipt as complete.
-
-If any signed bundle bytes change after an anchor, ProofRails must create a new bundle hash and anchor that new hash before treating the updated receipt as complete.
-
-## What verification means
-
-A verified anchor supports this statement:
-
-> The supplied bundle bytes hash to the same value committed by the identified onchain anchor transaction.
-
-It does not independently establish the truth of offchain data, legal sufficiency, accounting treatment or ISO 20022 compliance.
-
-## Failure handling
-
-RPC, gas, funding, key, contract or worker failures can delay anchoring. Keep the receipt in `awaiting_anchor` or `failed`, expose the error operationally and retry only after fixing the underlying cause.
-
-```http
-POST /v1/iso/receipts/{receipt_id}/retry-anchor
+```solidity
+function anchorEvidence(bytes32 bundleHash) external;
 ```
 
-The public verifier should display `anchored` only after the current bundle hash and the onchain event match.
+A successful call emits:
+
+```solidity
+event EvidenceAnchored(
+    bytes32 bundleHash,
+    address indexed sender,
+    uint256 ts
+);
+```
+
+The event stores the committed hash, the account that submitted it and the block timestamp.
+
+## Hosted completion rule
+
+A hosted receipt is complete only when all of these values agree:
+
+1. SHA-256 of the current `evidence.zip`;
+2. `bundle_hash` returned by the receipt API;
+3. `bundleHash` decoded from the `EvidenceAnchored` event in `flare_txid`.
+
+Until that equality is confirmed, the receipt remains `pending`, `awaiting_anchor` or `failed`. An application must not display it as complete.
+
+## Platform and tenant modes
+
+In platform mode, the ProofRails worker submits the anchor. In tenant mode, the project submits the transaction and calls `POST /v1/iso/confirm-anchor` with the receipt ID and transaction hash. The API verifies the event against the project's configured chain and contract before changing the receipt to `anchored`.
+
+## Trust boundary
+
+The anchor proves integrity and timing of the committed hash. It does not prove that offchain metadata is true, that the payer was legally authorized, or that the receipt satisfies an accounting, tax or regulatory requirement.

@@ -1,90 +1,55 @@
 ---
-title: Mainnet proof walkthrough
-description: Inspect the settlement, protected result, receipt, signed bundle and Flare anchor from a verified standard-x402 run.
+title: Mainnet example
+description: Trace one paid request through settlement, protected response, receipt, evidence bundle and Flare anchor.
 ---
 
-# Mainnet proof walkthrough
+# Mainnet example
 
-<Warning>
-The linked transactions are on Flare mainnet and used real USD₮0. This page only inspects existing public evidence and does not submit a payment.
-</Warning>
+This read-only example shows the identifiers from one completed hosted request on 29 July 2026. Do not replay its authorization or nonce.
 
-This walkthrough covers the standard-client run completed on 29 July 2026 with unmodified x402 2.19.0 packages.
+## Request and result
 
-## 1. Inspect the payment
-
-Open the [Flare settlement transaction](https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340).
-
-| Field | Expected value |
+| Item | Value |
 |---|---|
-| Status | Success |
-| Chain | Flare mainnet, chain ID `14` |
-| Token | USD₮0 `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
-| Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
-| Payer | `0xa52D9C74Bb82bf3Ae62288389f90e55a6E45Dc2c` |
-| Recipient | `0x0A617D605a1010a74B8dA756E48D75bCef110ef4` |
-| Raw amount | `1000` with 6 decimals, equal to `0.001 USD₮0` |
-| Payment ID | `0x77c2ae30329f09773e24287433cdbe1c11a51c99ff6b91883d5637a08e139fc6` |
+| Endpoint | `POST https://app.proofrails.com/v1/x402/premium/fx-lookup` |
+| Client | Official x402 V2 packages `2.19.0` |
+| Payment | `0.001 USD₮0` on Flare mainnet |
+| HTTP result | `200` |
+| Response body | `{"rate":"0.00628055","source":"coingecko"}` |
+| Request ID | `b50f446e-f420-4afa-b196-5821bf0b5a92` |
 
-The facilitator record reports `settled: true`, and the EIP-3009 authorization nonce is used.
+## Settlement
 
-## 2. Inspect the protected result
-
-The paid endpoint returned:
-
-```json
-{"rate":"0.00628055","source":"coingecko"}
-```
-
-The SHA-256 of those exact response bytes is:
+[Open the settlement transaction](https://flare-explorer.flare.network/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340)
 
 ```text
-0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
+0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340
 ```
 
-That value matches the live receipt and `delivery.json` inside the signed evidence bundle.
+The successful transaction emitted one `X402PaymentSettled` event with the expected USD₮0 token, payer, recipient, amount of `1000` base units, nonce and deterministic payment ID.
 
-## 3. Inspect the receipt and bundle
+## Receipt and delivered resource
 
-Open receipt [`dec5a106-3216-4543-bfb6-e669dc83f4d7`](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7).
-
-Expected status: `anchored`.
-
-Expected current bundle hash:
+[Open the public receipt](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7)
 
 ```text
-0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+Receipt ID: dec5a106-3216-4543-bfb6-e669dc83f4d7
+Resource hash: 0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
 ```
 
-Independent checks of the served ZIP confirmed:
+The resource hash is the SHA-256 of the exact protected JSON response bytes.
 
-- ZIP integrity;
-- the ZIP SHA-256 matches the receipt bundle hash;
-- the Ed25519 signature validates over `manifest.json`;
-- every manifest file matches its declared hash and size;
-- the served `pain.001`, `pain.002` and `camt.054` files parse and match their API-declared hashes;
-- the result resource hash appears in the receipt and signed bundle.
-
-These are ISO 20022-style artifacts. Their presence does not establish certification or compliance with a specific institution's market practice.
-
-## 4. Inspect the anchor
-
-Open the [Flare EvidenceAnchor transaction](https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28).
-
-The transaction called EvidenceAnchor at:
+## Evidence and anchor
 
 ```text
-0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
+Bundle hash: 0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+Anchor tx:    0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28
 ```
 
-Its `EvidenceAnchored` event committed:
+[Open the anchor transaction](https://flare-explorer.flare.network/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28)
 
-```text
-0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
-```
+The ZIP hash, receipt `bundle_hash` and decoded `EvidenceAnchored.bundleHash` were equal. The manifest signature and every listed file hash and size also passed independent recomputation.
 
-That value equals the hash of the currently served evidence ZIP.
+## What this example demonstrates
 
-## 5. Understand the proof boundary
-
-This evidence supports the integrity and timing of the committed receipt bundle and its recorded payment and resource hashes. The anchor does not independently prove that every offchain field is true, that the exchange satisfies a legal obligation, or that the generated XML is certified for a specific ISO 20022 market practice.
+This example connects one paid HTTP request to a settlement, returned resource, receipt, signed evidence bundle and onchain commitment. It does not establish that every route, token or deployment mode has completed the same test.

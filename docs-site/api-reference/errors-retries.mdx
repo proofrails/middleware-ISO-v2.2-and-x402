@@ -1,0 +1,34 @@
+---
+title: Errors, retries and reconciliation
+description: Handle API failures, receipt polling and x402 timeouts without duplicate payments.
+---
+
+# Errors, retries and reconciliation
+
+The API does not yet use one universal error envelope. Always preserve the HTTP status, safe response body and `X-Request-ID` when available.
+
+| Condition | Client behavior |
+|---|---|
+| `400` | Fix the request. Do not retry unchanged data. |
+| `401` or `403` | Fix the credential, project or role. Do not retry automatically. |
+| `402` | Decode requirements and validate the complete payment tuple before signing. |
+| `404` | Check the route and identifier. Treat a missing receipt separately from a pending receipt. |
+| `409 nonce_already_used` | Reconcile the existing payment. Never authorize a second payment automatically. |
+| `422` | Fix schema validation errors. Do not retry unchanged data. |
+| `429` | Honor `Retry-After` when supplied and use bounded backoff. |
+| `5xx` before signing | Retry only with bounded exponential backoff and jitter. |
+| Timeout or `5xx` after signing | Reconcile the nonce, payment ID, transaction and receipt before any further action. |
+
+## Receipt writes
+
+Receipt creation is deduplicated by the chain/transaction pair and by `reference`. Reuse both values when the response to a write is lost. The hosted contract does not currently define a separate `Idempotency-Key` retention guarantee.
+
+## Receipt polling
+
+Poll `GET /v1/iso/receipts/{rid}` with a bounded interval. Stop at `anchored` or `failed`. A timeout in your poller does not change the receipt state and does not justify resubmitting a payment.
+
+## x402 recovery rule
+
+Once a signed authorization may have reached the server, do not create another authorization merely because the HTTP response was lost. Check the EIP-3009 nonce, facilitator payment record, settlement transaction, x402 payment listings and receipt records first.
+
+A 409 replay response is evidence that the nonce is already consumed, not an instruction to generate a replacement payment.

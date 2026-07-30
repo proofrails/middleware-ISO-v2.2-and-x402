@@ -1,0 +1,68 @@
+---
+title: Flare contracts
+description: Contract addresses, functions, events and independent read checks for the hosted Flare path.
+---
+
+# Flare contracts
+
+Always confirm chain ID `14`, runtime bytecode and the exact address before signing or sending value.
+
+## Addresses
+
+| Contract | Address |
+|---|---|
+| EvidenceAnchor | `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` |
+| X402Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| USD₮0 | `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
+
+RPC: `https://flare-api.flare.network/ext/C/rpc`
+
+Explorer: `https://flare-explorer.flare.network`
+
+## EvidenceAnchor
+
+```solidity
+function anchorEvidence(bytes32 bundleHash) external;
+event EvidenceAnchored(bytes32 bundleHash, address indexed sender, uint256 ts);
+```
+
+The contract stores evidence through events. A verifier reads the transaction receipt and compares `bundleHash` with the ZIP SHA-256.
+
+## X402Facilitator
+
+The facilitator accepts a `PaymentPayload` containing token, payer, recipient, raw amount, authorization window, nonce and signature values.
+
+Main settlement functions:
+
+```solidity
+function settlePayment(PaymentPayload calldata payload) external returns (bytes32 paymentId);
+function settlePaymentAsPayee(PaymentPayload calldata payload) external returns (bytes32 paymentId);
+```
+
+Read functions:
+
+```solidity
+function verifyPayment(PaymentPayload calldata payload) external view returns (bytes32 paymentId, bool valid);
+function getPayment(bytes32 paymentId) external view returns (PaymentRecord memory);
+function isNonceUsed(address token, address authorizer, bytes32 nonce) external view returns (bool);
+function supportedTokens(address token) external view returns (bool);
+function minimumAmounts(address token) external view returns (uint256);
+function paused() external view returns (bool);
+```
+
+Successful settlement emits:
+
+```solidity
+event X402PaymentSettled(
+    address indexed token,
+    address indexed payer,
+    address indexed recipient,
+    uint256 amount,
+    bytes32 nonce,
+    bytes32 paymentId
+);
+```
+
+`paymentId` is `keccak256(abi.encode(from, to, token, value, nonce))`. The facilitator and token both reject reuse through the payment record and EIP-3009 authorization state.
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract. These contracts do not imply a generic public `/verify` and `/settle` facilitator service.

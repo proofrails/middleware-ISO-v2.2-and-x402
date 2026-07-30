@@ -1,72 +1,41 @@
 ---
-title: Flare integration
-description: EvidenceAnchor, USD₮0 settlement, FTSO and FDC helper surfaces.
+title: Verify a Flare anchor
+description: Decode EvidenceAnchored and compare it with the current evidence ZIP.
 ---
 
-# Flare integration
+# Verify a Flare anchor
 
-ProofRails uses Flare for tamper-evident receipt commitments and the verified USD₮0 paid-resource flow. The current source also includes FTSO v2 data helpers and FDC attestation preparation.
+The hosted EvidenceAnchor is `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` on Flare mainnet, chain ID `14`.
 
-## Evidence anchoring
+## Read-only viem check
 
-Hosted mainnet contract:
+```js
+import { createPublicClient, defineChain, http, keccak256, toBytes } from 'viem';
 
-```text
-0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
+const flare = defineChain({
+  id: 14,
+  name: 'Flare',
+  nativeCurrency: { name: 'Flare', symbol: 'FLR', decimals: 18 },
+  rpcUrls: { default: { http: ['https://flare-api.flare.network/ext/C/rpc'] } },
+});
+
+const client = createPublicClient({ chain: flare, transport: http() });
+const receipt = await client.getTransactionReceipt({ hash: process.env.ANCHOR_TX });
+if (receipt.status !== 'success') throw new Error('Anchor transaction failed');
+
+const expected = '0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA'.toLowerCase();
+const topic0 = keccak256(toBytes('EvidenceAnchored(bytes32,address,uint256)'));
+const log = receipt.logs.find((item) =>
+  item.address.toLowerCase() === expected && item.topics[0] === topic0
+);
+if (!log) throw new Error('Expected EvidenceAnchored event not found');
+
+const eventBundleHash = `0x${log.data.slice(2, 66)}`;
+if (eventBundleHash.toLowerCase() !== process.env.BUNDLE_HASH.toLowerCase()) {
+  throw new Error('Bundle hash mismatch');
+}
 ```
 
-An anchor writes the current bundle hash to EvidenceAnchor. Applications should store the resulting transaction hash with the receipt and independently confirm the emitted hash.
+Also require the transaction's chain, contract address and block confirmation policy. Compare the event value with a locally computed SHA-256 of the current ZIP, not only with a value copied from the receipt API.
 
-For hosted ProofRails receipts, anchoring is a completion requirement. Keep a receipt in `awaiting_anchor` or `failed` until the current bundle hash is committed and independently matched. If signed bundle bytes change, anchor the new hash before presenting the updated receipt as complete.
-
-Self-hosted configuration:
-
-```env
-FLARE_RPC_URL=https://flare-api.flare.network/ext/C/rpc
-ANCHOR_CONTRACT_ADDR=0x...
-ANCHOR_PRIVATE_KEY=<runtime-secret-reference>
-```
-
-Do not place a literal private key in an image, document, repository or browser build.
-
-## Platform and tenant modes
-
-- **Platform anchoring:** the ProofRails worker signs and submits the anchor.
-- **Tenant anchoring:** the tenant submits the transaction and calls `POST /v1/iso/confirm-anchor` with the receipt ID, chain and transaction hash.
-
-Use tenant mode when your organization must control the signing key or gas policy.
-
-## Retry
-
-Current source:
-
-```http
-POST /v1/iso/receipts/{receipt_id}/retry-anchor
-```
-
-Retry only after fixing the underlying RPC, funding, key, contract or worker problem. An anchor proves the integrity and timing of the committed hash, not the truth of offchain data.
-
-## FTSO helpers
-
-Current source routes:
-
-```http
-GET /v1/flare/feeds
-GET /v1/flare/feeds/{symbol}
-```
-
-These return FTSO v2 feed information and live values. Availability in the hosted API should be confirmed at runtime.
-
-## FDC preparation
-
-Current source:
-
-```http
-POST /v1/flare/fdc/prepare-attestation
-```
-
-This prepares an FDC attestation request body for a transaction. Preparing a request is not the same as obtaining and verifying a finalized FDC proof. Document the full attestation lifecycle separately when that production flow is deployed and tested.
-
-## USD₮0 settlement
-
-See [Networks and contracts](/deployments) and [x402 status](/x402/status-and-compatibility) for the verified facilitator, token and mainnet flow.
+`anchorEvidence` is a state-changing contract call. The example above performs only JSON-RPC reads. Submitting an anchor requires the deployment's signer authorization and gas policy.

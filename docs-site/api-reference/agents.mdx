@@ -1,13 +1,13 @@
 ---
-title: Agents API
-description: Agent records, AI configuration, templates, testing, activity and evidence anchoring.
+title: Agent management API
+description: Optional project records for agent identities, settings, usage and anchoring.
 ---
 
-# Agents API
+# Agent management API
 
-ProofRails represents an autonomous service as a project-scoped agent record. Agents can be configured, tested, linked to payment activity and used to create anchor records.
+Agent records are optional management objects. An automated client does not need to register an agent before using the Receipt API or an x402 paid endpoint.
 
-## Hosted CRUD and operations
+## Core records
 
 ```http
 POST   /v1/agents
@@ -16,46 +16,28 @@ GET    /v1/agents/{agent_id}
 PUT    /v1/agents/{agent_id}
 DELETE /v1/agents/{agent_id}
 GET    /v1/agents/{agent_id}/stats
-POST   /v1/agents/{agent_id}/test
-POST   /v1/agents/{agent_id}/test-ai
-PUT    /v1/agents/{agent_id}/ai-config
-POST   /v1/agents/{agent_id}/download-template
 ```
 
-The hosted OpenAPI checked on 24 July includes these routes. Use it for exact schemas.
+Registration requires `name` and `wallet_address`; it can also include `xmtp_address` and `pricing_rules`. Every operation requires a project API key and enforces project ownership unless the principal is a service administrator.
 
-## Current-source anchoring
+## Tests and configuration
 
 ```http
-GET  /v1/agents/{agent_id}/anchoring-config
+POST /v1/agents/{agent_id}/test
+POST /v1/agents/{agent_id}/test-ai
+PUT  /v1/agents/{agent_id}/ai-config
+POST /v1/agents/{agent_id}/download-template
 PUT  /v1/agents/{agent_id}/anchoring-config
-POST /v1/agents/{agent_id}/anchor-data
+```
+
+## Agent anchor records
+
+```http
 POST /v1/agents/{agent_id}/anchor
 GET  /v1/agents/{agent_id}/anchors
 GET  /v1/agents/{agent_id}/activity-unified
 ```
 
-`anchor-data` canonicalizes a JSON object with sorted keys and compact separators, computes SHA-256, stores only the hash in the anchor record and optionally queues an onchain submission.
+These routes manage project data around an agent. They do not authorize the service to use an agent's payment wallet or private key.
 
-```json
-{
-  "data": {
-    "task_id": "task-42",
-    "result_hash": "0x...",
-    "payment_id": "0x..."
-  },
-  "description": "Agent task completion",
-  "chain": "flare",
-  "submit_onchain": false
-}
-```
-
-Set `submit_onchain` to `false` when you only need a deterministic canonical hash or when signing is handled by another service.
-
-## Unified activity
-
-`GET /v1/agents/{agent_id}/activity-unified` merges x402 payment records and anchor events into a time-ordered feed with payment and anchor summary counts.
-
-## Security
-
-Do not send a private key through this API until the deployment's secret-storage implementation has been reviewed and uses proper encryption or an external signer. Prefer a vault, HSM or tenant-side signing flow.
+Treat AI-provider credentials as secrets outside ProofRails. Do not use the agent-record API as a substitute for a dedicated secret manager.

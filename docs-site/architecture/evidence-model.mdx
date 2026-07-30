@@ -1,61 +1,32 @@
 ---
 title: Evidence and trust model
-description: What ProofRails signs, hashes, anchors and verifies.
+description: Identify each proof layer, what it checks and what remains an external assumption.
 ---
 
 # Evidence and trust model
 
-ProofRails uses two complementary integrity mechanisms:
+ProofRails uses separate integrity checks because each one answers a different question.
 
-1. an Ed25519 signature over a canonical manifest; and
-2. an onchain commitment to the SHA-256 of the evidence ZIP.
+<img src="/assets/evidence-model.svg" alt="Receipt files are hashed into a signed manifest, packaged into an evidence ZIP and committed on Flare" />
 
-<img src="/assets/evidence-model.svg" alt="ProofRails evidence bundle and onchain trust model" />
+| Layer | Check | What it establishes |
+|---|---|---|
+| Payment reference | Compare chain, transaction, token, amount and parties with chain data. | The cited settlement facts match the network record. |
+| Resource hash | SHA-256 the delivered bytes. | The available resource matches the bytes bound to the receipt. |
+| File hashes | Recompute entries in `manifest.json`. | Individual evidence files have not changed. |
+| Manifest signature | Verify Ed25519 signature with `public_key.pem`. | The manifest was signed by the corresponding private key. |
+| Bundle hash | SHA-256 the final ZIP bytes. | The downloaded bundle has a stable digest. |
+| Onchain anchor | Decode `EvidenceAnchored` and compare `bundleHash`. | The same digest was committed by the event timestamp. |
 
-## Bundle contents
+## External assumptions
 
-A normal evidence ZIP contains:
+ProofRails cannot derive these facts from hashes:
 
-```text
-manifest.json
-manifest.sig
-public_key.pem
-pain001.xml
-receipt.json
-tip.json
-```
+- legal identity behind a wallet;
+- authority to pay or sell;
+- accuracy of supplied descriptions or references;
+- whether delivered content met a contract;
+- tax, accounting or regulatory treatment;
+- institutional acceptance of an ISO 20022-style artifact.
 
-Configuration can add files such as credential or IVMS data. Post-processing APIs can also expose additional ISO XML beside the bundle. The manifest lists each committed file with its byte count and SHA-256.
-
-## Verification procedure
-
-A verifier should:
-
-1. download the exact bundle bytes;
-2. compute `SHA-256(evidence.zip)`;
-3. parse the ZIP and reject CRC or path errors;
-4. canonicalize `manifest.json` exactly as the producer does;
-5. verify `manifest.sig` using `public_key.pem`;
-6. recompute every manifest file hash and byte count;
-7. compare the bundle hash with the receipt API;
-8. compare it with the EvidenceAnchor event on the expected chain and contract.
-
-## Claims this supports
-
-A passing verification supports the statement:
-
-> These exact bundle bytes match the receipt record and the hash committed by the identified anchor transaction, and the included manifest signature validates against the included public key.
-
-It does not independently establish:
-
-- legal settlement finality;
-- invoice validity or commercial performance;
-- ownership of a wallet;
-- KYC, AML or sanctions status;
-- correctness of user-supplied metadata;
-- bank acceptance or ISO certification;
-- exact delivery bytes unless their hashes appear in the committed manifest.
-
-## Key provenance
-
-An included public key proves internal signature consistency, not the external identity of the signer. Production deployments should publish a trusted signing-key fingerprint, rotation policy and revocation history through a separately authenticated channel.
+Integrations should preserve the original source data and record how it was obtained. Evidence integrity is strongest when a verifier can recompute payment, resource, file, signature, bundle and anchor checks independently.

@@ -1,0 +1,28 @@
+---
+title: Hosted service
+description: Understand the managed API, application, workers, storage and public verifier.
+---
+
+# Hosted service
+
+The hosted ProofRails service runs the evidence engine and exposes it through five public surfaces.
+
+| Surface | URL | Purpose |
+|---|---|---|
+| Application and API | `https://app.proofrails.com` | Project workflows, receipt records and REST endpoints. |
+| OpenAPI | `https://app.proofrails.com/openapi.json` | Deployed route and schema discovery. |
+| API explorer | `https://app.proofrails.com/docs` | Interactive Swagger interface. |
+| Public verifier | `https://app.proofrails.com/verify/{receipt_id}` | Shareable receipt verification. |
+| Documentation | `https://docs.proofrails.com` | Integration and operating guidance. |
+
+## Managed components
+
+The service runs the FastAPI application, PostgreSQL records, Redis queues, background receipt workers, artifact storage, signing and Flare anchoring. Hosted users do not need to deploy the worker or contracts for the standard workflow.
+
+## Access model
+
+Write and project-list operations use `X-API-Key`. Receipt lookup, artifact download and verification have public routes so a receipt can be checked without exposing a project credential. Keep API keys on a server or in a secret manager. Do not put them in browser JavaScript or an AI prompt.
+
+## Availability of routes
+
+Use the hosted OpenAPI document to discover deployed routes. Repository branches can contain work that is not available in the hosted service. These docs mark source-only behavior where it is relevant, but integrations should bind to the schema returned by the service they call.

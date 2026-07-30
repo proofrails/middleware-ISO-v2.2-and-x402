@@ -1,65 +1,41 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Verify a receipt | ProofRails Docs</title><meta name="description" content="Recompute a bundle hash, validate its signature and compare the onchain commitment.">
+<title>Verify a receipt | ProofRails Docs</title><meta name="description" content="Check a public receipt, evidence ZIP, manifest signature and onchain bundle commitment.">
+<link rel="canonical" href="https://docs.proofrails.com/verify-receipt"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a class="active" href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a class="active" href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
 <main class="main"><article class="content"><h1 id="verify-a-receipt">Verify a receipt</h1>
-<p>Verification should answer three separate questions:</p>
-<ol>
-<li>Are the bundle bytes internally intact?</li>
-<li>Does the bundle match the receipt record?</li>
-<li>Does its hash match the expected onchain event on the expected contract and chain?</li>
-</ol>
-<h2 id="public-verifier">Public verifier</h2>
+<p>Verification answers whether the available evidence matches the hash committed onchain. It does not decide whether the underlying commercial statements are true.</p>
+<h2 id="public-receipt">Public receipt</h2>
 <p>Open:</p>
 <pre><code class="language-text">https://app.proofrails.com/verify/{receipt_id}
 </code></pre>
-<p>Public example:</p>
-<p><a href="https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5">app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5</a></p>
-<h2 id="verify-a-bundle-url">Verify a bundle URL</h2>
-<pre><code class="language-bash">curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
-  -H 'X-API-Key: &lt;api_key&gt;' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    &quot;bundle_url&quot;: &quot;https://app.proofrails.com/files/&lt;receipt_id&gt;/evidence.zip&quot;
+<p>A completed hosted receipt should display <code>anchored</code>, the bundle hash, the anchor transaction and the evidence download.</p>
+<h2 id="verification-api">Verification API</h2>
+<pre><code class="language-bash">curl --fail-with-body --request POST   https://app.proofrails.com/v1/iso/verify   --header 'Content-Type: application/json'   --data '{
+    &quot;bundle_url&quot;: &quot;https://app.proofrails.com/files/{receipt_id}/evidence.zip&quot;,
+    &quot;bundle_hash&quot;: &quot;0xEXPECTED_SHA256&quot;
   }'
 </code></pre>
-<h2 id="verify-an-expected-hash">Verify an expected hash</h2>
-<pre><code class="language-bash">curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
-  -H 'X-API-Key: &lt;api_key&gt;' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    &quot;bundle_url&quot;: &quot;https://example.com/evidence.zip&quot;,
-    &quot;bundle_hash&quot;: &quot;0x&lt;sha256&gt;&quot;
-  }'
-</code></pre>
-<h2 id="response">Response</h2>
+<p>You may provide <code>bundle_url</code>, <code>bundle_hash</code>, or both. When a URL is supplied, ProofRails downloads the ZIP and computes its SHA-256.</p>
 <pre><code class="language-json">{
   &quot;matches_onchain&quot;: true,
   &quot;bundle_hash&quot;: &quot;0x...&quot;,
   &quot;flare_txid&quot;: &quot;0x...&quot;,
-  &quot;anchored_at&quot;: &quot;2026-07-23T12:40:00Z&quot;,
-  &quot;checksums&quot;: {},
+  &quot;anchored_at&quot;: &quot;2026-07-29T10:13:26Z&quot;,
   &quot;errors&quot;: []
 }
 </code></pre>
-<p>Treat <code>errors</code> as part of the result even when the HTTP request succeeds.</p>
-<h2 id="verify-a-cid">Verify a CID</h2>
-<pre><code class="language-http">POST /v1/iso/verify-cid
-</code></pre>
-<pre><code class="language-json">{
-  &quot;cid&quot;: &quot;Qm...&quot;,
-  &quot;store&quot;: &quot;ipfs&quot;,
-  &quot;receipt_id&quot;: &quot;&lt;optional-receipt-id&gt;&quot;
-}
-</code></pre>
-<p>Supported store values in the SDK include <code>ipfs</code>, <code>arweave</code> and <code>auto</code>.</p>
-<h2 id="independent-chain-check">Independent chain check</h2>
-<p>For Flare mainnet, verify that:</p>
-<ul>
-<li>chain ID is <code>14</code>;</li>
-<li>contract is <code>0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA</code> for the documented hosted deployment;</li>
-<li>transaction status is successful;</li>
-<li>the event bundle hash equals your locally recomputed ZIP SHA-256.</li>
-</ul>
-<p>Do not accept an explorer link alone as proof of the correct chain. Check its domain, chain ID, contract address and event data.</p></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>
+<h2 id="independent-checks">Independent checks</h2>
+<p>For higher assurance:</p>
+<ol>
+<li>Download <code>evidence.zip</code> yourself.</li>
+<li>Compute <code>sha256(evidence.zip)</code> and add the <code>0x</code> prefix.</li>
+<li>Read <code>manifest.json</code> and recompute every listed file hash and byte size.</li>
+<li>Verify <code>manifest.sig</code> against <code>public_key.pem</code> using Ed25519.</li>
+<li>Fetch the Flare transaction receipt for <code>flare_txid</code>.</li>
+<li>Decode <code>EvidenceAnchored(bytes32,address,uint256)</code> from the configured EvidenceAnchor contract.</li>
+<li>Require exact equality between the event <code>bundleHash</code>, the downloaded ZIP hash and the receipt <code>bundle_hash</code>.</li>
+</ol>
+<p>A signature only shows that the manifest was signed by the included key. Trust in the signer still depends on how your project obtained and protected that key.</p></article><nav class="page-nav"><a href="/create-first-receipt"><span>Previous</span><strong>Create a receipt</strong></a><a class="next" href="/agent-quickstart"><span>Next</span><strong>AI agent quickstart</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

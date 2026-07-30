@@ -1,90 +1,63 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mainnet proof walkthrough | ProofRails Docs</title><meta name="description" content="Inspect the settlement, protected result, receipt, signed bundle and Flare anchor from a verified standard-x402 run.">
+<title>Mainnet example | ProofRails Docs</title><meta name="description" content="Trace one paid request through settlement, protected response, receipt, evidence bundle and Flare anchor.">
+<link rel="canonical" href="https://docs.proofrails.com/x402/mainnet-proof"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a class="active" href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
-<main class="main"><article class="content"><h1 id="mainnet-proof-walkthrough">Mainnet proof walkthrough</h1>
-<p><Warning>
-The linked transactions are on Flare mainnet and used real USD₮0. This page only inspects existing public evidence and does not submit a payment.
-</Warning></p>
-<p>This walkthrough covers the standard-client run completed on 29 July 2026 with unmodified x402 2.19.0 packages.</p>
-<h2 id="1-inspect-the-payment">1. Inspect the payment</h2>
-<p>Open the <a href="https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340">Flare settlement transaction</a>.</p>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a class="active" href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="mainnet-example">Mainnet example</h1>
+<p>This read-only example shows the identifiers from one completed hosted request on 29 July 2026. Do not replay its authorization or nonce.</p>
+<h2 id="request-and-result">Request and result</h2>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Expected value</th>
+<th>Item</th>
+<th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Status</td>
-<td>Success</td>
+<td>Endpoint</td>
+<td><code>POST https://app.proofrails.com/v1/x402/premium/fx-lookup</code></td>
 </tr>
 <tr>
-<td>Chain</td>
-<td>Flare mainnet, chain ID <code>14</code></td>
+<td>Client</td>
+<td>Official x402 V2 packages <code>2.19.0</code></td>
 </tr>
 <tr>
-<td>Token</td>
-<td>USD₮0 <code>0xe7cd86e13AC4309349F30B3435a9d337750fC82D</code></td>
+<td>Payment</td>
+<td><code>0.001 USD₮0</code> on Flare mainnet</td>
 </tr>
 <tr>
-<td>Facilitator</td>
-<td><code>0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE</code></td>
+<td>HTTP result</td>
+<td><code>200</code></td>
 </tr>
 <tr>
-<td>Payer</td>
-<td><code>0xa52D9C74Bb82bf3Ae62288389f90e55a6E45Dc2c</code></td>
+<td>Response body</td>
+<td><code>{"rate":"0.00628055","source":"coingecko"}</code></td>
 </tr>
 <tr>
-<td>Recipient</td>
-<td><code>0x0A617D605a1010a74B8dA756E48D75bCef110ef4</code></td>
-</tr>
-<tr>
-<td>Raw amount</td>
-<td><code>1000</code> with 6 decimals, equal to <code>0.001 USD₮0</code></td>
-</tr>
-<tr>
-<td>Payment ID</td>
-<td><code>0x77c2ae30329f09773e24287433cdbe1c11a51c99ff6b91883d5637a08e139fc6</code></td>
+<td>Request ID</td>
+<td><code>b50f446e-f420-4afa-b196-5821bf0b5a92</code></td>
 </tr>
 </tbody>
 </table>
-<p>The facilitator record reports <code>settled: true</code>, and the EIP-3009 authorization nonce is used.</p>
-<h2 id="2-inspect-the-protected-result">2. Inspect the protected result</h2>
-<p>The paid endpoint returned:</p>
-<pre><code class="language-json">{&quot;rate&quot;:&quot;0.00628055&quot;,&quot;source&quot;:&quot;coingecko&quot;}
+<h2 id="settlement">Settlement</h2>
+<p><a href="https://flare-explorer.flare.network/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340">Open the settlement transaction</a></p>
+<pre><code class="language-text">0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340
 </code></pre>
-<p>The SHA-256 of those exact response bytes is:</p>
-<pre><code class="language-text">0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
+<p>The successful transaction emitted one <code>X402PaymentSettled</code> event with the expected USD₮0 token, payer, recipient, amount of <code>1000</code> base units, nonce and deterministic payment ID.</p>
+<h2 id="receipt-and-delivered-resource">Receipt and delivered resource</h2>
+<p><a href="https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7">Open the public receipt</a></p>
+<pre><code class="language-text">Receipt ID: dec5a106-3216-4543-bfb6-e669dc83f4d7
+Resource hash: 0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
 </code></pre>
-<p>That value matches the live receipt and <code>delivery.json</code> inside the signed evidence bundle.</p>
-<h2 id="3-inspect-the-receipt-and-bundle">3. Inspect the receipt and bundle</h2>
-<p>Open receipt <a href="https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7"><code>dec5a106-3216-4543-bfb6-e669dc83f4d7</code></a>.</p>
-<p>Expected status: <code>anchored</code>.</p>
-<p>Expected current bundle hash:</p>
-<pre><code class="language-text">0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+<p>The resource hash is the SHA-256 of the exact protected JSON response bytes.</p>
+<h2 id="evidence-and-anchor">Evidence and anchor</h2>
+<pre><code class="language-text">Bundle hash: 0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+Anchor tx:    0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28
 </code></pre>
-<p>Independent checks of the served ZIP confirmed:</p>
-<ul>
-<li>ZIP integrity;</li>
-<li>the ZIP SHA-256 matches the receipt bundle hash;</li>
-<li>the Ed25519 signature validates over <code>manifest.json</code>;</li>
-<li>every manifest file matches its declared hash and size;</li>
-<li>the served <code>pain.001</code>, <code>pain.002</code> and <code>camt.054</code> files parse and match their API-declared hashes;</li>
-<li>the result resource hash appears in the receipt and signed bundle.</li>
-</ul>
-<p>These are ISO 20022-style artifacts. Their presence does not establish certification or compliance with a specific institution's market practice.</p>
-<h2 id="4-inspect-the-anchor">4. Inspect the anchor</h2>
-<p>Open the <a href="https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28">Flare EvidenceAnchor transaction</a>.</p>
-<p>The transaction called EvidenceAnchor at:</p>
-<pre><code class="language-text">0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA
-</code></pre>
-<p>Its <code>EvidenceAnchored</code> event committed:</p>
-<pre><code class="language-text">0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
-</code></pre>
-<p>That value equals the hash of the currently served evidence ZIP.</p>
-<h2 id="5-understand-the-proof-boundary">5. Understand the proof boundary</h2>
-<p>This evidence supports the integrity and timing of the committed receipt bundle and its recorded payment and resource hashes. The anchor does not independently prove that every offchain field is true, that the exchange satisfies a legal obligation, or that the generated XML is certified for a specific ISO 20022 market practice.</p></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>
+<p><a href="https://flare-explorer.flare.network/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28">Open the anchor transaction</a></p>
+<p>The ZIP hash, receipt <code>bundle_hash</code> and decoded <code>EvidenceAnchored.bundleHash</code> were equal. The manifest signature and every listed file hash and size also passed independent recomputation.</p>
+<h2 id="what-this-example-demonstrates">What this example demonstrates</h2>
+<p>This example connects one paid HTTP request to a settlement, returned resource, receipt, signed evidence bundle and onchain commitment. It does not establish that every route, token or deployment mode has completed the same test.</p></article><nav class="page-nav"><a href="/x402/status-and-compatibility"><span>Previous</span><strong>x402 compatibility</strong></a><a class="next" href="/contracts/flare"><span>Next</span><strong>Flare contracts</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

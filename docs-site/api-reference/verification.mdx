@@ -1,60 +1,60 @@
 ---
 title: Verification API
-description: Verify evidence bundles, expected hashes and content-addressed storage.
+description: Verify a bundle URL, expected hash, CID or confirmed tenant anchor.
 ---
 
 # Verification API
 
-## Verify bundle evidence
+Verification routes are public unless stated otherwise.
+
+## Verify a bundle
 
 ```http
 POST /v1/iso/verify
+Content-Type: application/json
 ```
 
 ```json
 {
   "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip",
-  "bundle_hash": "0x<optional-expected-sha256>"
+  "bundle_hash": "0xOPTIONAL_EXPECTED_HASH",
+  "txid": "0xOPTIONAL_ANCHOR_TRANSACTION"
 }
 ```
 
-At least one input must be present. Supplying both lets the service download the bundle and compare it with your expected hash.
+At least one supported locator must be supplied. The response includes:
 
-Response fields:
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-29T10:13:26Z",
+  "errors": []
+}
+```
 
-| Field | Meaning |
-|---|---|
-| `matches_onchain` | Whether the service found a matching anchor under its configured chain and contract. |
-| `bundle_hash` | SHA-256 computed or supplied for the bundle. |
-| `flare_txid` | Matching anchor transaction when found. |
-| `anchored_at` | Anchor time when available. |
-| `checksums` | Optional file-level verification details. |
-| `errors` | Download, ZIP, signature, manifest or chain lookup failures. |
+Treat a non-empty `errors` array as incomplete verification even if another field is truthy.
 
-## Verify CID
+## Verify a content-addressed bundle
 
 ```http
 POST /v1/iso/verify-cid
 ```
 
-Use this for evidence stored on IPFS or Arweave. The SDK supports `ipfs`, `arweave` and `auto` selectors.
+This route resolves the supplied content identifier through configured storage and applies the verifier. Availability depends on the hosted storage configuration.
 
-## List receipt anchors
+## Confirm a tenant-submitted anchor
 
 ```http
-GET /v1/anchors/{receipt_id}
+POST /v1/iso/confirm-anchor
+X-API-Key: <project-admin-key>
 ```
 
-```json
-[
-  {
-    "chain": "flare",
-    "txid": "0x...",
-    "anchored_at": "2026-07-23T12:01:00Z"
-  }
-]
-```
+This route is for projects configured for tenant anchoring. It checks the transaction against the project's chain and EvidenceAnchor address before marking the receipt `anchored`.
 
-## Verification discipline
+## Independent authority
 
-A hosted `matches_onchain: true` result is useful, but independent verification should also check chain ID, EvidenceAnchor address, transaction status, decoded event hash and the locally recomputed ZIP SHA-256.
+The service response is convenient, but a high-assurance verifier should independently download the current ZIP, check its SHA-256 and manifest signature, fetch the Flare transaction receipt, require successful execution, require the expected EvidenceAnchor address and compare the decoded event hash.
+
+If an anchor lookup is unavailable, do not interpret that operational condition as a successful onchain match.

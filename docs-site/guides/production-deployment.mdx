@@ -1,28 +1,43 @@
 ---
-title: Production deployment
-description: Production notes for ProofRails deployments.
+title: Operated deployment
+description: Components, configuration and acceptance checks for a self-hosted ProofRails service.
 ---
 
-# Production deployment
+# Operated deployment
 
-Before production use, verify:
+The API process alone is insufficient for a self-hosted ProofRails service.
 
-- API keys and admin keys are not default values.
-- Secrets are stored in the deployment platform, not committed to Git.
-- `NEXT_PUBLIC_API_BASE` or API proxy configuration points to the correct production API.
-- Anchoring RPC, contract address, private key, and gas funding are configured.
-- x402 recipient, facilitator, chain, and token settings match the target environment.
-- Rate limiting and idempotency settings match expected traffic.
-- Webhooks use HTTPS endpoints and signature verification where supported.
+## Required components
 
-## Deployment surfaces
+- FastAPI service behind TLS;
+- PostgreSQL with migrations and backups;
+- Redis and RQ workers;
+- durable artifact storage with a correct public base URL;
+- Ed25519 bundle-signing key;
+- Flare RPC and configured EvidenceAnchor contract;
+- anchor signer and gas policy when platform anchoring is enabled;
+- secret storage for API, signer and infrastructure credentials;
+- health checks, structured logs, metrics and alerting.
 
-- Backend FastAPI service
-- Web app / dashboard
-- Documentation site
-- Optional x402 test app or campaign app
-- Worker or polling process for anchoring and monitoring
+## Configuration boundaries
 
-<Warning>
-Do not deploy with blank production environment variables. Blank envs can override working local defaults and cause production-only failures.
-</Warning>
+Keep chain ID, token address, contract address, recipient and minimum amount in environment-specific configuration. Validate the complete tuple at startup and expose a safe read-only configuration summary without secrets.
+
+Do not copy the hosted ProofRails signer or contract ownership model into another deployment. A self-hosted operator is responsible for its own keys, contracts, funds and recovery procedures.
+
+## Acceptance checks
+
+Before traffic:
+
+1. Apply database migrations and verify rollback instructions.
+2. Start API and worker processes and confirm Redis connectivity.
+3. Create a non-value receipt and observe worker completion.
+4. Download the current bundle and verify every manifest entry and signature.
+5. Confirm the configured EvidenceAnchor event on the intended chain.
+6. Require exact equality between current ZIP hash, receipt hash and event hash.
+7. Confirm public URLs do not resolve to localhost or a private hostname.
+8. Test backup restoration and artifact retention.
+9. Verify rate limits, authorization boundaries and log redaction.
+10. Exercise a rollback without deleting receipt or anchor evidence.
+
+A health endpoint alone does not demonstrate the complete evidence path.

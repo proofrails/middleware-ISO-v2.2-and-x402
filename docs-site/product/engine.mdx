@@ -1,0 +1,35 @@
+---
+title: Evidence engine
+description: Understand the processing stages that turn payment data into an anchored evidence record.
+---
+
+# Evidence engine
+
+The ProofRails engine is the processing layer behind the API and hosted application. It converts payment data into a consistent receipt and builds the evidence required to inspect that receipt later.
+
+## Pipeline
+
+| Stage | Engine action | Persisted result |
+|---|---|---|
+| Ingest | Validate the project, transaction reference and required payment fields. | Receipt with `pending` status. |
+| Normalize | Store chain, transaction, parties, amount, asset, reference and optional resource hash. | Project-scoped receipt record. |
+| Translate | Generate the applicable finance-readable files. | ISO 20022-style artifacts with individual hashes. |
+| Package | Create receipt evidence and a canonical manifest. | `evidence.zip`. |
+| Sign | Sign the manifest with Ed25519 and include the public key. | `manifest.sig` and `public_key.pem`. |
+| Commit | Calculate the ZIP SHA-256 and submit it to EvidenceAnchor. | Bundle hash and anchor transaction. |
+| Verify | Recompute files and compare the bundle hash with the onchain event. | Machine-readable verification result. |
+
+## Receipt states
+
+| State | Meaning | Client action |
+|---|---|---|
+| `pending` | The receipt exists and background processing has started. | Poll the receipt or wait for an event. |
+| `awaiting_anchor` | The bundle exists but the current hash has not been confirmed onchain. | Wait, or submit and confirm the anchor in tenant mode. |
+| `anchored` | The current bundle hash matches a confirmed anchor transaction. | Treat the hosted receipt as complete. |
+| `failed` | Processing or anchoring did not complete. | Inspect the error through your operational channel and retry only through a supported workflow. |
+
+## Resource binding
+
+A `resource_hash` binds delivered bytes to the receipt. In the hosted x402 flow, ProofRails hashes the protected JSON response body. For Receipt API integrations, the caller can provide a `0x`-prefixed SHA-256 hash of a file or result.
+
+This proves byte equality when the original resource is available for recomputation. It does not judge whether the resource was correct or useful.

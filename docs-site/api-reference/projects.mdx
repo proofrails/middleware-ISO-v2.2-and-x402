@@ -1,17 +1,44 @@
 ---
 title: Projects API
-description: Project registration and configuration endpoints.
+description: Project registration, access boundaries and anchoring configuration.
 ---
 
 # Projects API
 
-Projects provide tenancy and API key scoping.
+A project is the tenant boundary for API keys, receipts, agents and configuration.
+
+## Register
 
 ```http
 POST /v1/projects/register
-GET  /v1/projects
-GET  /v1/projects/{project_id}/config
-PUT  /v1/projects/{project_id}/config
 ```
 
-Project configuration can include active chain settings, callbacks, and app-specific defaults depending on deployment.
+Registration uses a fresh SIWE nonce, complete EIP-4361 message and wallet signature. It returns the project plus one raw API key. See [Authentication and API keys](/api-reference/authentication).
+
+## List accessible projects
+
+```http
+GET /v1/projects
+X-API-Key: <project-key>
+```
+
+A project principal sees its own project. A service administrator can see broader scope.
+
+## Read configuration
+
+```http
+GET /v1/projects/{project_id}/config
+X-API-Key: <project-key>
+```
+
+## Update configuration
+
+```http
+PUT /v1/projects/{project_id}/config
+X-API-Key: <project-admin-key>
+Content-Type: application/json
+```
+
+Project configuration controls anchoring mode and chain-specific settings. `platform` mode delegates anchoring to the ProofRails worker. `tenant` mode requires the project to submit and confirm its own anchor transaction.
+
+Never copy the hosted ProofRails contract addresses into a different deployment without verifying that the deployment is intentionally authorized to use them.

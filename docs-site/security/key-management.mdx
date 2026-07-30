@@ -1,24 +1,32 @@
 ---
 title: Key management
-description: Handle API keys, private keys, and environment secrets safely.
+description: Separate API, wallet, signing, anchoring and contract-owner credentials.
 ---
 
 # Key management
 
-ProofRails deployments may use several secret types:
+ProofRails uses several unrelated credential classes. Do not reuse one key across them.
 
-- project API keys
-- admin API keys
-- anchoring private keys
-- webhook secrets
-- x402 facilitator or recipient configuration
-- deployment platform secrets
+| Credential | Purpose | Owner |
+|---|---|---|
+| Project API key | Authenticate project API operations. | Project operator. |
+| SIWE wallet | Register a project and recover API access. | Project owner. |
+| Bundle Ed25519 key | Sign canonical evidence manifests. | Hosted service or self-hosted operator. |
+| Anchor signer | Submit EvidenceAnchor transactions. | Platform or tenant, according to project mode. |
+| x402 payer wallet | Sign EIP-3009 payment authorizations. | Paying client. |
+| x402 server settler | Submit accepted authorizations and pay gas in server-submitted mode. | ProofRails hosted operator. |
+| Contract owner | Manage supported tokens, minimums and pause state. | Contract operator or multisig. |
 
-Guidance:
+## Handling rules
 
-- Never commit real secrets.
-- Use `.env.example` for placeholders only.
-- Store production secrets in the deployment platform or a secret manager.
-- Rotate any token pasted into chat, logs, screenshots, or public issues.
-- Use separate keys for development, staging, and production.
-- Treat exposed credentials as compromised.
+- Store secrets in a dedicated secret manager.
+- Keep API and private keys out of repositories, browser code, logs and AI prompts.
+- Use separate development and live credentials.
+- Restrict signing processes to the smallest required operation.
+- Rotate API keys with overlap, then revoke the old key.
+- Maintain documented recovery for anchor and contract-owner keys.
+- Monitor unexpected contract-owner and settlement activity.
+
+Contract addresses, recipients and token addresses are public configuration, not secrets. They still require integrity checks because changing one can redirect value or verification.
+
+The public key inside an evidence ZIP proves signature self-consistency. A relying party needs a separately trusted fingerprint or distribution channel to bind that key to a particular operator.

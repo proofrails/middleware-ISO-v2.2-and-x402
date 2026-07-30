@@ -1,106 +1,68 @@
 ---
-title: Quickstart
-description: Create, poll and verify a ProofRails receipt.
+title: Hosted API quickstart
+description: Create an anchored receipt through the hosted REST API and retrieve its evidence.
 ---
 
-# Quickstart
+# Hosted API quickstart
 
-This guide runs the current source locally with mock payment checks, creates a receipt and follows it to evidence generation. No blockchain transaction is required for the local flow.
+This guide records an existing onchain payment. Calling the Receipt API does not transfer the payment funds. The hosted service may submit an EvidenceAnchor transaction as part of receipt processing.
 
-## Prerequisites
+## Before you start
 
-- Git
-- Docker with Compose
-- `curl`
-
-## 1. Start the stack
+You need a ProofRails project API key and the details of a completed payment:
 
 ```bash
-git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
-cd middleware-ISO-v2.2-and-x402
-git checkout agentic
-cp .env.example .env
+export PROOFRAILS_API_KEY='your_server_side_key'
+export PROOFRAILS_API='https://app.proofrails.com'
 ```
 
-Set local-only values in `.env`:
+Keep the key outside source control and client-side code.
 
-```env
-API_KEYS=dev-admin-CHANGE_ME
-X402_MOCK_PAYMENTS=true
-RATE_LIMIT_ENABLED=false
-AUTO_CREATE_DB=true
-```
+## 1. Create the receipt
 
 ```bash
-docker compose up --build
-```
-
-Check readiness:
-
-```bash
-curl --fail http://localhost:8000/v1/health
-```
-
-OpenAPI is available at `http://localhost:8000/docs`.
-
-## 2. Create a receipt
-
-```bash
-curl --fail-with-body -X POST http://localhost:8000/v1/iso/record-tip \
-  -H 'X-API-Key: dev-admin-CHANGE_ME' \
-  -H 'Idempotency-Key: quickstart-invoice-001' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "reference": "invoice-001",
-    "tip_tx_hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/record-tip"   --header "X-API-Key: $PROOFRAILS_API_KEY"   --header 'Content-Type: application/json'   --data '{
+    "tip_tx_hash": "0xYOUR_SETTLEMENT_TRANSACTION",
     "chain": "flare",
-    "amount": "100.00",
-    "currency": "FLR",
-    "sender_wallet": "0x1111111111111111111111111111111111111111",
-    "receiver_wallet": "0x2222222222222222222222222222222222222222",
-    "metadata": {"invoice_id": "invoice-001", "environment": "local"},
-    "tags": ["quickstart", "invoice"]
+    "amount": "12.50",
+    "currency": "USD₮0",
+    "sender_wallet": "0xPAYER",
+    "receiver_wallet": "0xRECIPIENT",
+    "reference": "order-1842",
+    "resource_hash": "0xOPTIONAL_SHA256_OF_DELIVERED_BYTES"
   }'
 ```
 
-Save the returned `receipt_id`. In the current source, `operation_id` is the same UUID.
+The response contains the stable receipt ID:
 
-## 3. Poll processing
+```json
+{
+  "receipt_id": "5f2c...",
+  "status": "pending"
+}
+```
+
+## 2. Poll the receipt
 
 ```bash
-curl --fail http://localhost:8000/v1/operations/<receipt_id> \
-  -H 'X-API-Key: dev-admin-CHANGE_ME'
+curl --fail "$PROOFRAILS_API/v1/iso/receipts/5f2c..."
 ```
 
-Expected lifecycle:
+Stop when `status` is `anchored`. Treat `failed` as an operational failure. Do not present `pending` or `awaiting_anchor` as complete.
 
-```text
-pending → processing → awaiting_anchor → anchored
-                                ↘ failed
-```
-
-Use 2–5 second polling intervals in development. Prefer webhooks in production.
-
-## 4. Fetch the outputs
+## 3. Retrieve artifacts
 
 ```bash
-curl --fail http://localhost:8000/v1/iso/receipts/<receipt_id> \
-  -H 'X-API-Key: dev-admin-CHANGE_ME'
-
-curl --fail http://localhost:8000/v1/iso/messages/<receipt_id> \
-  -H 'X-API-Key: dev-admin-CHANGE_ME'
-
-curl --fail --output evidence.zip \
-  http://localhost:8000/files/<receipt_id>/evidence.zip
+curl --fail "$PROOFRAILS_API/v1/iso/messages/5f2c..."
+curl --fail --output evidence.zip   "$PROOFRAILS_API/files/5f2c.../evidence.zip"
 ```
 
-## 5. Verify the bundle
+## 4. Verify the bundle
 
 ```bash
-curl --fail-with-body -X POST http://localhost:8000/v1/iso/verify \
-  -H 'X-API-Key: dev-admin-CHANGE_ME' \
-  -H 'Content-Type: application/json' \
-  -d '{"bundle_url":"http://localhost:8000/files/<receipt_id>/evidence.zip"}'
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/verify"   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/5f2c.../evidence.zip"
+  }'
 ```
 
-A local mock run can validate bundle integrity but cannot prove a real mainnet anchor. For a public read-only example, follow the [mainnet proof walkthrough](/x402/mainnet-proof).
+Require `matches_onchain: true`, then compare the returned `bundle_hash` and `flare_txid` with the receipt. See [Verification API](/api-reference/verification) for failure handling.

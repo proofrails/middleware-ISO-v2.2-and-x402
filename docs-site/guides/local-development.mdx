@@ -1,42 +1,60 @@
 ---
-title: Local development
-description: Run ProofRails locally for development and testing.
+title: Run locally
+description: Start the API, database, Redis and worker without using real payment value.
 ---
 
-# Local development
+# Run locally
 
-## Backend
+Local development is appropriate for receipt integration tests and UI work. It does not validate a mainnet payment or anchor.
+
+## Prerequisites
+
+- Git
+- Docker with Compose
+- `curl`
+
+## Start the stack
 
 ```bash
+git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
+cd middleware-ISO-v2.2-and-x402
+git checkout agentic
 cp .env.example .env
 ```
 
-Recommended local settings:
+Set explicit development values:
 
 ```env
 API_KEYS=dev-admin-CHANGE_ME
-DATABASE_URL=sqlite:///./local.db
-AUTO_CREATE_DB=true
 X402_MOCK_PAYMENTS=true
 RATE_LIMIT_ENABLED=false
+AUTO_CREATE_DB=true
 ```
-
-Run:
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+docker compose up --build
 ```
 
-## Web app
+Check the API:
 
 ```bash
-npm run dev --workspace web-alt
+curl --fail http://localhost:8000/v1/health
 ```
 
-Default local app:
+OpenAPI is available at `http://localhost:8000/docs`.
 
-```text
-http://localhost:3000
+## Why the worker matters
+
+Receipt creation queues artifact generation and anchoring work through Redis. Running only `uvicorn` does not exercise the complete receipt pipeline. Use the Compose services or start the API, Redis, database and worker explicitly.
+
+## Mock boundary
+
+`X402_MOCK_PAYMENTS=true` skips real payment verification. A mock 200 response is development behavior, not settlement evidence. Never enable mock payment mode on a public deployment.
+
+## Stop and remove local data
+
+```bash
+docker compose down
 ```
 
-If running from WSL and viewing from Windows, use the WSL IP address instead of `127.0.0.1` when needed.
+Add `--volumes` only when you intentionally want to delete local database and Redis volumes.

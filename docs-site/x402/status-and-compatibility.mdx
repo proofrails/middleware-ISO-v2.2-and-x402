@@ -1,57 +1,45 @@
 ---
 title: x402 compatibility
-description: Standard x402 client compatibility for the verified ProofRails Flare-mainnet path.
+description: Protocol versions, headers, settlement mode and hosted-path boundaries.
 ---
 
 # x402 compatibility
 
-<Warning>
-This integration uses real USD₮0 on Flare mainnet. It is not a testnet faucet flow or a payment simulation.
-</Warning>
+## Hosted supported path
 
-## Current compatibility
+| Property | Value |
+|---|---|
+| x402 protocol | V2 challenge and signed retry |
+| Client packages exercised | `@x402/fetch@2.19.0`, `@x402/evm@2.19.0` |
+| Scheme | `exact` |
+| Network | `eip155:14` |
+| Asset | USD₮0 |
+| Authorization | EIP-3009 `TransferWithAuthorization` |
+| Settlement | Integrated server-submitted settlement through X402Facilitator |
+| Result | Protected HTTP response plus `PAYMENT-RESPONSE` |
 
-The hosted ProofRails paid FX endpoint completed the standard x402 V2 exchange with unmodified `@x402/fetch` and `@x402/evm` version 2.19.0 on 29 July 2026.
+## Headers
 
-The live-verified sequence covered:
+| Header | Direction | Content |
+|---|---|---|
+| `PAYMENT-REQUIRED` | Server to client on HTTP 402 | Base64 JSON containing `x402Version`, resource and accepted payment options. |
+| `PAYMENT-SIGNATURE` | Client to server on retry | Base64 JSON containing the accepted option, authorization and signature. |
+| `PAYMENT-RESPONSE` | Server to client after settlement | Base64 JSON containing success, network, transaction, payer and receipt links when available. |
 
-- HTTP 402 and `PAYMENT-REQUIRED`;
-- official-client `PAYMENT-SIGNATURE` generation;
-- server-submitted settlement through the ProofRails X402Facilitator;
-- an HTTP 200 protected FX response;
-- standard `PAYMENT-RESPONSE` with an actual receipt ID and verifier URL;
-- resource hash capture in the receipt and signed bundle;
-- ISO 20022-style artifacts;
-- Ed25519 manifest verification;
-- a Flare EvidenceAnchor event matching the current bundle hash.
+The server also emits legacy compatibility headers on some paths. New integrations should use the V2 headers above.
 
-## Integration boundary
+## Response contract
 
-ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
+A successful paid request must satisfy all of these conditions:
 
-ProofRails does not expose a generic public HTTP `/verify` and `/settle` facilitator service for unrelated merchant APIs. Integrate against the payment-gated routes that appear in the hosted OpenAPI or deploy the source for your own environment.
+- the protected response is HTTP 2xx;
+- `PAYMENT-RESPONSE` decodes with `success: true`;
+- `transaction` is present;
+- `network` is `eip155:14` for the hosted Flare path;
+- `receiptId` is present before the integration declares its evidence record complete.
 
-## Replay behavior
+The receipt itself can still be `pending` while background packaging and anchoring run.
 
-The verified payment nonce was rejected after settlement with HTTP 409 `nonce_already_used`. Sequential replay and two concurrent duplicate requests produced no second payment transaction.
+## Other source paths
 
-The source verifier also checks chain, token, recipient, minimum amount, transaction status and confirmation policy. New payment paths should repeat the complete production evidence and adversarial test matrix before they are described as validated.
-
-## Developer checks
-
-Before a client signs:
-
-- confirm Flare chain ID `14`;
-- match the live USD₮0 contract, facilitator and recipient;
-- inspect the exact raw amount and authorization deadline;
-- apply explicit fee and value bounds;
-- keep one nonce per authorization;
-- preserve `PAYMENT-RESPONSE` and the returned receipt reference;
-- verify the delivered resource hash against the receipt and signed bundle.
-
-## Evidence
-
-- [Settlement transaction](https://flarescan.com/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340)
-- [Public ProofRails receipt](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7)
-- [EvidenceAnchor transaction](https://flarescan.com/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28)
-- [Complete walkthrough](/x402/mainnet-proof)
+Base USDC and native FLR adapters remain experimental. Read the live 402 challenge and accept only payment tuples your application explicitly allows.

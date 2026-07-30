@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "last_verified": "2026-07-29",
+  "capabilities": [
+    {
+      "id": "receipt-api",
+      "description": "Record an existing payment and create a ProofRails receipt",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "openapi_operations": ["record_tip_v1_iso_record_tip_post"],
+      "limitations": ["Records an existing payment reference; does not transfer payment funds"]
+    },
+    {
+      "id": "signed-evidence-bundle",
+      "description": "Generate a manifest, Ed25519 signature and portable evidence ZIP",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "limitations": ["Included public key establishes self-consistency; external signer identity needs a separately trusted fingerprint"]
+    },
+    {
+      "id": "flare-evidence-anchor",
+      "description": "Commit the current evidence ZIP hash through EvidenceAnchor",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "limitations": ["Proves integrity and timing of a hash, not offchain truth or legal sufficiency"]
+    },
+    {
+      "id": "x402-flare-usdt0",
+      "description": "Standard x402 V2 paid request with USD₮0 on Flare mainnet",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "openapi_operations": ["premium_fx_lookup_v1_x402_premium_fx_lookup_post"],
+      "limitations": ["Uses real value", "Validated scope is the documented FX lookup flow", "No automatic repayment after timeout"]
+    },
+    {
+      "id": "integrated-x402-facilitator",
+      "description": "Integrated settlement for ProofRails payment-gated APIs",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "limitations": ["Not a generic public facilitator for unrelated merchant APIs"]
+    },
+    {
+      "id": "iso-20022-style-artifacts",
+      "description": "Generate finance-readable payment and reporting artifacts",
+      "hosted": true,
+      "evidence_status": "live-verified",
+      "limitations": ["No certification or institutional conformance claim"]
+    },
+    {
+      "id": "base-usdc-adapter",
+      "description": "Source adapter for Base USDC payments",
+      "hosted": false,
+      "evidence_status": "code-verified",
+      "limitations": ["Experimental and not equivalent to the validated hosted Flare path"]
+    },
+    {
+      "id": "native-flr-adapter",
+      "description": "Source adapter for native FLR payments",
+      "hosted": false,
+      "evidence_status": "code-verified",
+      "limitations": ["Experimental and not equivalent to the validated hosted Flare path"]
+    }
+  ],
+  "negative_capabilities": {
+    "generic_public_x402_facilitator": false,
+    "iso_20022_certification": false,
+    "anchor_proves_offchain_truth": false,
+    "webhook_api_in_deployed_openapi": false
+  }
+}

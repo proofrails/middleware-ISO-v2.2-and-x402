@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "last_verified": "2026-07-29",
+  "networks": [
+    {
+      "name": "flare-mainnet",
+      "chain_id": 14,
+      "caip2": "eip155:14",
+      "rpc_url": "https://flare-api.flare.network/ext/C/rpc",
+      "explorer_url": "https://flare-explorer.flare.network",
+      "contracts": {
+        "evidence_anchor": {
+          "address": "0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA",
+          "evidence_status": "live-verified"
+        },
+        "x402_facilitator": {
+          "address": "0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE",
+          "evidence_status": "live-verified",
+          "scope": "ProofRails payment-gated APIs"
+        }
+      },
+      "assets": {
+        "usdt0": {
+          "address": "0xe7cd86e13AC4309349F30B3435a9d337750fC82D",
+          "decimals": 6,
+          "evidence_status": "live-verified"
+        }
+      },
+      "hosted_x402_recipient": "0x0A617D605a1010a74B8dA756E48D75bCef110ef4",
+      "validated_minimum_raw": "1000"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "ProofRails",
-  "description": "Verifiable receipts and finance-readable evidence for onchain payments",
+  "description": "Receipts and evidence for onchain payments and paid API calls",
   "colors": {
     "primary": "#e11d8a",
     "light": "#f8fafc",
@@ -11,57 +11,46 @@
   "favicon": "/favicon.svg",
   "navigation": [
     {
-      "group": "Start here",
+      "group": "Understand ProofRails",
       "pages": [
         "introduction",
+        "product/how-it-works",
+        "product/integration-options",
+        "product/engine",
+        "product/hosted-service",
         "capabilities",
+        "platform-status"
+      ]
+    },
+    {
+      "group": "Get started",
+      "pages": [
         "quickstart",
         "create-first-receipt",
-        "verify-receipt"
-      ]
-    },
-    {
-      "group": "Architecture",
-      "pages": [
-        "architecture/system-overview",
-        "architecture/evidence-model",
-        "concepts/receipts",
-        "concepts/evidence-bundles",
-        "concepts/anchoring",
-        "concepts/verification-model"
-      ]
-    },
-    {
-      "group": "Deployments",
-      "pages": [
-        "deployments",
-        "guides/flare-anchoring",
-        "guides/production-deployment",
+        "verify-receipt",
+        "agent-quickstart",
         "guides/local-development"
       ]
     },
     {
-      "group": "ISO 20022-style artifacts",
+      "group": "Receipts and evidence",
       "pages": [
+        "concepts/receipts",
+        "concepts/evidence-bundles",
+        "concepts/anchoring",
         "concepts/iso-20022-artifacts",
-        "api-reference/iso-artifacts"
+        "concepts/verification-model"
       ]
     },
     {
-      "group": "x402 and paid resources",
+      "group": "x402 and Flare",
       "pages": [
         "x402/overview",
+        "x402/client-integration",
         "x402/status-and-compatibility",
         "x402/mainnet-proof",
-        "x402/coston2-testnet-demo"
-      ]
-    },
-    {
-      "group": "Agents and integrations",
-      "pages": [
-        "guides/agent-workflows",
-        "guides/sdks",
-        "guides/webhooks"
+        "contracts/flare",
+        "deployments"
       ]
     },
     {
@@ -71,17 +60,30 @@
         "api-reference/authentication",
         "api-reference/receipts",
         "api-reference/verification",
+        "api-reference/iso-artifacts",
         "api-reference/projects",
-        "api-reference/agents",
         "api-reference/x402",
-        "api-reference/webhooks"
+        "api-reference/agents",
+        "api-reference/errors-retries"
       ]
     },
     {
-      "group": "Security",
+      "group": "Architecture and operations",
       "pages": [
+        "architecture/system-overview",
+        "architecture/evidence-model",
+        "guides/flare-anchoring",
+        "guides/production-deployment",
         "security/key-management",
         "security/limitations"
+      ]
+    },
+    {
+      "group": "Agents and clients",
+      "pages": [
+        "guides/agent-workflows",
+        "agents/machine-readable-docs",
+        "guides/sdks"
       ]
     }
   ],
@@ -92,8 +94,8 @@
       "icon": "square-arrow-up-right"
     },
     {
-      "name": "OpenAPI",
-      "url": "https://app.proofrails.com/docs",
+      "name": "OpenAPI JSON",
+      "url": "https://app.proofrails.com/openapi.json",
       "icon": "brackets-curly"
     },
     {

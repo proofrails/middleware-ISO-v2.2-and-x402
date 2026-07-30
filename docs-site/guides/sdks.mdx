@@ -1,78 +1,34 @@
 ---
-title: SDKs
-description: Use the TypeScript and Python clients from the ProofRails repository.
+title: Client libraries
+description: Choose raw HTTP, generated OpenAPI clients or the official x402 packages.
 ---
 
-# SDKs
+# Client libraries
 
-The repository includes TypeScript and Python clients. They are source packages in the monorepo; confirm registry publication before using a public package-manager install command.
+## REST API
 
-## TypeScript
+Raw HTTP is the canonical ProofRails integration because it follows the deployed OpenAPI directly. Generate a client from:
 
-Build from the repository root:
+```text
+https://app.proofrails.com/openapi.json
+```
+
+Review the generated client because the current document does not declare `X-API-Key` security and does not model x402 402 headers.
+
+## Official x402 client
+
+Use the pinned packages for the validated Flare paid-request path:
 
 ```bash
-npm --prefix packages/sdk ci
-npm --prefix packages/sdk run build
+npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
 ```
 
-```ts
-import IsoMiddlewareClient from "iso-middleware-sdk";
+These packages perform the standard 402 challenge and signed retry. They do not verify the resulting ProofRails evidence bundle for you.
 
-const proofrails = new IsoMiddlewareClient({
-  baseUrl: process.env.PROOFRAILS_BASE_URL!,
-  apiKey: process.env.PROOFRAILS_API_KEY!,
-});
+See [x402 client integration](/x402/client-integration).
 
-const page = await proofrails.listReceipts({
-  status: "anchored",
-  chain: "flare",
-  scope: "mine",
-  page_size: 20,
-});
+## Repository SDKs
 
-const receipt = await proofrails.getReceipt(page.items[0].id);
-const anchors = await proofrails.getAnchors(receipt.id);
-const result = await proofrails.verifyBundle({
-  bundle_url: new URL(receipt.bundle_url!, process.env.PROOFRAILS_BASE_URL).toString(),
-});
-```
+The source repository contains TypeScript and Python SDK implementations. Public package-registry publication and version parity with the hosted API are not asserted here. If you use them from source, pin the exact commit, inspect the methods against the live OpenAPI and run your own compatibility tests.
 
-## Python
-
-Install locally from the checked-out repository:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e packages/sdk-python
-```
-
-```python
-import os
-from iso_middleware_sdk import ISOClient
-
-proofrails = ISOClient(
-    base_url=os.environ["PROOFRAILS_BASE_URL"],
-    api_key=os.environ["PROOFRAILS_API_KEY"],
-)
-
-page = proofrails.list_receipts(
-    status="anchored",
-    chain="flare",
-    scope="mine",
-    page_size=20,
-)
-
-receipt = proofrails.get_receipt(page["items"][0]["id"])
-anchors = proofrails.get_anchors(receipt["id"])
-result = proofrails.verify_bundle(bundle_url=receipt["bundle_url"])
-```
-
-## Available client groups
-
-Both clients cover receipts, verification, project configuration, statements, refunds, tenant anchoring, agent management, agent anchors and x402 analytics. The TypeScript client also exports the EvidenceAnchor ABI for tenant-side anchoring.
-
-## Server-side key handling
-
-Do not bundle a ProofRails API key into browser JavaScript. The hosted frontend uses a server-side proxy pattern so the browser never receives the key.
+Do not use placeholder API keys in executable examples. Load `PROOFRAILS_API_KEY` from a server-side secret manager.

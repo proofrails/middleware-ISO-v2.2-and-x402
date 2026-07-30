@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "ProofRails",
+  "description": "Receipts and evidence for onchain payments and paid API calls",
+  "documentation": "https://docs.proofrails.com/",
+  "llms_txt": "https://docs.proofrails.com/llms.txt",
+  "llms_full_txt": "https://docs.proofrails.com/llms-full.txt",
+  "api": {
+    "base_url": "https://app.proofrails.com",
+    "openapi": "https://app.proofrails.com/openapi.json",
+    "authentication": {"type": "apiKey", "in": "header", "name": "X-API-Key"}
+  },
+  "registries": {
+    "contracts": "https://docs.proofrails.com/contracts.json",
+    "capabilities": "https://docs.proofrails.com/capabilities.json",
+    "documentation": "https://docs.proofrails.com/sitemap.json"
+  },
+  "safety": {
+    "hosted_x402_network": "flare-mainnet",
+    "chain_id": 14,
+    "uses_real_value": true,
+    "automatic_payment_retry": false
+  },
+  "boundaries": {
+    "generic_public_facilitator": false,
+    "iso_20022_certified": false,
+    "anchor_proves_offchain_truth": false,
+    "receipt_complete_before_current_anchor": false
+  }
+}

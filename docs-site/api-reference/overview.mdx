@@ -1,61 +1,46 @@
 ---
 title: API overview
-description: Hosted base URL, authentication, runtime discovery and API groups.
+description: Base URL, runtime schema, authentication classes and response conventions.
 ---
 
 # API overview
 
-ProofRails exposes a FastAPI REST API.
-
-## Base URLs
+The hosted ProofRails API is available at:
 
 ```text
-https://app.proofrails.com    # hosted API
-http://localhost:8000         # default local API
+https://app.proofrails.com
 ```
 
-Runtime references:
+## Runtime discovery
 
-- [Swagger UI](https://app.proofrails.com/docs)
-- [ReDoc](https://app.proofrails.com/redoc)
-- [OpenAPI JSON](https://app.proofrails.com/openapi.json)
-- [Health](https://app.proofrails.com/v1/health)
+Use these endpoints before generating a client:
 
-The hosted OpenAPI is the source of truth for deployed routes. The `agentic` branch can contain capabilities that have not yet rolled out to the hosted service.
+- OpenAPI JSON: `https://app.proofrails.com/openapi.json`
+- Swagger UI: `https://app.proofrails.com/docs`
+- ReDoc: `https://app.proofrails.com/redoc`
+- Health: `https://app.proofrails.com/v1/health`
 
-## Authentication
+The live OpenAPI document is the route and schema authority for the hosted service. It currently omits security declarations and does not model the x402 402 headers, so use the authentication table and x402 reference in these docs as well.
 
-Use a server-side API key unless a route is explicitly public:
+## Authentication classes
 
-```http
-X-API-Key: <api_key>
-```
+| Class | How it is authorized | Examples |
+|---|---|---|
+| Public | No credential | Receipt lookup, artifact lookup, anchor lookup, bundle verification. |
+| Project | `X-API-Key` | Receipt creation and project-scoped listings. |
+| Project admin | `X-API-Key` with `project_admin` role | Project configuration and API-key management. |
+| Service admin | Admin API key | Pricing configuration, facilitator configuration and revenue operations. |
+| x402 | `PAYMENT-SIGNATURE` produced from the server challenge | Payment-gated premium endpoints. |
+| SIWE | EIP-4361 message and wallet signature | Project registration and wallet-based key recovery. |
 
-Project-scoped keys limit access to that tenant. Admin keys can access cross-project, configuration and analytics routes. Some deployments also support SIWE for wallet-linked access and key minting.
+## Request conventions
 
-## Common headers
+Send JSON with `Content-Type: application/json`. Amounts are decimal strings in receipt requests and raw integer strings in x402 requirements. Never use floating-point arithmetic for token values.
 
-```http
-Content-Type: application/json
-X-API-Key: <api_key>
-Idempotency-Key: <unique-logical-operation-id>
-```
+Route parameter names in generated clients follow OpenAPI. For example, hosted receipt lookup is declared as `/v1/iso/receipts/{rid}` even though this documentation uses `receipt_id` descriptively.
 
-Responses can include request identifiers and rate-limit metadata depending on deployment configuration.
+## Errors and request IDs
 
-## API groups
+FastAPI validation errors use HTTP 422. Authentication and authorization failures use 401 and 403. x402 challenges use 402 and nonce replay can return 409. Error bodies are not yet one universal schema. Preserve status, response body and `X-Request-ID` when present.
 
-| Group | Main purpose |
-|---|---|
-| Receipts | Create, list, fetch, poll and retry receipt operations. |
-| Verification | Verify bundle URLs, hashes, CIDs and anchors. |
-| ISO artifacts | List and generate payment, status, statement, return and investigation messages. |
-| Projects and auth | Tenant configuration, API keys and SIWE. |
-| Agents | Agent records, AI settings, templates, tests, stats and anchoring. |
-| x402 | Pricing, payment verification, paid actions, receipts and analytics. |
-| Events | SSE and source-branch webhooks. |
-| Operations | Health, metrics, audit events and optional monitoring. |
-
-## Version reality
-
-The hosted OpenAPI checked on 24 July 2026 identified itself as version `0.1.0`, while the current application factory in source identifies the service as `2.2.0`. Do not use either string alone to infer route availability. Discover the runtime schema and pin the API behavior your integration depends on.
+See [Errors, retries and reconciliation](/api-reference/errors-retries) before implementing automatic retries.

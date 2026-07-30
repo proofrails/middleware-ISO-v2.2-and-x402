@@ -1,111 +1,35 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Capabilities | ProofRails Docs</title><meta name="description" content="A complete map of ProofRails product, API and self-hosted capabilities.">
+<title>Product capabilities | ProofRails Docs</title><meta name="description" content="See what the ProofRails engine, hosted service and x402 integration provide.">
+<link rel="canonical" href="https://docs.proofrails.com/capabilities"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a class="active" href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
-<main class="main"><article class="content"><h1 id="capabilities">Capabilities</h1>
-<h2 id="receipt-and-evidence-core">Receipt and evidence core</h2>
-<p>The hosted receipt path has been live-verified through receipt creation, resource-hash capture, signed evidence packaging and a matching Flare anchor. A hosted receipt is complete only after its current bundle hash is anchored.</p>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a class="active" href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="product-capabilities">Product capabilities</h1>
+<h2 id="core-receipt-workflow">Core receipt workflow</h2>
 <ul>
-<li>submit onchain payment references with structured metadata and tags;</li>
-<li>process receipts asynchronously;</li>
-<li>list and filter receipts by status, chain, reference, date and tags;</li>
-<li>use cursor pagination for agent-safe iteration;</li>
-<li>retrieve lightweight status or full receipt data;</li>
-<li>generate signed evidence ZIPs;</li>
-<li>serve receipt JSON, payment context, XML and bundle files;</li>
-<li>retry failed anchoring jobs;</li>
-<li>stream receipt events over SSE.</li>
+<li>Record an onchain payment with a project-scoped business reference.</li>
+<li>Retrieve the receipt by ID and list project receipts.</li>
+<li>Attach a SHA-256 resource hash to represent delivered bytes.</li>
+<li>Generate ISO 20022-style payment and reporting artifacts.</li>
+<li>Build a signed evidence ZIP with a manifest and file hashes.</li>
+<li>Anchor the current bundle hash on Flare.</li>
+<li>Verify a bundle URL, expected hash or supported content-addressed reference.</li>
+<li>Share a public receipt page.</li>
 </ul>
-<h2 id="verification">Verification</h2>
+<h2 id="hosted-operations">Hosted operations</h2>
 <ul>
-<li>verify a bundle by URL or expected hash;</li>
-<li>verify content addressed by IPFS or Arweave CID;</li>
-<li>recompute ZIP SHA-256;</li>
-<li>validate CRC, manifest inventory and Ed25519 signature;</li>
-<li>query receipt anchors;</li>
-<li>compare with the expected Flare transaction and EvidenceAnchor event;</li>
-<li>expose public receipt pages and embeddable receipt views.</li>
+<li>Project and API-key management.</li>
+<li>Background receipt processing through Redis-backed workers.</li>
+<li>Hosted artifact storage and public downloads.</li>
+<li>Receipt lifecycle events and anchor lookup.</li>
+<li>Public OpenAPI and verification surfaces.</li>
 </ul>
-<h2 id="iso-20022-style-artifacts">ISO 20022-style artifacts</h2>
-<p>The source includes generators for:</p>
-<table>
-<thead>
-<tr>
-<th>Family</th>
-<th>Artifacts</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Customer payment</td>
-<td><code>pain.001</code>, <code>pain.002</code>, <code>pain.007</code>, <code>pain.008</code></td>
-</tr>
-<tr>
-<td>FI-to-FI payment</td>
-<td><code>pacs.002</code>, <code>pacs.004</code>, <code>pacs.007</code>, <code>pacs.008</code>, <code>pacs.009</code></td>
-</tr>
-<tr>
-<td>Cash management</td>
-<td><code>camt.029</code>, <code>camt.052</code>, <code>camt.053</code>, <code>camt.054</code>, <code>camt.056</code></td>
-</tr>
-<tr>
-<td>Remittance</td>
-<td><code>remt.001</code></td>
-</tr>
-</tbody>
-</table>
-<p>Availability depends on the receipt path and deployment. Some are generated automatically; others use explicit APIs or statement jobs. Several generators are minimal and best-effort rather than XSD-certified implementations.</p>
-<h2 id="projects-tenants-and-access">Projects, tenants and access</h2>
-<ul>
-<li>project registration and project-specific configuration;</li>
-<li>environment or database-backed API keys;</li>
-<li>key creation and revocation;</li>
-<li>SIWE nonce, wallet verification and linked-wallet management;</li>
-<li>per-project receipt scoping;</li>
-<li>admin-only cross-project operations;</li>
-<li>optional compliance-policy hooks and external provider callbacks;</li>
-<li>structured errors, request IDs, rate limiting and idempotency middleware.</li>
-</ul>
-<h2 id="storage-and-credential-envelopes">Storage and credential envelopes</h2>
-<ul>
-<li>local filesystem, IPFS and Arweave bundle-storage backends;</li>
-<li>CID-based verification for content-addressed evidence;</li>
-<li>source-level verifiable-credential envelope generation around a receipt bundle hash.</li>
-</ul>
-<p>The credential helper can emit an unsigned <code>alg: none</code> envelope when Ed25519 support or a signing key is unavailable. Treat that result as data packaging, not a verifiable credential, and require a signed algorithm in production.</p>
-<h2 id="agents-and-automation">Agents and automation</h2>
-<ul>
-<li>create and manage agent records;</li>
-<li>configure agent AI settings and test behavior;</li>
-<li>parse natural-language agent commands through the optional server-side AI provider;</li>
-<li>export agent templates;</li>
-<li>discover source-branch Flare capabilities as tool schemas;</li>
-<li>attach x402 payments and anchor activity to agents;</li>
-<li>hash arbitrary canonical JSON and optionally anchor it;</li>
-<li>list agent anchors and unified payment/anchor activity;</li>
-<li>use HMAC-signed webhooks in the current source branch;</li>
-<li>monitor lifecycle through polling, SSE or webhooks.</li>
-</ul>
-<h2 id="flare-integrations">Flare integrations</h2>
-<ul>
-<li>EvidenceAnchor commitments on Flare;</li>
-<li>FTSO v2 feed lookup helpers in the current source branch;</li>
-<li>FDC attestation request preparation in the current source branch;</li>
-<li>native FLR payment verification path in source, currently experimental;</li>
-<li>live-verified USD₮0 EIP-3009 settlement through X402Facilitator;</li>
-<li>explorer-verifiable Flare-mainnet payment and anchor records.</li>
-</ul>
-<h2 id="x402-and-paid-actions">x402 and paid actions</h2>
-<ul>
-<li>endpoint pricing configuration;</li>
-<li>payment records and revenue analytics;</li>
-<li>a live-verified Flare USD₮0 path using the standard x402 2.19.0 client exchange;</li>
-<li>Base USDC and native FLR adapters in source, currently experimental;</li>
-<li>paid bundle verification, statement generation, ISO retrieval, FX lookup, bulk verification and refund routes;</li>
-<li>receipt generation from x402 payment records;</li>
-<li>ProofRails-specific paid-resource unlock flow.</li>
-</ul>
-<p>See <a href="/x402/status-and-compatibility">x402 compatibility</a> for the verified scope and public evidence.</p>
-<h2 id="operations">Operations</h2>
-<p>The current source supports PostgreSQL or local SQLite, Redis-backed queues, workers, artifact storage, Alembic migrations, health checks, metrics, webhook delivery and optional proactive monitoring. A hosted route should only be assumed available if it appears in the live OpenAPI or is confirmed by the service owner.</p></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>
+<h2 id="x402-paid-actions">x402 paid actions</h2>
+<p>The hosted API can return a standard x402 V2 challenge for selected paid endpoints. The validated Flare path accepts USD₮0 authorization, settles through the integrated X402Facilitator, executes the protected endpoint, hashes the response and returns a receipt reference in <code>PAYMENT-RESPONSE</code>.</p>
+<p>The source also contains Base USDC and native FLR paths. They are not documented as equivalent hosted paths because they have not completed the same published end-to-end validation.</p>
+<h2 id="agent-support">Agent support</h2>
+<p>Agents can use the same REST endpoints as other clients. The useful automation pattern is to store a business reference before payment, capture <code>receiptId</code> after an x402 response, poll until <code>anchored</code>, download the bundle and retain the verification result with the task log.</p>
+<p>The API also exposes agent-record and agent-anchoring routes. Those are management features; an agent does not need an on-platform agent record to call the Receipt API or use x402.</p>
+<h2 id="boundaries">Boundaries</h2>
+<p>ProofRails does not establish wallet ownership, legal authority, tax treatment, sanctions status or the truth of supplied metadata. ISO 20022-style output is a structured artifact, not certification for a specific institution.</p></article><nav class="page-nav"><a href="/product/hosted-service"><span>Previous</span><strong>Hosted service</strong></a><a class="next" href="/platform-status"><span>Next</span><strong>Hosted service status</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

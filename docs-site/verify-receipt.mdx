@@ -1,17 +1,13 @@
 ---
 title: Verify a receipt
-description: Recompute a bundle hash, validate its signature and compare the onchain commitment.
+description: Check a public receipt, evidence ZIP, manifest signature and onchain bundle commitment.
 ---
 
 # Verify a receipt
 
-Verification should answer three separate questions:
+Verification answers whether the available evidence matches the hash committed onchain. It does not decide whether the underlying commercial statements are true.
 
-1. Are the bundle bytes internally intact?
-2. Does the bundle match the receipt record?
-3. Does its hash match the expected onchain event on the expected contract and chain?
-
-## Public verifier
+## Public receipt
 
 Open:
 
@@ -19,71 +15,39 @@ Open:
 https://app.proofrails.com/verify/{receipt_id}
 ```
 
-Public example:
+A completed hosted receipt should display `anchored`, the bundle hash, the anchor transaction and the evidence download.
 
-[app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5](https://app.proofrails.com/verify/dde8e2b7-11cb-4ac6-9e32-e4f2c5687ca5)
-
-## Verify a bundle URL
+## Verification API
 
 ```bash
-curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
-  -H 'X-API-Key: <api_key>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip"
+curl --fail-with-body --request POST   https://app.proofrails.com/v1/iso/verify   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/{receipt_id}/evidence.zip",
+    "bundle_hash": "0xEXPECTED_SHA256"
   }'
 ```
 
-## Verify an expected hash
-
-```bash
-curl --fail-with-body -X POST https://app.proofrails.com/v1/iso/verify \
-  -H 'X-API-Key: <api_key>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "bundle_url": "https://example.com/evidence.zip",
-    "bundle_hash": "0x<sha256>"
-  }'
-```
-
-## Response
+You may provide `bundle_url`, `bundle_hash`, or both. When a URL is supplied, ProofRails downloads the ZIP and computes its SHA-256.
 
 ```json
 {
   "matches_onchain": true,
   "bundle_hash": "0x...",
   "flare_txid": "0x...",
-  "anchored_at": "2026-07-23T12:40:00Z",
-  "checksums": {},
+  "anchored_at": "2026-07-29T10:13:26Z",
   "errors": []
 }
 ```
 
-Treat `errors` as part of the result even when the HTTP request succeeds.
+## Independent checks
 
-## Verify a CID
+For higher assurance:
 
-```http
-POST /v1/iso/verify-cid
-```
+1. Download `evidence.zip` yourself.
+2. Compute `sha256(evidence.zip)` and add the `0x` prefix.
+3. Read `manifest.json` and recompute every listed file hash and byte size.
+4. Verify `manifest.sig` against `public_key.pem` using Ed25519.
+5. Fetch the Flare transaction receipt for `flare_txid`.
+6. Decode `EvidenceAnchored(bytes32,address,uint256)` from the configured EvidenceAnchor contract.
+7. Require exact equality between the event `bundleHash`, the downloaded ZIP hash and the receipt `bundle_hash`.
 
-```json
-{
-  "cid": "Qm...",
-  "store": "ipfs",
-  "receipt_id": "<optional-receipt-id>"
-}
-```
-
-Supported store values in the SDK include `ipfs`, `arweave` and `auto`.
-
-## Independent chain check
-
-For Flare mainnet, verify that:
-
-- chain ID is `14`;
-- contract is `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` for the documented hosted deployment;
-- transaction status is successful;
-- the event bundle hash equals your locally recomputed ZIP SHA-256.
-
-Do not accept an explorer link alone as proof of the correct chain. Check its domain, chain ID, contract address and event data.
+A signature only shows that the manifest was signed by the included key. Trust in the signer still depends on how your project obtained and protected that key.

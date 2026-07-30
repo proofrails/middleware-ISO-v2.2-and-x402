@@ -1,55 +1,49 @@
 ---
 title: Receipts API
-description: Create, list, fetch, poll and retry ProofRails receipts.
+description: Create, list and retrieve project receipt records using the hosted schema.
 ---
 
 # Receipts API
 
-## Create
+## Create a receipt
 
 ```http
 POST /v1/iso/record-tip
+X-API-Key: <project-key>
+Content-Type: application/json
 ```
 
-See [Create a receipt](/create-first-receipt) for the complete payload.
+The deployed OpenAPI names this body `TipRecordRequest`. Accepted request fields:
 
-## List
+| Field | Type | Required |
+|---|---|---:|
+| `tip_tx_hash` | string | Yes |
+| `chain` | string | Yes |
+| `amount` | decimal string | Yes |
+| `currency` | string | Yes |
+| `sender_wallet` | string | Yes |
+| `receiver_wallet` | string | Yes |
+| `reference` | string | Yes |
+| `resource_hash` | string or null | No |
+| `callback_url` | URL string or null | No |
+
+The deployed request does not accept arbitrary `metadata` or `tags`.
+
+Response:
+
+```json
+{"receipt_id":"<uuid>","status":"pending"}
+```
+
+The route deduplicates by chain plus transaction hash and by business reference. A duplicate returns the existing receipt.
+
+## Retrieve one receipt
 
 ```http
-GET /v1/receipts
+GET /v1/iso/receipts/{rid}
 ```
 
-| Query | Description |
-|---|---|
-| `status` | Filter by lifecycle status. |
-| `chain` | Filter by chain name. |
-| `reference` | Filter by external reference. |
-| `since`, `until` | ISO-formatted date boundaries. |
-| `tags` | Comma-separated tags; source requires all listed tags. |
-| `scope` | `mine` by default; `all` requires admin access. |
-| `cursor` | Stable cursor for agents and concurrent insert workloads. |
-| `page`, `page_size` | Legacy offset pagination. |
-
-Use `next_cursor` for subsequent calls. Cursor pagination is safer than page numbers while receipts are being inserted.
-
-## Poll status
-
-Current source:
-
-```http
-GET /v1/operations/{operation_id}
-GET /v1/iso/receipts/{receipt_id}/status
-```
-
-These lightweight endpoints return status, bundle hash, anchor transaction and timestamps without the full receipt payload. They were not present in the hosted OpenAPI snapshot checked on 24 July 2026; hosted clients should discover support at runtime.
-
-For hosted ProofRails receipts, `anchored` is the completed state. The receipt remains incomplete while it is `pending`, `processing`, `awaiting_anchor` or `failed`.
-
-## Fetch full receipt
-
-```http
-GET /v1/iso/receipts/{receipt_id}
-```
+This route is public and returns:
 
 ```json
 {
@@ -57,27 +51,34 @@ GET /v1/iso/receipts/{receipt_id}
   "status": "anchored",
   "bundle_hash": "0x...",
   "flare_txid": "0x...",
-  "xml_url": "/files/<uuid>/pain001.xml",
-  "bundle_url": "/files/<uuid>/evidence.zip",
-  "created_at": "2026-07-23T12:00:00Z",
-  "anchored_at": "2026-07-23T12:01:00Z"
+  "xml_url": "https://app.proofrails.com/files/<uuid>/pain001.xml",
+  "bundle_url": "https://app.proofrails.com/files/<uuid>/evidence.zip",
+  "resource_hash": "0x...",
+  "created_at": "2026-07-29T10:13:22Z",
+  "anchored_at": "2026-07-29T10:13:26Z"
 }
 ```
 
-## Artifacts and anchors
+Only `anchored` is the completed hosted state.
+
+## List project receipts
 
 ```http
-GET /v1/iso/messages/{receipt_id}
-GET /v1/anchors/{receipt_id}
-GET /v1/iso/events/{receipt_id}
+GET /v1/receipts?page=1&page_size=50
+X-API-Key: <project-key>
 ```
 
-## Retry failed anchoring
+Supported filters in the hosted schema include `status`, `chain`, `reference`, `since`, `until`, `project_id`, `page`, `page_size` and `scope`. Project keys normally use `scope=mine`; broader access requires an admin principal.
 
-Current source:
+The managed endpoint uses page-based pagination. Cursor and tag filters are not part of this API contract.
+
+## Related public routes
 
 ```http
-POST /v1/iso/receipts/{receipt_id}/retry-anchor
+GET /v1/iso/messages/{rid}
+GET /v1/iso/events/{rid}
+GET /v1/anchors/{rid}
+GET /v1/receipts/{receipt_id}/compliance-checks
 ```
 
-The receipt must be `failed` and already have a bundle hash. A successful retry request resets it to `awaiting_anchor` and queues the anchor job.
+Artifact presence and a receipt lifecycle state are separate. Read `bundle_url` and `bundle_hash` from the current receipt rather than constructing artifact URLs from assumptions.

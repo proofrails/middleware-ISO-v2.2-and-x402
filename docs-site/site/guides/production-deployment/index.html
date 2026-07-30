@@ -1,27 +1,39 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Production deployment | ProofRails Docs</title><meta name="description" content="Production notes for ProofRails deployments.">
+<title>Operated deployment | ProofRails Docs</title><meta name="description" content="Components, configuration and acceptance checks for a self-hosted ProofRails service.">
+<link rel="canonical" href="https://docs.proofrails.com/guides/production-deployment"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
 <link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
-<body><header class="topbar"><a class="mobile-brand" href="/introduction">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/docs">OpenAPI</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/introduction"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Start here</div><a href="/introduction">Overview</a><a href="/capabilities">Capabilities</a><a href="/quickstart">Quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a></div><div class="nav-group"><div class="nav-title">Architecture</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/concepts/receipts">Receipts</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">Deployments</div><a href="/deployments">Networks and contracts</a><a href="/guides/flare-anchoring">Flare integration</a><a class="active" href="/guides/production-deployment">Production deployment</a><a href="/guides/local-development">Local development</a></div><div class="nav-group"><div class="nav-title">ISO 20022-style artifacts</div><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/api-reference/iso-artifacts">ISO and financial-message API</a></div><div class="nav-group"><div class="nav-title">x402 and paid resources</div><a href="/x402/overview">x402 payment-gated actions</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet proof walkthrough</a><a href="/x402/coston2-testnet-demo">Historical Coston2 testnet flow</a></div><div class="nav-group"><div class="nav-title">Agents and integrations</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/guides/sdks">SDKs</a><a href="/guides/webhooks">Webhooks and events</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/agents">Agents API</a><a href="/api-reference/x402">x402 API</a><a href="/api-reference/webhooks">Webhooks API</a></div><div class="nav-group"><div class="nav-title">Security</div><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div></aside>
-<main class="main"><article class="content"><h1 id="production-deployment">Production deployment</h1>
-<p>Before production use, verify:</p>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a class="active" href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="operated-deployment">Operated deployment</h1>
+<p>The API process alone is insufficient for a self-hosted ProofRails service.</p>
+<h2 id="required-components">Required components</h2>
 <ul>
-<li>API keys and admin keys are not default values.</li>
-<li>Secrets are stored in the deployment platform, not committed to Git.</li>
-<li><code>NEXT_PUBLIC_API_BASE</code> or API proxy configuration points to the correct production API.</li>
-<li>Anchoring RPC, contract address, private key, and gas funding are configured.</li>
-<li>x402 recipient, facilitator, chain, and token settings match the target environment.</li>
-<li>Rate limiting and idempotency settings match expected traffic.</li>
-<li>Webhooks use HTTPS endpoints and signature verification where supported.</li>
+<li>FastAPI service behind TLS;</li>
+<li>PostgreSQL with migrations and backups;</li>
+<li>Redis and RQ workers;</li>
+<li>durable artifact storage with a correct public base URL;</li>
+<li>Ed25519 bundle-signing key;</li>
+<li>Flare RPC and configured EvidenceAnchor contract;</li>
+<li>anchor signer and gas policy when platform anchoring is enabled;</li>
+<li>secret storage for API, signer and infrastructure credentials;</li>
+<li>health checks, structured logs, metrics and alerting.</li>
 </ul>
-<h2 id="deployment-surfaces">Deployment surfaces</h2>
-<ul>
-<li>Backend FastAPI service</li>
-<li>Web app / dashboard</li>
-<li>Documentation site</li>
-<li>Optional x402 test app or campaign app</li>
-<li>Worker or polling process for anchoring and monitoring</li>
-</ul>
-<p><Warning>
-Do not deploy with blank production environment variables. Blank envs can override working local defaults and cause production-only failures.
-</Warning></p></article><footer>ProofRails · Onchain payment evidence for finance systems</footer></main></div></body></html>
+<h2 id="configuration-boundaries">Configuration boundaries</h2>
+<p>Keep chain ID, token address, contract address, recipient and minimum amount in environment-specific configuration. Validate the complete tuple at startup and expose a safe read-only configuration summary without secrets.</p>
+<p>Do not copy the hosted ProofRails signer or contract ownership model into another deployment. A self-hosted operator is responsible for its own keys, contracts, funds and recovery procedures.</p>
+<h2 id="acceptance-checks">Acceptance checks</h2>
+<p>Before traffic:</p>
+<ol>
+<li>Apply database migrations and verify rollback instructions.</li>
+<li>Start API and worker processes and confirm Redis connectivity.</li>
+<li>Create a non-value receipt and observe worker completion.</li>
+<li>Download the current bundle and verify every manifest entry and signature.</li>
+<li>Confirm the configured EvidenceAnchor event on the intended chain.</li>
+<li>Require exact equality between current ZIP hash, receipt hash and event hash.</li>
+<li>Confirm public URLs do not resolve to localhost or a private hostname.</li>
+<li>Test backup restoration and artifact retention.</li>
+<li>Verify rate limits, authorization boundaries and log redaction.</li>
+<li>Exercise a rollback without deleting receipt or anchor evidence.</li>
+</ol>
+<p>A health endpoint alone does not demonstrate the complete evidence path.</p></article><nav class="page-nav"><a href="/guides/flare-anchoring"><span>Previous</span><strong>Verify a Flare anchor</strong></a><a class="next" href="/security/key-management"><span>Next</span><strong>Key management</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

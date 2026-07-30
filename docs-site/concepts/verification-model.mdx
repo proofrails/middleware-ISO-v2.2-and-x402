@@ -1,20 +1,27 @@
 ---
 title: Verification model
-description: What ProofRails verification proves and does not prove.
+description: Read verification results correctly and distinguish integrity from truth.
 ---
 
 # Verification model
 
-ProofRails verification answers a narrow but important question:
+A ProofRails verification result is a set of explicit comparisons, not a general approval of the transaction.
 
-> Does the submitted receipt evidence match the expected record and onchain anchor data?
+## Successful result
 
-It can check:
+`matches_onchain: true` means the supplied or calculated bundle hash matches an `EvidenceAnchored` record found by the verifier. When a bundle URL is supplied, the verifier also reports bundle-processing errors.
 
-- evidence bundle hash
-- stored receipt metadata
-- anchor transaction reference
-- bundle URL contents where accessible
-- CID references where supported
+## Failed or incomplete result
 
-It does not prove external business facts such as legal settlement finality, customer identity, sanctions screening, invoice validity, or bank acceptance.
+Treat any of these as incomplete verification:
+
+- `matches_onchain` is `false`;
+- `errors` is non-empty;
+- the receipt is not `anchored`;
+- the returned transaction is missing;
+- the downloaded ZIP hash differs from the receipt;
+- the manifest signature or a listed file hash fails independently.
+
+## Result scope
+
+A successful integrity check does not verify legal identity, authority, business performance, accounting classification or regulatory compliance. Applications should describe the exact passed checks rather than collapse them into a generic `verified` claim.

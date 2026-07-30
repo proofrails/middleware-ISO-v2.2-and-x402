@@ -1,51 +1,34 @@
 ---
 title: Security and limitations
-description: Key handling, evidence boundaries and claim-safe use of ProofRails.
+description: Operational risks and the exact boundaries of ProofRails evidence.
 ---
 
 # Security and limitations
 
-## Key handling
+## Evidence boundaries
 
-- Keep API keys and signing keys server-side.
-- Use a secret manager and inject secrets at runtime.
-- Never commit `.env`, private keys or bearer tokens.
-- Separate development, staging and production credentials.
-- Give worker, API and deployment identities only the permissions they require.
-- Rotate exposed keys and keep signing-key rotation history.
+- A settlement proves the chain recorded a value transfer under its consensus rules.
+- A resource hash proves equality with available bytes, not their quality or correctness.
+- A manifest signature proves control of the corresponding private key, not external identity unless the public key is trusted separately.
+- An anchor proves integrity and timing of a committed hash, not offchain truth or legal sufficiency.
+- ISO 20022-style artifacts are not certification for an institution or market practice.
 
-The current source's agent anchoring configuration accepts private-key input. Review that implementation before production use. Secret storage should use authenticated encryption or an external signing service rather than reversible encoding.
+## x402 risks
 
-## Hosted and source drift
+The public `settlePayment` contract function can be called by anyone who obtains a valid signed authorization. The recipient is cryptographically bound, but early submission can create timing or griefing risk. Keep authorizations short-lived and transmit them only to the intended service.
 
-The source repository and hosted API can differ. Generate clients from the hosted OpenAPI, pin tested behavior and verify the exact deployed commit before a release. A source route is not a hosted capability until runtime discovery or a live test confirms it.
+A timeout after signing can occur after settlement. Reconcile the EIP-3009 nonce, facilitator payment record and transaction before any retry. Never create a replacement payment automatically.
 
-## Evidence boundary
+The hosted x402 path spends real USD₮0 on Flare mainnet. Verify chain ID, token address, recipient, amount, facilitator and validity window before signing.
 
-ProofRails establishes integrity relationships among receipt data, delivered-resource hashes, generated files, signatures, bundle hashes and onchain commitments. It does not independently validate every business fact supplied to it.
+## API and deployment limits
 
-An onchain anchor proves the integrity and timing of the committed hash. It does not prove the truth or legal sufficiency of the underlying offchain data.
+The current OpenAPI omits security schemes and does not model every runtime error or x402 header. Use the documented authorization matrix and test generated clients.
 
-## ISO boundary
+Public receipt and artifact URLs are intentionally shareable. Do not place confidential business data in fields or files intended for public verification.
 
-ProofRails generates ISO 20022-style artifacts. Several generators are minimal or best-effort. Validate XSD, market-practice and semantic requirements for the institution or network that will consume an artifact. The message family or namespace alone does not establish compliance or certification.
+Self-hosted operators are responsible for database access, artifact retention, signing keys, anchor keys, contract ownership, rate limits, monitoring, backup restoration and incident response.
 
-## Credential-envelope boundary
+## Unsupported conclusions
 
-The source credential helper can fall back to an unsigned `alg: none` envelope when Ed25519 dependencies or a signing key are unavailable. Reject unsigned envelopes in production and do not describe them as verifiable credentials. The verified July 2026 standard-x402 receipt served `vc.json` as `null`; no credential claim is attached to that evidence pack.
-
-## x402 boundary
-
-The hosted Flare USD₮0 path has completed a standard x402 2.19.0 client flow through payment, protected result, receipt, signed bundle and matching anchor. This evidence applies to that exact hosted path.
-
-Native FLR and Base USDC paths exist in source but have not passed the same evidence gate. Treat them as experimental. ProofRails does not expose a generic public `/verify` and `/settle` facilitator service for third-party merchant APIs.
-
-The exact-client lifecycle should remain covered by a durable committed regression test. The July acceptance run used an external regression harness because the repository did not yet contain that complete test.
-
-## Receipt completion and anchoring
-
-A hosted receipt is complete only after its current bundle hash is anchored. Settlement can succeed before delivery, receipt generation, bundle creation or anchoring finishes. Keep the receipt in its actual intermediate or failed state and do not report completion early.
-
-## Mainnet safety
-
-The current hosted x402 USD₮0 path uses Flare mainnet and real value. Verify the chain, token, facilitator, recipient, amount, validity window and fee policy before signing. The payment interface should display an unavoidable mainnet warning before a user can authorize payment.
+ProofRails does not establish legal identity, authority to transact, contractual performance, tax treatment, sanctions status, accounting classification or regulatory compliance.

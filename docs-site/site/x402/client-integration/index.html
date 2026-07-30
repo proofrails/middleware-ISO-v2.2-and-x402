@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>x402 client integration | ProofRails Docs</title><meta name="description" content="Pay for a ProofRails API with the official x402 V2 client and retain the resulting receipt.">
+<link rel="canonical" href="https://docs.proofrails.com/x402/client-integration"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">App</a><a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a><a href="/llms.txt">LLMs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a class="active" href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="x402-client-integration">x402 client integration</h1>
+<p>The hosted Flare path was exercised with <code>@x402/fetch</code> and <code>@x402/evm</code> version <code>2.19.0</code>.</p>
+<div class="callout warning" role="alert"><strong>Real-value warning</strong>The code below can spend real USD₮0 on Flare mainnet. Use a dedicated wallet, load its key through a secret manager, inspect the first 402 response, and enforce your own amount and fee limits before enabling the paid retry.</div>
+
+<h2 id="install">Install</h2>
+<pre><code class="language-bash">npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
+</code></pre>
+<h2 id="expected-challenge">Expected challenge</h2>
+<p>Fetch once without a signer and decode <code>PAYMENT-REQUIRED</code>. Require the exact tuple you intend to pay:</p>
+<pre><code class="language-js">const endpoint = 'https://app.proofrails.com/v1/x402/premium/fx-lookup';
+const first = await fetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (first.status !== 402) throw new Error(`Expected 402, got ${first.status}`);
+
+const encoded = first.headers.get('PAYMENT-REQUIRED');
+if (!encoded) throw new Error('Missing PAYMENT-REQUIRED');
+
+const challenge = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+const option = challenge.accepts.find((item) =&gt;
+  item.network === 'eip155:14' &amp;&amp;
+  item.asset.toLowerCase() === '0xe7cd86e13ac4309349f30b3435a9d337750fc82d'.toLowerCase()
+);
+
+if (!option) throw new Error('Expected Flare USD₮0 option is missing');
+if (option.amount !== '1000') throw new Error('Unexpected amount');
+if (option.payTo.toLowerCase() !== '0x0A617D605a1010a74B8dA756E48D75bCef110ef4'.toLowerCase()) {
+  throw new Error('Unexpected recipient');
+}
+if (option.extra?.facilitator?.toLowerCase() !== '0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE'.toLowerCase()) {
+  throw new Error('Unexpected facilitator');
+}
+</code></pre>
+<h2 id="paid-request">Paid request</h2>
+<pre><code class="language-js">import { wrapFetchWithPaymentFromConfig, decodePaymentResponseHeader } from '@x402/fetch';
+import { ExactEvmScheme } from '@x402/evm';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const account = privateKeyToAccount(process.env.PAYER_PRIVATE_KEY);
+const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
+  schemes: [
+    { network: 'eip155:14', client: new ExactEvmScheme(account) },
+  ],
+});
+
+const response = await paidFetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
+
+const paymentHeader = response.headers.get('PAYMENT-RESPONSE');
+if (!paymentHeader) throw new Error('Missing PAYMENT-RESPONSE');
+
+const payment = decodePaymentResponseHeader(paymentHeader);
+const result = await response.json();
+
+console.log({ result, transaction: payment.transaction, receiptId: payment.receiptId });
+</code></pre>
+<h2 id="complete-the-evidence-workflow">Complete the evidence workflow</h2>
+<p>Store <code>transaction</code>, <code>receiptId</code>, <code>receiptUrl</code> and <code>verifierUrl</code> with the agent task. Poll <code>receiptUrl</code> until <code>status</code> becomes <code>anchored</code>, then download <code>bundle_url</code> and verify it.</p>
+<p>A duplicate authorization nonce is rejected with HTTP 409 and <code>nonce_already_used</code>. Do not create a second payment merely because receipt processing or anchoring is still pending.</p></article><nav class="page-nav"><a href="/x402/overview"><span>Previous</span><strong>x402 and ProofRails</strong></a><a class="next" href="/x402/status-and-compatibility"><span>Next</span><strong>x402 compatibility</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

@@ -1,0 +1,30 @@
+---
+title: Choose an integration
+description: Select the ProofRails path that matches your payment and user workflow.
+---
+
+# Choose an integration
+
+ProofRails supports several entry points into the same receipt and evidence engine.
+
+| Integration | Use it when | Payment behavior | Main result |
+|---|---|---|---|
+| Hosted application | Finance or operations users create, inspect and share receipts. | Records an existing payment reference. | Receipt page and downloadable evidence. |
+| Receipt API | Your backend already knows the settlement transaction and business context. | Does not move payment funds. | Receipt ID, artifacts, bundle and anchor. |
+| x402 paid API | An application or agent must pay before an HTTP action runs. | The x402 exchange authorizes and settles the payment. | Protected response plus receipt reference. |
+| Public verifier | A recipient needs to check a receipt or bundle. | No payment required. | Hash, signature and anchor comparison. |
+| Self-hosted service | You need your own infrastructure, keys, storage or contracts. | Determined by your deployment. | The same processing model under your operation. |
+
+## Receipt API
+
+Use the Receipt API for payments from wallets, payment processors or other rails when your system can supply a transaction hash and context. The API is the simplest way to add ProofRails to an existing checkout, treasury or reconciliation workflow.
+
+## x402
+
+Use x402 when payment is part of the HTTP request itself. The official client handles the 402 challenge and signed retry. ProofRails then records the settlement and delivered API response through its normal evidence pipeline.
+
+x402 is optional. A receipt created through the Receipt API has the same core evidence model as a receipt created after an x402 payment.
+
+## Hosted and self-hosted
+
+The hosted service is the shortest path because ProofRails runs the database, workers, storage, receipt pages and verifier. Self-hosting gives you control over those components but also makes you responsible for key custody, contract configuration, backups, monitoring and upgrades.
