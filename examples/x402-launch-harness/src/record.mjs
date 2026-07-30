@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { wrapFetchWithPaymentFromConfig, decodePaymentResponseHeader } from '@x402/fetch';
-import { ExactEvmScheme } from '@x402/evm';
+import { ExactEvmScheme, toClientEvmSigner } from '@x402/evm';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
   ENDPOINT,
@@ -14,6 +14,8 @@ import {
   payerPrivateKey,
 } from './config.mjs';
 import { preflight } from './preflight.mjs';
+import { publicClient } from './chain.mjs';
+import { selectFlareOption, assertExpectedTuple } from './challenge.mjs';
 import { title, field, note, rule, check } from './format.mjs';
 import { verify } from './verify.mjs';
 
@@ -71,8 +73,18 @@ export async function record({ approvalToken } = {}) {
   }
 
   const account = privateKeyToAccount(privateKey);
+  // Never let option ordering decide what gets signed: the challenge also offers
+  // a 0.05 native FLR option on the same network.
+  const selectExactTuple = (x402Version, accepts) => {
+    const option = selectFlareOption({ accepts });
+    const failures = assertExpectedTuple(option);
+    if (failures.length) throw new Error(`Offered option is not the approved tuple: ${failures.join('; ')}`);
+    return option;
+  };
+
   const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
-    schemes: [{ network: NETWORK, client: new ExactEvmScheme(account) }],
+    schemes: [{ network: NETWORK, client: new ExactEvmScheme(toClientEvmSigner(account, publicClient)) }],
+    paymentRequirementsSelector: selectExactTuple,
   });
 
   title(`PAID REQUEST \u00b7 FLARE MAINNET \u00b7 REAL VALUE \u00b7 ${AMOUNT_DISPLAY}`);
