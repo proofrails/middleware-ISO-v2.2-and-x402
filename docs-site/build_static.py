@@ -139,9 +139,9 @@ def render(slug: str) -> tuple[str, str]:
         )
     top = (
         '<header class="topbar"><a class="mobile-brand" href="/">ProofRails</a>'
-        '<nav><a href="https://app.proofrails.com">App</a>'
-        '<a href="https://app.proofrails.com/openapi.json">OpenAPI JSON</a>'
-        '<a href="/llms.txt">LLMs</a>'
+        '<nav><a href="https://app.proofrails.com">Open app</a>'
+        '<a href="/api-reference/overview">API reference</a>'
+        '<a href="/agents/machine-readable-docs">AI agent docs</a>'
         '<a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header>'
     )
     canonical = canonical_for(slug)

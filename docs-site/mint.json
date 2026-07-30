@@ -94,9 +94,14 @@
       "icon": "square-arrow-up-right"
     },
     {
-      "name": "OpenAPI JSON",
-      "url": "https://app.proofrails.com/openapi.json",
+      "name": "API reference",
+      "url": "/api-reference/overview",
       "icon": "brackets-curly"
+    },
+    {
+      "name": "AI agent docs",
+      "url": "/agents/machine-readable-docs",
+      "icon": "robot"
     },
     {
       "name": "GitHub",

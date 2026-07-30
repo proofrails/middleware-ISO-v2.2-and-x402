@@ -50,6 +50,16 @@ for slug in SLUGS:
         ERRORS.append(f"missing OpenAPI discovery link: {slug}")
     if "<Warning>" in text or "</Warning>" in text:
         ERRORS.append(f"unrendered warning: {slug}")
+    topbar = text.split('<header class="topbar">', 1)[-1].split("</header>", 1)[0]
+    for human_link in [
+        'href="/api-reference/overview">API reference</a>',
+        'href="/agents/machine-readable-docs">AI agent docs</a>',
+    ]:
+        if human_link not in topbar:
+            ERRORS.append(f"missing human-facing top navigation: {slug}: {human_link}")
+    for raw_link in ["openapi.json", "llms.txt"]:
+        if raw_link in topbar:
+            ERRORS.append(f"raw machine endpoint exposed in top navigation: {slug}: {raw_link}")
 
 # Internal links and assets.
 for page in SITE.rglob("*.html"):
