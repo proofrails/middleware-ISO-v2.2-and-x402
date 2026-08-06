@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Receipts API | ProofRails Docs</title><meta name="description" content="Create, list and retrieve project receipt records using the hosted schema.">
+<link rel="canonical" href="https://docs.proofrails.com/api-reference/receipts"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a class="active" href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="receipts-api">Receipts API</h1>
+<h2 id="create-a-receipt">Create a receipt</h2>
+<pre><code class="language-http">POST /v1/iso/record-tip
+X-API-Key: &lt;project-key&gt;
+Content-Type: application/json
+</code></pre>
+<p>The deployed OpenAPI names this body <code>TipRecordRequest</code>. Accepted request fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th style="text-align: right;">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tip_tx_hash</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>chain</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>amount</code></td>
+<td>decimal string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>currency</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>sender_wallet</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>receiver_wallet</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>reference</code></td>
+<td>string</td>
+<td style="text-align: right;">Yes</td>
+</tr>
+<tr>
+<td><code>resource_hash</code></td>
+<td>string or null</td>
+<td style="text-align: right;">No</td>
+</tr>
+<tr>
+<td><code>callback_url</code></td>
+<td>URL string or null</td>
+<td style="text-align: right;">No</td>
+</tr>
+</tbody>
+</table>
+<p>The deployed request does not accept arbitrary <code>metadata</code> or <code>tags</code>.</p>
+<p>Response:</p>
+<pre><code class="language-json">{&quot;receipt_id&quot;:&quot;&lt;uuid&gt;&quot;,&quot;status&quot;:&quot;pending&quot;}
+</code></pre>
+<p>The route deduplicates by chain plus transaction hash and by business reference. A duplicate returns the existing receipt.</p>
+<h2 id="retrieve-one-receipt">Retrieve one receipt</h2>
+<pre><code class="language-http">GET /v1/iso/receipts/{rid}
+</code></pre>
+<p>This route is public and returns:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;&lt;uuid&gt;&quot;,
+  &quot;status&quot;: &quot;anchored&quot;,
+  &quot;bundle_hash&quot;: &quot;0x...&quot;,
+  &quot;flare_txid&quot;: &quot;0x...&quot;,
+  &quot;xml_url&quot;: &quot;https://app.proofrails.com/files/&lt;uuid&gt;/pain001.xml&quot;,
+  &quot;bundle_url&quot;: &quot;https://app.proofrails.com/files/&lt;uuid&gt;/evidence.zip&quot;,
+  &quot;resource_hash&quot;: &quot;0x...&quot;,
+  &quot;created_at&quot;: &quot;2026-07-29T10:13:22Z&quot;,
+  &quot;anchored_at&quot;: &quot;2026-07-29T10:13:26Z&quot;
+}
+</code></pre>
+<p>Only <code>anchored</code> is the completed hosted state.</p>
+<h2 id="list-project-receipts">List project receipts</h2>
+<pre><code class="language-http">GET /v1/receipts?page=1&amp;page_size=50
+X-API-Key: &lt;project-key&gt;
+</code></pre>
+<p>Supported filters in the hosted schema include <code>status</code>, <code>chain</code>, <code>reference</code>, <code>since</code>, <code>until</code>, <code>project_id</code>, <code>page</code>, <code>page_size</code> and <code>scope</code>. Project keys normally use <code>scope=mine</code>; broader access requires an admin principal.</p>
+<p>The managed endpoint uses page-based pagination. Cursor and tag filters are not part of this API contract.</p>
+<h2 id="related-public-routes">Related public routes</h2>
+<pre><code class="language-http">GET /v1/iso/messages/{rid}
+GET /v1/iso/events/{rid}
+GET /v1/anchors/{rid}
+GET /v1/receipts/{receipt_id}/compliance-checks
+</code></pre>
+<p>Artifact presence and a receipt lifecycle state are separate. Read <code>bundle_url</code> and <code>bundle_hash</code> from the current receipt rather than constructing artifact URLs from assumptions.</p></article><nav class="page-nav"><a href="/api-reference/authentication"><span>Previous</span><strong>Authentication and API keys</strong></a><a class="next" href="/api-reference/verification"><span>Next</span><strong>Verification API</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

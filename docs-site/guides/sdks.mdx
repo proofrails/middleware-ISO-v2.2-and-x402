@@ -1,0 +1,34 @@
+---
+title: Client libraries
+description: Choose raw HTTP, generated OpenAPI clients or the official x402 packages.
+---
+
+# Client libraries
+
+## REST API
+
+Raw HTTP is the canonical ProofRails integration because it follows the deployed OpenAPI directly. Generate a client from:
+
+```text
+https://app.proofrails.com/openapi.json
+```
+
+Review the generated client because the current document does not declare `X-API-Key` security and does not model x402 402 headers.
+
+## Official x402 client
+
+Use the pinned packages for the validated Flare paid-request path:
+
+```bash
+npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
+```
+
+These packages perform the standard 402 challenge and signed retry. They do not verify the resulting ProofRails evidence bundle for you.
+
+See [x402 client integration](/x402/client-integration).
+
+## Repository SDKs
+
+The source repository contains TypeScript and Python SDK implementations. Public package-registry publication and version parity with the hosted API are not asserted here. If you use them from source, pin the exact commit, inspect the methods against the live OpenAPI and run your own compatibility tests.
+
+Do not use placeholder API keys in executable examples. Load `PROOFRAILS_API_KEY` from a server-side secret manager.

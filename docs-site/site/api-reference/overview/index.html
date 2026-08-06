@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>API overview | ProofRails Docs</title><meta name="description" content="Base URL, runtime schema, authentication classes and response conventions.">
+<link rel="canonical" href="https://docs.proofrails.com/api-reference/overview"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a class="active" href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="api-overview">API overview</h1>
+<p>The hosted ProofRails API is available at:</p>
+<pre><code class="language-text">https://app.proofrails.com
+</code></pre>
+<h2 id="runtime-discovery">Runtime discovery</h2>
+<p>Use these endpoints before generating a client:</p>
+<ul>
+<li>OpenAPI JSON: <code>https://app.proofrails.com/openapi.json</code></li>
+<li>Swagger UI: <code>https://app.proofrails.com/docs</code></li>
+<li>ReDoc: <code>https://app.proofrails.com/redoc</code></li>
+<li>Health: <code>https://app.proofrails.com/v1/health</code></li>
+</ul>
+<p>The live OpenAPI document is the route and schema authority for the hosted service. It currently omits security declarations and does not model the x402 402 headers, so use the authentication table and x402 reference in these docs as well.</p>
+<h2 id="authentication-classes">Authentication classes</h2>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>How it is authorized</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Public</td>
+<td>No credential</td>
+<td>Receipt lookup, artifact lookup, anchor lookup, bundle verification.</td>
+</tr>
+<tr>
+<td>Project</td>
+<td><code>X-API-Key</code></td>
+<td>Receipt creation and project-scoped listings.</td>
+</tr>
+<tr>
+<td>Project admin</td>
+<td><code>X-API-Key</code> with <code>project_admin</code> role</td>
+<td>Project configuration and API-key management.</td>
+</tr>
+<tr>
+<td>Service admin</td>
+<td>Admin API key</td>
+<td>Pricing configuration, facilitator configuration and revenue operations.</td>
+</tr>
+<tr>
+<td>x402</td>
+<td><code>PAYMENT-SIGNATURE</code> produced from the server challenge</td>
+<td>Payment-gated premium endpoints.</td>
+</tr>
+<tr>
+<td>SIWE</td>
+<td>EIP-4361 message and wallet signature</td>
+<td>Project registration and wallet-based key recovery.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="request-conventions">Request conventions</h2>
+<p>Send JSON with <code>Content-Type: application/json</code>. Amounts are decimal strings in receipt requests and raw integer strings in x402 requirements. Never use floating-point arithmetic for token values.</p>
+<p>Route parameter names in generated clients follow OpenAPI. For example, hosted receipt lookup is declared as <code>/v1/iso/receipts/{rid}</code> even though this documentation uses <code>receipt_id</code> descriptively.</p>
+<h2 id="errors-and-request-ids">Errors and request IDs</h2>
+<p>FastAPI validation errors use HTTP 422. Authentication and authorization failures use 401 and 403. x402 challenges use 402 and nonce replay can return 409. Error bodies are not yet one universal schema. Preserve status, response body and <code>X-Request-ID</code> when present.</p>
+<p>See <a href="/api-reference/errors-retries">Errors, retries and reconciliation</a> before implementing automatic retries.</p></article><nav class="page-nav"><a href="/deployments"><span>Previous</span><strong>Networks and environments</strong></a><a class="next" href="/api-reference/authentication"><span>Next</span><strong>Authentication and API keys</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

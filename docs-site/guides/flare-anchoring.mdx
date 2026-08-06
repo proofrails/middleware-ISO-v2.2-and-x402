@@ -1,0 +1,41 @@
+---
+title: Verify a Flare anchor
+description: Decode EvidenceAnchored and compare it with the current evidence ZIP.
+---
+
+# Verify a Flare anchor
+
+The hosted EvidenceAnchor is `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` on Flare mainnet, chain ID `14`.
+
+## Read-only viem check
+
+```js
+import { createPublicClient, defineChain, http, keccak256, toBytes } from 'viem';
+
+const flare = defineChain({
+  id: 14,
+  name: 'Flare',
+  nativeCurrency: { name: 'Flare', symbol: 'FLR', decimals: 18 },
+  rpcUrls: { default: { http: ['https://flare-api.flare.network/ext/C/rpc'] } },
+});
+
+const client = createPublicClient({ chain: flare, transport: http() });
+const receipt = await client.getTransactionReceipt({ hash: process.env.ANCHOR_TX });
+if (receipt.status !== 'success') throw new Error('Anchor transaction failed');
+
+const expected = '0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA'.toLowerCase();
+const topic0 = keccak256(toBytes('EvidenceAnchored(bytes32,address,uint256)'));
+const log = receipt.logs.find((item) =>
+  item.address.toLowerCase() === expected && item.topics[0] === topic0
+);
+if (!log) throw new Error('Expected EvidenceAnchored event not found');
+
+const eventBundleHash = `0x${log.data.slice(2, 66)}`;
+if (eventBundleHash.toLowerCase() !== process.env.BUNDLE_HASH.toLowerCase()) {
+  throw new Error('Bundle hash mismatch');
+}
+```
+
+Also require the transaction's chain, contract address and block confirmation policy. Compare the event value with a locally computed SHA-256 of the current ZIP, not only with a value copied from the receipt API.
+
+`anchorEvidence` is a state-changing contract call. The example above performs only JSON-RPC reads. Submitting an anchor requires the deployment's signer authorization and gas policy.

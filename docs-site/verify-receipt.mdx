@@ -1,0 +1,53 @@
+---
+title: Verify a receipt
+description: Check a public receipt, evidence ZIP, manifest signature and onchain bundle commitment.
+---
+
+# Verify a receipt
+
+Verification answers whether the available evidence matches the hash committed onchain. It does not decide whether the underlying commercial statements are true.
+
+## Public receipt
+
+Open:
+
+```text
+https://app.proofrails.com/verify/{receipt_id}
+```
+
+A completed hosted receipt should display `anchored`, the bundle hash, the anchor transaction and the evidence download.
+
+## Verification API
+
+```bash
+curl --fail-with-body --request POST   https://app.proofrails.com/v1/iso/verify   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/{receipt_id}/evidence.zip",
+    "bundle_hash": "0xEXPECTED_SHA256"
+  }'
+```
+
+You may provide `bundle_url`, `bundle_hash`, or both. When a URL is supplied, ProofRails downloads the ZIP and computes its SHA-256.
+
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-29T10:13:26Z",
+  "errors": []
+}
+```
+
+## Independent checks
+
+For higher assurance:
+
+1. Download `evidence.zip` yourself.
+2. Compute `sha256(evidence.zip)` and add the `0x` prefix.
+3. Read `manifest.json` and recompute every listed file hash and byte size.
+4. Verify `manifest.sig` against `public_key.pem` using Ed25519.
+5. Fetch the Flare transaction receipt for `flare_txid`.
+6. Decode `EvidenceAnchored(bytes32,address,uint256)` from the configured EvidenceAnchor contract.
+7. Require exact equality between the event `bundleHash`, the downloaded ZIP hash and the receipt `bundle_hash`.
+
+A signature only shows that the manifest was signed by the included key. Trust in the signer still depends on how your project obtained and protected that key.

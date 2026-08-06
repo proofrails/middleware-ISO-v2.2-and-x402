@@ -56,12 +56,109 @@ class Settings(BaseSettings):
     anchor_abi_path: str = Field(default="contracts/EvidenceAnchor.abi.json", alias="ANCHOR_ABI_PATH")
     anchor_lookback_blocks: int = Field(default=50_000, alias="ANCHOR_LOOKBACK_BLOCKS")
 
+    # Demo
+    demo_mode: bool = Field(default=False, alias="DEMO_MODE")
+    demo_auto_produce: bool = Field(default=False, alias="DEMO_AUTO_PRODUCE")
+
     # AI
     ai_provider: Optional[str] = Field(default=None, alias="AI_PROVIDER")
     openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
     ai_model: str = Field(default="gpt-4o-mini", alias="AI_MODEL")
     ai_temperature: float = Field(default=0.2, alias="AI_TEMPERATURE")
     ai_max_tokens: int = Field(default=512, alias="AI_MAX_TOKENS")
+
+    # Flare FTSO v2 — on-chain price oracle
+    ftso_enabled: bool = Field(default=True, alias="FTSO_ENABLED")
+    ftso_cache_ttl: int = Field(default=90, alias="FTSO_CACHE_TTL")
+    ftso_registry_address: str = Field(
+        default="0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019",
+        alias="FTSO_REGISTRY_ADDRESS",
+    )
+
+    # x402 — FLR native payment support
+    x402_flare_rpc_url: str = Field(
+        default="https://flare-api.flare.network/ext/C/rpc",
+        alias="X402_FLARE_RPC_URL",
+    )
+    x402_flr_recipient: Optional[str] = Field(default=None, alias="X402_FLR_RECIPIENT")
+
+    # x402 — Flare USDT0 path (EIP-3009 facilitator)
+    x402_enable_flare_usdt0: bool = Field(default=True, alias="X402_ENABLE_FLARE_USDT0")
+    x402_flare_chain_id: int = Field(default=14, alias="X402_FLARE_CHAIN_ID")
+    x402_usdt0_flare_address: str = Field(
+        default="0xe7cd86e13AC4309349F30B3435a9d337750fC82D", alias="X402_USDT0_FLARE_ADDRESS"
+    )
+    x402_usdt0_decimals: int = Field(default=6, alias="X402_USDT0_DECIMALS")
+    x402_flare_facilitator_address: Optional[str] = Field(
+        default=None, alias="X402_FLARE_FACILITATOR_ADDRESS"
+    )
+    x402_usdt0_recipient: Optional[str] = Field(default=None, alias="X402_USDT0_RECIPIENT")
+    x402_usdt0_amount: str = Field(default="0.001", alias="X402_USDT0_AMOUNT")
+    x402_flare_confirmations: int = Field(default=1, alias="X402_FLARE_CONFIRMATIONS")
+    x402_settlement_mode: str = Field(default="client", alias="X402_SETTLEMENT_MODE")
+    x402_settler_private_key: Optional[str] = Field(default=None, alias="X402_SETTLER_PRIVATE_KEY")
+
+    # x402 — Base USDC path
+    x402_enable_base_usdc: bool = Field(default=True, alias="X402_ENABLE_BASE_USDC")
+    x402_usdc_address: str = Field(
+        default="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", alias="X402_USDC_ADDRESS"
+    )
+    x402_usdc_amount: str = Field(default="0.001", alias="X402_USDC_AMOUNT")
+    x402_base_recipient: Optional[str] = Field(default=None, alias="X402_BASE_RECIPIENT")
+
+    # x402 — Flare native FLR path
+    x402_enable_flare_native_flr: bool = Field(default=True, alias="X402_ENABLE_FLARE_NATIVE_FLR")
+    x402_flr_amount: str = Field(default="0.05", alias="X402_FLR_AMOUNT")
+
+    # x402 — shared recipient fallback
+    x402_recipient_address: Optional[str] = Field(
+        default=None, alias="X402_RECIPIENT_ADDRESS"
+    )
+
+    @property
+    def x402_effective_usdc_recipient(self) -> Optional[str]:
+        """USDC-on-Base recipient, falling back to the shared recipient."""
+        return self.x402_base_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_usdt0_recipient(self) -> Optional[str]:
+        """USDT0-on-Flare recipient, falling back to the shared recipient."""
+        return self.x402_usdt0_recipient or self.x402_recipient_address
+
+    @property
+    def x402_effective_flr_recipient(self) -> Optional[str]:
+        """Native-FLR recipient, falling back to the shared recipient."""
+        return self.x402_flr_recipient or self.x402_recipient_address
+
+    # Proactive monitor
+    monitor_enabled: bool = Field(default=False, alias="MONITOR_ENABLED")
+    monitor_interval_seconds: int = Field(default=60, alias="MONITOR_INTERVAL_SECONDS")
+    monitor_stale_anchor_minutes: int = Field(default=10, alias="MONITOR_STALE_ANCHOR_MINUTES")
+    monitor_wallet_watch_enabled: bool = Field(default=False, alias="MONITOR_WALLET_WATCH_ENABLED")
+    monitor_batch_reports_enabled: bool = Field(default=False, alias="MONITOR_BATCH_REPORTS_ENABLED")
+
+    # Agentic integration — rate limiting
+    rate_limit_enabled: bool = Field(default=True, alias="RATE_LIMIT_ENABLED")
+
+    # Agentic integration — idempotency
+    idempotency_enabled: bool = Field(default=True, alias="IDEMPOTENCY_ENABLED")
+
+    # Flare Data Connector (FDC) — for attestation-based tx verification
+    fdc_verifier_url: str = Field(
+        default="https://fdc-verifiers-testnet.aflabs.net",
+        alias="FDC_VERIFIER_URL",
+        description="FDC verifier API base URL",
+    )
+    fdc_da_layer_url: str = Field(
+        default="https://da-layer-testnet.aflabs.net",
+        alias="FDC_DA_LAYER_URL",
+        description="FDC DA layer base URL for Merkle proof retrieval",
+    )
+    fdc_api_key: Optional[str] = Field(
+        default=None,
+        alias="FDC_API_KEY",
+        description="X-apikey for FDC verifier API (use 00000000-0000-0000-0000-000000000000 for testnet)",
+    )
 
     @property
     def allow_origins_list(self) -> List[str]:

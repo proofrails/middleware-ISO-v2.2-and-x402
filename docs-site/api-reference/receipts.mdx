@@ -1,0 +1,84 @@
+---
+title: Receipts API
+description: Create, list and retrieve project receipt records using the hosted schema.
+---
+
+# Receipts API
+
+## Create a receipt
+
+```http
+POST /v1/iso/record-tip
+X-API-Key: <project-key>
+Content-Type: application/json
+```
+
+The deployed OpenAPI names this body `TipRecordRequest`. Accepted request fields:
+
+| Field | Type | Required |
+|---|---|---:|
+| `tip_tx_hash` | string | Yes |
+| `chain` | string | Yes |
+| `amount` | decimal string | Yes |
+| `currency` | string | Yes |
+| `sender_wallet` | string | Yes |
+| `receiver_wallet` | string | Yes |
+| `reference` | string | Yes |
+| `resource_hash` | string or null | No |
+| `callback_url` | URL string or null | No |
+
+The deployed request does not accept arbitrary `metadata` or `tags`.
+
+Response:
+
+```json
+{"receipt_id":"<uuid>","status":"pending"}
+```
+
+The route deduplicates by chain plus transaction hash and by business reference. A duplicate returns the existing receipt.
+
+## Retrieve one receipt
+
+```http
+GET /v1/iso/receipts/{rid}
+```
+
+This route is public and returns:
+
+```json
+{
+  "id": "<uuid>",
+  "status": "anchored",
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "xml_url": "https://app.proofrails.com/files/<uuid>/pain001.xml",
+  "bundle_url": "https://app.proofrails.com/files/<uuid>/evidence.zip",
+  "resource_hash": "0x...",
+  "created_at": "2026-07-29T10:13:22Z",
+  "anchored_at": "2026-07-29T10:13:26Z"
+}
+```
+
+Only `anchored` is the completed hosted state.
+
+## List project receipts
+
+```http
+GET /v1/receipts?page=1&page_size=50
+X-API-Key: <project-key>
+```
+
+Supported filters in the hosted schema include `status`, `chain`, `reference`, `since`, `until`, `project_id`, `page`, `page_size` and `scope`. Project keys normally use `scope=mine`; broader access requires an admin principal.
+
+The managed endpoint uses page-based pagination. Cursor and tag filters are not part of this API contract.
+
+## Related public routes
+
+```http
+GET /v1/iso/messages/{rid}
+GET /v1/iso/events/{rid}
+GET /v1/anchors/{rid}
+GET /v1/receipts/{receipt_id}/compliance-checks
+```
+
+Artifact presence and a receipt lifecycle state are separate. Read `bundle_url` and `bundle_hash` from the current receipt rather than constructing artifact URLs from assumptions.

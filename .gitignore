@@ -19,6 +19,9 @@ build/
 # Environment and local data
 .env
 .keys/
+*.pem
+*.key
+*.hex
 artifacts/
 dev.db
 
@@ -31,6 +34,10 @@ Thumbs.db
 # Misc
 *.log
 
+# Keep accidental local snapshots/dependencies out of the repo
+Downloads/
+**/Downloads/
+
 # npm pack artifacts
 *.tgz
 
@@ -39,3 +46,21 @@ Thumbs.db
 web-alt/.next/
 web-mock/.next/
 .vercel/
+
+# TypeScript build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# CPU/memory profiling artifacts
+*.cpuprofile
+*.cpuprofile.txt
+*.heapsnapshot
+
+# Local environment overrides (keep only .env.example and .env.production.example)
+web-alt/.env.local
+.env.local
+.env.*.local
+
+# Test database
+test_agentic.db
+*.test.db

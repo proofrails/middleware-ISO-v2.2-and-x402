@@ -1,0 +1,45 @@
+---
+title: x402 compatibility
+description: Protocol versions, headers, settlement mode and hosted-path boundaries.
+---
+
+# x402 compatibility
+
+## Hosted supported path
+
+| Property | Value |
+|---|---|
+| x402 protocol | V2 challenge and signed retry |
+| Client packages exercised | `@x402/fetch@2.19.0`, `@x402/evm@2.19.0` |
+| Scheme | `exact` |
+| Network | `eip155:14` |
+| Asset | USD₮0 |
+| Authorization | EIP-3009 `TransferWithAuthorization` |
+| Settlement | Integrated server-submitted settlement through X402Facilitator |
+| Result | Protected HTTP response plus `PAYMENT-RESPONSE` |
+
+## Headers
+
+| Header | Direction | Content |
+|---|---|---|
+| `PAYMENT-REQUIRED` | Server to client on HTTP 402 | Base64 JSON containing `x402Version`, resource and accepted payment options. |
+| `PAYMENT-SIGNATURE` | Client to server on retry | Base64 JSON containing the accepted option, authorization and signature. |
+| `PAYMENT-RESPONSE` | Server to client after settlement | Base64 JSON containing success, network, transaction, payer and receipt links when available. |
+
+The server also emits legacy compatibility headers on some paths. New integrations should use the V2 headers above.
+
+## Response contract
+
+A successful paid request must satisfy all of these conditions:
+
+- the protected response is HTTP 2xx;
+- `PAYMENT-RESPONSE` decodes with `success: true`;
+- `transaction` is present;
+- `network` is `eip155:14` for the hosted Flare path;
+- `receiptId` is present before the integration declares its evidence record complete.
+
+The receipt itself can still be `pending` while background packaging and anchoring run.
+
+## Other source paths
+
+Base USDC and native FLR adapters remain experimental. Read the live 402 challenge and accept only payment tuples your application explicitly allows.

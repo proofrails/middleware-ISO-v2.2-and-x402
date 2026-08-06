@@ -1,0 +1,51 @@
+---
+title: x402 and ProofRails
+description: Understand x402's payment role and the evidence ProofRails adds after a paid HTTP request.
+---
+
+# x402 and ProofRails
+
+x402 lets an HTTP server require payment before it returns a resource. ProofRails uses that exchange as an input to its receipt and evidence engine.
+
+<img src="/assets/x402-role.svg" alt="x402 handles the HTTP payment exchange, then the ProofRails engine creates receipt and delivery evidence" />
+
+## Division of responsibility
+
+| Layer | Responsibility |
+|---|---|
+| x402 client | Reads the 402 challenge, selects an accepted payment option, signs an authorization and retries the request. |
+| ProofRails paid endpoint | Publishes payment requirements and runs the protected action after settlement succeeds. |
+| X402Facilitator | Settles the accepted USD₮0 EIP-3009 authorization on Flare. |
+| ProofRails engine | Records payment and delivery, hashes the response, creates artifacts, signs the evidence bundle and anchors its hash. |
+| Verifier | Checks the bundle and onchain commitment later. |
+
+x402 answers, "How does this HTTP request pay?" ProofRails answers, "What was paid for, what did the endpoint return, and which evidence can both sides retain?"
+
+## Hosted Flare flow
+
+1. The client sends the API request without a payment header.
+2. ProofRails returns HTTP 402 and a base64 `PAYMENT-REQUIRED` header.
+3. The client validates the offered network, token, recipient, amount and facilitator.
+4. The client signs the selected EIP-3009 authorization.
+5. It retries the same method, URL and body with `PAYMENT-SIGNATURE`.
+6. ProofRails settles the authorization through X402Facilitator.
+7. The protected handler returns its normal HTTP response.
+8. ProofRails hashes that response and persists the payment and receipt.
+9. The HTTP 200 response includes `PAYMENT-RESPONSE` with the transaction and receipt reference.
+10. The receipt worker produces and anchors the evidence bundle.
+
+## Hosted payment tuple
+
+| Field | Value |
+|---|---|
+| Network | Flare mainnet, CAIP-2 `eip155:14` |
+| Asset | USD₮0, 6 decimals |
+| Validated amount | `1000` base units, equal to `0.001 USD₮0` |
+| Scheme | `exact` with EIP-3009 authorization |
+| Paid example | `POST /v1/x402/premium/fx-lookup` |
+
+<Warning>
+A successful hosted x402 request spends real USD₮0 on Flare mainnet and creates an irreversible settlement transaction. The payer also needs FLR only when its execution path pays gas. Validate every field in the 402 challenge before signing.
+</Warning>
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.

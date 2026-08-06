@@ -1,0 +1,10 @@
+# Place gated resource files here:
+#
+#   flare-proofrails-thesis-v1.pdf
+#   flare-proofrails-thesis-v1.md
+#
+# These files are NOT committed to git (see .gitignore).
+# Copy them from docs/ before deploying:
+#
+#   cp ../docs/FLARE_PROOFRAILS_THESIS.pdf ./resources/private/flare-proofrails-thesis-v1.pdf
+#   cp ../docs/FLARE_PROOFRAILS_THESIS.md  ./resources/private/flare-proofrails-thesis-v1.md

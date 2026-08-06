@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>x402 and ProofRails | ProofRails Docs</title><meta name="description" content="Understand x402&#x27;s payment role and the evidence ProofRails adds after a paid HTTP request.">
+<link rel="canonical" href="https://docs.proofrails.com/x402/overview"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a class="active" href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="x402-and-proofrails">x402 and ProofRails</h1>
+<p>x402 lets an HTTP server require payment before it returns a resource. ProofRails uses that exchange as an input to its receipt and evidence engine.</p>
+<p><img src="/assets/x402-role.svg" alt="x402 handles the HTTP payment exchange, then the ProofRails engine creates receipt and delivery evidence" /></p>
+<h2 id="division-of-responsibility">Division of responsibility</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>x402 client</td>
+<td>Reads the 402 challenge, selects an accepted payment option, signs an authorization and retries the request.</td>
+</tr>
+<tr>
+<td>ProofRails paid endpoint</td>
+<td>Publishes payment requirements and runs the protected action after settlement succeeds.</td>
+</tr>
+<tr>
+<td>X402Facilitator</td>
+<td>Settles the accepted USD₮0 EIP-3009 authorization on Flare.</td>
+</tr>
+<tr>
+<td>ProofRails engine</td>
+<td>Records payment and delivery, hashes the response, creates artifacts, signs the evidence bundle and anchors its hash.</td>
+</tr>
+<tr>
+<td>Verifier</td>
+<td>Checks the bundle and onchain commitment later.</td>
+</tr>
+</tbody>
+</table>
+<p>x402 answers, "How does this HTTP request pay?" ProofRails answers, "What was paid for, what did the endpoint return, and which evidence can both sides retain?"</p>
+<h2 id="hosted-flare-flow">Hosted Flare flow</h2>
+<ol>
+<li>The client sends the API request without a payment header.</li>
+<li>ProofRails returns HTTP 402 and a base64 <code>PAYMENT-REQUIRED</code> header.</li>
+<li>The client validates the offered network, token, recipient, amount and facilitator.</li>
+<li>The client signs the selected EIP-3009 authorization.</li>
+<li>It retries the same method, URL and body with <code>PAYMENT-SIGNATURE</code>.</li>
+<li>ProofRails settles the authorization through X402Facilitator.</li>
+<li>The protected handler returns its normal HTTP response.</li>
+<li>ProofRails hashes that response and persists the payment and receipt.</li>
+<li>The HTTP 200 response includes <code>PAYMENT-RESPONSE</code> with the transaction and receipt reference.</li>
+<li>The receipt worker produces and anchors the evidence bundle.</li>
+</ol>
+<h2 id="hosted-payment-tuple">Hosted payment tuple</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network</td>
+<td>Flare mainnet, CAIP-2 <code>eip155:14</code></td>
+</tr>
+<tr>
+<td>Asset</td>
+<td>USD₮0, 6 decimals</td>
+</tr>
+<tr>
+<td>Validated amount</td>
+<td><code>1000</code> base units, equal to <code>0.001 USD₮0</code></td>
+</tr>
+<tr>
+<td>Scheme</td>
+<td><code>exact</code> with EIP-3009 authorization</td>
+</tr>
+<tr>
+<td>Paid example</td>
+<td><code>POST /v1/x402/premium/fx-lookup</code></td>
+</tr>
+</tbody>
+</table>
+<div class="callout warning" role="alert"><strong>Real-value warning</strong>A successful hosted x402 request spends real USD₮0 on Flare mainnet and creates an irreversible settlement transaction. The payer also needs FLR only when its execution path pays gas. Validate every field in the 402 challenge before signing.</div>
+
+<p>ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.</p></article><nav class="page-nav"><a href="/concepts/verification-model"><span>Previous</span><strong>Verification model</strong></a><a class="next" href="/x402/client-integration"><span>Next</span><strong>x402 client integration</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

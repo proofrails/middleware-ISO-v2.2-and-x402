@@ -1,0 +1,46 @@
+---
+title: API overview
+description: Base URL, runtime schema, authentication classes and response conventions.
+---
+
+# API overview
+
+The hosted ProofRails API is available at:
+
+```text
+https://app.proofrails.com
+```
+
+## Runtime discovery
+
+Use these endpoints before generating a client:
+
+- OpenAPI JSON: `https://app.proofrails.com/openapi.json`
+- Swagger UI: `https://app.proofrails.com/docs`
+- ReDoc: `https://app.proofrails.com/redoc`
+- Health: `https://app.proofrails.com/v1/health`
+
+The live OpenAPI document is the route and schema authority for the hosted service. It currently omits security declarations and does not model the x402 402 headers, so use the authentication table and x402 reference in these docs as well.
+
+## Authentication classes
+
+| Class | How it is authorized | Examples |
+|---|---|---|
+| Public | No credential | Receipt lookup, artifact lookup, anchor lookup, bundle verification. |
+| Project | `X-API-Key` | Receipt creation and project-scoped listings. |
+| Project admin | `X-API-Key` with `project_admin` role | Project configuration and API-key management. |
+| Service admin | Admin API key | Pricing configuration, facilitator configuration and revenue operations. |
+| x402 | `PAYMENT-SIGNATURE` produced from the server challenge | Payment-gated premium endpoints. |
+| SIWE | EIP-4361 message and wallet signature | Project registration and wallet-based key recovery. |
+
+## Request conventions
+
+Send JSON with `Content-Type: application/json`. Amounts are decimal strings in receipt requests and raw integer strings in x402 requirements. Never use floating-point arithmetic for token values.
+
+Route parameter names in generated clients follow OpenAPI. For example, hosted receipt lookup is declared as `/v1/iso/receipts/{rid}` even though this documentation uses `receipt_id` descriptively.
+
+## Errors and request IDs
+
+FastAPI validation errors use HTTP 422. Authentication and authorization failures use 401 and 403. x402 challenges use 402 and nonce replay can return 409. Error bodies are not yet one universal schema. Preserve status, response body and `X-Request-ID` when present.
+
+See [Errors, retries and reconciliation](/api-reference/errors-retries) before implementing automatic retries.

@@ -1,0 +1,68 @@
+---
+title: Hosted API quickstart
+description: Create an anchored receipt through the hosted REST API and retrieve its evidence.
+---
+
+# Hosted API quickstart
+
+This guide records an existing onchain payment. Calling the Receipt API does not transfer the payment funds. The hosted service may submit an EvidenceAnchor transaction as part of receipt processing.
+
+## Before you start
+
+You need a ProofRails project API key and the details of a completed payment:
+
+```bash
+export PROOFRAILS_API_KEY='your_server_side_key'
+export PROOFRAILS_API='https://app.proofrails.com'
+```
+
+Keep the key outside source control and client-side code.
+
+## 1. Create the receipt
+
+```bash
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/record-tip"   --header "X-API-Key: $PROOFRAILS_API_KEY"   --header 'Content-Type: application/json'   --data '{
+    "tip_tx_hash": "0xYOUR_SETTLEMENT_TRANSACTION",
+    "chain": "flare",
+    "amount": "12.50",
+    "currency": "USD₮0",
+    "sender_wallet": "0xPAYER",
+    "receiver_wallet": "0xRECIPIENT",
+    "reference": "order-1842",
+    "resource_hash": "0xOPTIONAL_SHA256_OF_DELIVERED_BYTES"
+  }'
+```
+
+The response contains the stable receipt ID:
+
+```json
+{
+  "receipt_id": "5f2c...",
+  "status": "pending"
+}
+```
+
+## 2. Poll the receipt
+
+```bash
+curl --fail "$PROOFRAILS_API/v1/iso/receipts/5f2c..."
+```
+
+Stop when `status` is `anchored`. Treat `failed` as an operational failure. Do not present `pending` or `awaiting_anchor` as complete.
+
+## 3. Retrieve artifacts
+
+```bash
+curl --fail "$PROOFRAILS_API/v1/iso/messages/5f2c..."
+curl --fail --output evidence.zip   "$PROOFRAILS_API/files/5f2c.../evidence.zip"
+```
+
+## 4. Verify the bundle
+
+```bash
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/verify"   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/5f2c.../evidence.zip"
+  }'
+```
+
+Require `matches_onchain: true`, then compare the returned `bundle_hash` and `flare_txid` with the receipt. See [Verification API](/api-reference/verification) for failure handling.

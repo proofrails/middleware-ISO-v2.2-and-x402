@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "flare-general": {
+      "command": "npx",
+      "args": ["-y", "@flare-foundation/flare-ai-skills", "flare-general"]
+    },
+    "flare-ftso": {
+      "command": "npx",
+      "args": ["-y", "@flare-foundation/flare-ai-skills", "flare-ftso"]
+    },
+    "flare-fdc": {
+      "command": "npx",
+      "args": ["-y", "@flare-foundation/flare-ai-skills", "flare-fdc"]
+    },
+    "flare-fassets": {
+      "command": "npx",
+      "args": ["-y", "@flare-foundation/flare-ai-skills", "flare-fassets"]
+    },
+    "flare-smart-accounts": {
+      "command": "npx",
+      "args": ["-y", "@flare-foundation/flare-ai-skills", "flare-smart-accounts"]
+    }
+  }
+}

@@ -1,0 +1,32 @@
+---
+title: System architecture
+description: See how API requests, workers, storage, signing and Flare contracts fit together.
+---
+
+# System architecture
+
+<img src="/assets/system-architecture.svg" alt="ProofRails hosted architecture showing API, worker, database, artifact storage and Flare contracts" />
+
+## Request layer
+
+The FastAPI service exposes receipt, verification, project, agent and x402 routes. It authenticates project writes, stores the initial receipt and queues background work.
+
+## Processing layer
+
+An RQ worker consumes receipt jobs from Redis. It generates artifacts, writes the manifest, signs it, creates `evidence.zip`, computes the bundle hash and submits or waits for the anchor depending on project mode.
+
+## Data layer
+
+PostgreSQL stores projects, API keys, receipts, ISO artifacts, chain anchors, x402 payments and operational records. Artifact storage holds XML, JSON, signatures and evidence ZIPs. Public URLs expose the files required for receipt verification.
+
+## Onchain layer
+
+EvidenceAnchor records bundle-hash commitments. The integrated X402Facilitator settles supported USD₮0 authorizations for ProofRails payment-gated endpoints on Flare.
+
+## User surfaces
+
+The hosted application provides project and receipt workflows. The public verifier reads receipt and evidence data. API clients and AI agents use the same REST and x402 interfaces.
+
+## Self-hosted boundary
+
+A self-hosted deployment must configure its own database, Redis, workers, public base URL, artifact storage, signing key, RPC endpoints and contract addresses. The public ProofRails addresses are not defaults for an unrelated deployment.

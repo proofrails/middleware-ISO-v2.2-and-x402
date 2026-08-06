@@ -1,0 +1,34 @@
+---
+title: Security and limitations
+description: Operational risks and the exact boundaries of ProofRails evidence.
+---
+
+# Security and limitations
+
+## Evidence boundaries
+
+- A settlement proves the chain recorded a value transfer under its consensus rules.
+- A resource hash proves equality with available bytes, not their quality or correctness.
+- A manifest signature proves control of the corresponding private key, not external identity unless the public key is trusted separately.
+- An anchor proves integrity and timing of a committed hash, not offchain truth or legal sufficiency.
+- ISO 20022-style artifacts are not certification for an institution or market practice.
+
+## x402 risks
+
+The public `settlePayment` contract function can be called by anyone who obtains a valid signed authorization. The recipient is cryptographically bound, but early submission can create timing or griefing risk. Keep authorizations short-lived and transmit them only to the intended service.
+
+A timeout after signing can occur after settlement. Reconcile the EIP-3009 nonce, facilitator payment record and transaction before any retry. Never create a replacement payment automatically.
+
+The hosted x402 path spends real USD₮0 on Flare mainnet. Verify chain ID, token address, recipient, amount, facilitator and validity window before signing.
+
+## API and deployment limits
+
+The current OpenAPI omits security schemes and does not model every runtime error or x402 header. Use the documented authorization matrix and test generated clients.
+
+Public receipt and artifact URLs are intentionally shareable. Do not place confidential business data in fields or files intended for public verification.
+
+Self-hosted operators are responsible for database access, artifact retention, signing keys, anchor keys, contract ownership, rate limits, monitoring, backup restoration and incident response.
+
+## Unsupported conclusions
+
+ProofRails does not establish legal identity, authority to transact, contractual performance, tax treatment, sanctions status, accounting classification or regulatory compliance.

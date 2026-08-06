@@ -1,0 +1,374 @@
+{
+  "schema_version": "1.0",
+  "pages": [
+    {
+      "url": "https://docs.proofrails.com/",
+      "source": "introduction.mdx",
+      "title": "Overview",
+      "description": "Understand what ProofRails does, what it produces and where x402 fits.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/product/how-it-works",
+      "source": "product/how-it-works.mdx",
+      "title": "How ProofRails works",
+      "description": "Follow a payment from settlement reference to anchored receipt.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/product/integration-options",
+      "source": "product/integration-options.mdx",
+      "title": "Choose an integration",
+      "description": "Select the ProofRails path that matches your payment and user workflow.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/product/engine",
+      "source": "product/engine.mdx",
+      "title": "Evidence engine",
+      "description": "Understand the processing stages that turn payment data into an anchored evidence record.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/product/hosted-service",
+      "source": "product/hosted-service.mdx",
+      "title": "Hosted service",
+      "description": "Understand the managed API, application, workers, storage and public verifier.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/capabilities",
+      "source": "capabilities.mdx",
+      "title": "Product capabilities",
+      "description": "See what the ProofRails engine, hosted service and x402 integration provide.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/platform-status",
+      "source": "platform-status.mdx",
+      "title": "Hosted service status",
+      "description": "Deployed public surfaces and validated integration scope.",
+      "document_type": "product",
+      "evidence_status": "live-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/quickstart",
+      "source": "quickstart.mdx",
+      "title": "Hosted API quickstart",
+      "description": "Create an anchored receipt through the hosted REST API and retrieve its evidence.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/create-first-receipt",
+      "source": "create-first-receipt.mdx",
+      "title": "Create a receipt",
+      "description": "Send a payment record to ProofRails and handle the complete receipt lifecycle.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/verify-receipt",
+      "source": "verify-receipt.mdx",
+      "title": "Verify a receipt",
+      "description": "Check a public receipt, evidence ZIP, manifest signature and onchain bundle commitment.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/agent-quickstart",
+      "source": "agent-quickstart.mdx",
+      "title": "AI agent quickstart",
+      "description": "Give an autonomous client a safe, deterministic ProofRails workflow.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/guides/local-development",
+      "source": "guides/local-development.mdx",
+      "title": "Run locally",
+      "description": "Start the API, database, Redis and worker without using real payment value.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/concepts/receipts",
+      "source": "concepts/receipts.mdx",
+      "title": "Receipt data model",
+      "description": "Understand receipt identity, payment fields, lifecycle and deduplication.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/concepts/evidence-bundles",
+      "source": "concepts/evidence-bundles.mdx",
+      "title": "Evidence bundles",
+      "description": "Inspect the portable ZIP, manifest, file hashes and Ed25519 signature.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/concepts/anchoring",
+      "source": "concepts/anchoring.mdx",
+      "title": "Onchain anchoring",
+      "description": "Understand the EvidenceAnchor contract, receipt completion rule and independent event check.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/concepts/iso-20022-artifacts",
+      "source": "concepts/iso-20022-artifacts.mdx",
+      "title": "ISO 20022-style artifacts",
+      "description": "Understand the financial-message files produced from receipt data and their validation boundary.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/concepts/verification-model",
+      "source": "concepts/verification-model.mdx",
+      "title": "Verification model",
+      "description": "Read verification results correctly and distinguish integrity from truth.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/x402/overview",
+      "source": "x402/overview.mdx",
+      "title": "x402 and ProofRails",
+      "description": "Understand x402's payment role and the evidence ProofRails adds after a paid HTTP request.",
+      "document_type": "protocol-and-onchain",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/x402/client-integration",
+      "source": "x402/client-integration.mdx",
+      "title": "x402 client integration",
+      "description": "Pay for a ProofRails API with the official x402 V2 client and retain the resulting receipt.",
+      "document_type": "protocol-and-onchain",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/x402/status-and-compatibility",
+      "source": "x402/status-and-compatibility.mdx",
+      "title": "x402 compatibility",
+      "description": "Protocol versions, headers, settlement mode and hosted-path boundaries.",
+      "document_type": "protocol-and-onchain",
+      "evidence_status": "live-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/x402/mainnet-proof",
+      "source": "x402/mainnet-proof.mdx",
+      "title": "Mainnet example",
+      "description": "Trace one paid request through settlement, protected response, receipt, evidence bundle and Flare anchor.",
+      "document_type": "protocol-and-onchain",
+      "evidence_status": "live-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/contracts/flare",
+      "source": "contracts/flare.mdx",
+      "title": "Flare contracts",
+      "description": "Contract addresses, functions, events and independent read checks for the hosted Flare path.",
+      "document_type": "protocol-and-onchain",
+      "evidence_status": "live-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/deployments",
+      "source": "deployments.mdx",
+      "title": "Networks and environments",
+      "description": "Hosted network identity and the boundary between validated and experimental payment paths.",
+      "document_type": "product",
+      "evidence_status": "live-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/overview",
+      "source": "api-reference/overview.mdx",
+      "title": "API overview",
+      "description": "Base URL, runtime schema, authentication classes and response conventions.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/authentication",
+      "source": "api-reference/authentication.mdx",
+      "title": "Authentication and API keys",
+      "description": "Register a project with SIWE and protect project-scoped API credentials.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/receipts",
+      "source": "api-reference/receipts.mdx",
+      "title": "Receipts API",
+      "description": "Create, list and retrieve project receipt records using the hosted schema.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/verification",
+      "source": "api-reference/verification.mdx",
+      "title": "Verification API",
+      "description": "Verify a bundle URL, expected hash, CID or confirmed tenant anchor.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/iso-artifacts",
+      "source": "api-reference/iso-artifacts.mdx",
+      "title": "Financial artifact API",
+      "description": "Retrieve and generate ISO 20022-style receipt artifacts.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/projects",
+      "source": "api-reference/projects.mdx",
+      "title": "Projects API",
+      "description": "Project registration, access boundaries and anchoring configuration.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/x402",
+      "source": "api-reference/x402.mdx",
+      "title": "x402 API reference",
+      "description": "Standard paid-request behavior and the related hosted management routes.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/agents",
+      "source": "api-reference/agents.mdx",
+      "title": "Agent management API",
+      "description": "Optional project records for agent identities, settings, usage and anchoring.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/api-reference/errors-retries",
+      "source": "api-reference/errors-retries.mdx",
+      "title": "Errors, retries and reconciliation",
+      "description": "Handle API failures, receipt polling and x402 timeouts without duplicate payments.",
+      "document_type": "api-reference",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/architecture/system-overview",
+      "source": "architecture/system-overview.mdx",
+      "title": "System architecture",
+      "description": "See how API requests, workers, storage, signing and Flare contracts fit together.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/architecture/evidence-model",
+      "source": "architecture/evidence-model.mdx",
+      "title": "Evidence and trust model",
+      "description": "Identify each proof layer, what it checks and what remains an external assumption.",
+      "document_type": "concept",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/guides/flare-anchoring",
+      "source": "guides/flare-anchoring.mdx",
+      "title": "Verify a Flare anchor",
+      "description": "Decode EvidenceAnchored and compare it with the current evidence ZIP.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/guides/production-deployment",
+      "source": "guides/production-deployment.mdx",
+      "title": "Operated deployment",
+      "description": "Components, configuration and acceptance checks for a self-hosted ProofRails service.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/security/key-management",
+      "source": "security/key-management.mdx",
+      "title": "Key management",
+      "description": "Separate API, wallet, signing, anchoring and contract-owner credentials.",
+      "document_type": "security",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/security/limitations",
+      "source": "security/limitations.mdx",
+      "title": "Security and limitations",
+      "description": "Operational risks and the exact boundaries of ProofRails evidence.",
+      "document_type": "security",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/guides/agent-workflows",
+      "source": "guides/agent-workflows.mdx",
+      "title": "Agent workflows",
+      "description": "Reliable patterns for agents that create receipts or buy x402 resources.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/agents/machine-readable-docs",
+      "source": "agents/machine-readable-docs.mdx",
+      "title": "Machine-readable documentation",
+      "description": "Discovery endpoints and deterministic artifacts for AI and generated clients.",
+      "document_type": "product",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    },
+    {
+      "url": "https://docs.proofrails.com/guides/sdks",
+      "source": "guides/sdks.mdx",
+      "title": "Client libraries",
+      "description": "Choose raw HTTP, generated OpenAPI clients or the official x402 packages.",
+      "document_type": "guide",
+      "evidence_status": "code-verified",
+      "last_verified": "2026-07-29"
+    }
+  ]
+}

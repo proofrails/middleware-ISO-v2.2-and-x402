@@ -1,0 +1,112 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ProofRails",
+  "description": "Receipts and evidence for onchain payments and paid API calls",
+  "colors": {
+    "primary": "#e11d8a",
+    "light": "#f8fafc",
+    "dark": "#020617"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": [
+    {
+      "group": "Understand ProofRails",
+      "pages": [
+        "introduction",
+        "product/how-it-works",
+        "product/integration-options",
+        "product/engine",
+        "product/hosted-service",
+        "capabilities",
+        "platform-status"
+      ]
+    },
+    {
+      "group": "Get started",
+      "pages": [
+        "quickstart",
+        "create-first-receipt",
+        "verify-receipt",
+        "agent-quickstart",
+        "guides/local-development"
+      ]
+    },
+    {
+      "group": "Receipts and evidence",
+      "pages": [
+        "concepts/receipts",
+        "concepts/evidence-bundles",
+        "concepts/anchoring",
+        "concepts/iso-20022-artifacts",
+        "concepts/verification-model"
+      ]
+    },
+    {
+      "group": "x402 and Flare",
+      "pages": [
+        "x402/overview",
+        "x402/client-integration",
+        "x402/status-and-compatibility",
+        "x402/mainnet-proof",
+        "contracts/flare",
+        "deployments"
+      ]
+    },
+    {
+      "group": "API reference",
+      "pages": [
+        "api-reference/overview",
+        "api-reference/authentication",
+        "api-reference/receipts",
+        "api-reference/verification",
+        "api-reference/iso-artifacts",
+        "api-reference/projects",
+        "api-reference/x402",
+        "api-reference/agents",
+        "api-reference/errors-retries"
+      ]
+    },
+    {
+      "group": "Architecture and operations",
+      "pages": [
+        "architecture/system-overview",
+        "architecture/evidence-model",
+        "guides/flare-anchoring",
+        "guides/production-deployment",
+        "security/key-management",
+        "security/limitations"
+      ]
+    },
+    {
+      "group": "Agents and clients",
+      "pages": [
+        "guides/agent-workflows",
+        "agents/machine-readable-docs",
+        "guides/sdks"
+      ]
+    }
+  ],
+  "anchors": [
+    {
+      "name": "App",
+      "url": "https://app.proofrails.com",
+      "icon": "square-arrow-up-right"
+    },
+    {
+      "name": "API reference",
+      "url": "/api-reference/overview",
+      "icon": "brackets-curly"
+    },
+    {
+      "name": "AI agent docs",
+      "url": "/agents/machine-readable-docs",
+      "icon": "robot"
+    },
+    {
+      "name": "GitHub",
+      "url": "https://github.com/proofrails/middleware-ISO-v2.2-and-x402",
+      "icon": "github"
+    }
+  ]
+}

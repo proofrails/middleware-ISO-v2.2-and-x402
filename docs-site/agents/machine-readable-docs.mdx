@@ -1,0 +1,39 @@
+---
+title: Machine-readable documentation
+description: Discovery endpoints and deterministic artifacts for AI and generated clients.
+---
+
+# Machine-readable documentation
+
+ProofRails publishes compact discovery files alongside the human documentation.
+
+| Artifact | Purpose |
+|---|---|
+| `/llms.txt` | Curated product, API, safety and starting-point index. |
+| `/llms-full.txt` | Documentation corpus in navigation order without HTML chrome. |
+| `/.well-known/proofrails.json` | Service, authentication, registry and safety manifest. |
+| `/contracts.json` | Exact chain, contract and token identity tuples. |
+| `/capabilities.json` | Hosted capability and limitation registry. |
+| `/sitemap.json` | Structured page index with titles, descriptions and document classes. |
+| `/sitemap.xml` | Standard search-engine sitemap. |
+
+## Canonical runtime schema
+
+The hosted OpenAPI document remains the source for deployed routes and JSON schemas:
+
+```text
+https://app.proofrails.com/openapi.json
+```
+
+It currently omits some authentication declarations and x402 response headers. Agents must combine it with the API authentication and x402 reference pages rather than guessing.
+
+## Consumption rules
+
+1. Read `/.well-known/proofrails.json` first.
+2. Fetch `openapi.json` and require the target operation.
+3. Read `capabilities.json` for hosted scope and known limitations.
+4. Read `contracts.json` before any chain or token action.
+5. Use `llms-full.txt` for semantic retrieval, not as an authorization source.
+6. Require a human or policy gate before any value-bearing x402 call.
+
+Machine-readable files never contain API keys, private keys, funded-wallet defaults or reusable payment authorizations.

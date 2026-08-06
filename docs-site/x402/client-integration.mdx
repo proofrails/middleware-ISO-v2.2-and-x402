@@ -1,0 +1,88 @@
+---
+title: x402 client integration
+description: Pay for a ProofRails API with the official x402 V2 client and retain the resulting receipt.
+---
+
+# x402 client integration
+
+The hosted Flare path was exercised with `@x402/fetch` and `@x402/evm` version `2.19.0`.
+
+<Warning>
+The code below can spend real USD₮0 on Flare mainnet. Use a dedicated wallet, load its key through a secret manager, inspect the first 402 response, and enforce your own amount and fee limits before enabling the paid retry.
+</Warning>
+
+## Install
+
+```bash
+npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
+```
+
+## Expected challenge
+
+Fetch once without a signer and decode `PAYMENT-REQUIRED`. Require the exact tuple you intend to pay:
+
+```js
+const endpoint = 'https://app.proofrails.com/v1/x402/premium/fx-lookup';
+const first = await fetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (first.status !== 402) throw new Error(`Expected 402, got ${first.status}`);
+
+const encoded = first.headers.get('PAYMENT-REQUIRED');
+if (!encoded) throw new Error('Missing PAYMENT-REQUIRED');
+
+const challenge = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+const option = challenge.accepts.find((item) =>
+  item.network === 'eip155:14' &&
+  item.asset.toLowerCase() === '0xe7cd86e13ac4309349f30b3435a9d337750fc82d'.toLowerCase()
+);
+
+if (!option) throw new Error('Expected Flare USD₮0 option is missing');
+if (option.amount !== '1000') throw new Error('Unexpected amount');
+if (option.payTo.toLowerCase() !== '0x0A617D605a1010a74B8dA756E48D75bCef110ef4'.toLowerCase()) {
+  throw new Error('Unexpected recipient');
+}
+if (option.extra?.facilitator?.toLowerCase() !== '0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE'.toLowerCase()) {
+  throw new Error('Unexpected facilitator');
+}
+```
+
+## Paid request
+
+```js
+import { wrapFetchWithPaymentFromConfig, decodePaymentResponseHeader } from '@x402/fetch';
+import { ExactEvmScheme } from '@x402/evm';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const account = privateKeyToAccount(process.env.PAYER_PRIVATE_KEY);
+const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
+  schemes: [
+    { network: 'eip155:14', client: new ExactEvmScheme(account) },
+  ],
+});
+
+const response = await paidFetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
+
+const paymentHeader = response.headers.get('PAYMENT-RESPONSE');
+if (!paymentHeader) throw new Error('Missing PAYMENT-RESPONSE');
+
+const payment = decodePaymentResponseHeader(paymentHeader);
+const result = await response.json();
+
+console.log({ result, transaction: payment.transaction, receiptId: payment.receiptId });
+```
+
+## Complete the evidence workflow
+
+Store `transaction`, `receiptId`, `receiptUrl` and `verifierUrl` with the agent task. Poll `receiptUrl` until `status` becomes `anchored`, then download `bundle_url` and verify it.
+
+A duplicate authorization nonce is rejected with HTTP 409 and `nonce_already_used`. Do not create a second payment merely because receipt processing or anchoring is still pending.

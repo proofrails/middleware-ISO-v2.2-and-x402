@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verification API | ProofRails Docs</title><meta name="description" content="Verify a bundle URL, expected hash, CID or confirmed tenant anchor.">
+<link rel="canonical" href="https://docs.proofrails.com/api-reference/verification"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a class="active" href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="verification-api">Verification API</h1>
+<p>Verification routes are public unless stated otherwise.</p>
+<h2 id="verify-a-bundle">Verify a bundle</h2>
+<pre><code class="language-http">POST /v1/iso/verify
+Content-Type: application/json
+</code></pre>
+<pre><code class="language-json">{
+  &quot;bundle_url&quot;: &quot;https://app.proofrails.com/files/&lt;receipt_id&gt;/evidence.zip&quot;,
+  &quot;bundle_hash&quot;: &quot;0xOPTIONAL_EXPECTED_HASH&quot;,
+  &quot;txid&quot;: &quot;0xOPTIONAL_ANCHOR_TRANSACTION&quot;
+}
+</code></pre>
+<p>At least one supported locator must be supplied. The response includes:</p>
+<pre><code class="language-json">{
+  &quot;matches_onchain&quot;: true,
+  &quot;bundle_hash&quot;: &quot;0x...&quot;,
+  &quot;flare_txid&quot;: &quot;0x...&quot;,
+  &quot;anchored_at&quot;: &quot;2026-07-29T10:13:26Z&quot;,
+  &quot;errors&quot;: []
+}
+</code></pre>
+<p>Treat a non-empty <code>errors</code> array as incomplete verification even if another field is truthy.</p>
+<h2 id="verify-a-content-addressed-bundle">Verify a content-addressed bundle</h2>
+<pre><code class="language-http">POST /v1/iso/verify-cid
+</code></pre>
+<p>This route resolves the supplied content identifier through configured storage and applies the verifier. Availability depends on the hosted storage configuration.</p>
+<h2 id="confirm-a-tenant-submitted-anchor">Confirm a tenant-submitted anchor</h2>
+<pre><code class="language-http">POST /v1/iso/confirm-anchor
+X-API-Key: &lt;project-admin-key&gt;
+</code></pre>
+<p>This route is for projects configured for tenant anchoring. It checks the transaction against the project's chain and EvidenceAnchor address before marking the receipt <code>anchored</code>.</p>
+<h2 id="independent-authority">Independent authority</h2>
+<p>The service response is convenient, but a high-assurance verifier should independently download the current ZIP, check its SHA-256 and manifest signature, fetch the Flare transaction receipt, require successful execution, require the expected EvidenceAnchor address and compare the decoded event hash.</p>
+<p>If an anchor lookup is unavailable, do not interpret that operational condition as a successful onchain match.</p></article><nav class="page-nav"><a href="/api-reference/receipts"><span>Previous</span><strong>Receipts API</strong></a><a class="next" href="/api-reference/iso-artifacts"><span>Next</span><strong>Financial artifact API</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

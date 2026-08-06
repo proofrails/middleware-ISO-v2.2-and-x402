@@ -1,0 +1,60 @@
+---
+title: Run locally
+description: Start the API, database, Redis and worker without using real payment value.
+---
+
+# Run locally
+
+Local development is appropriate for receipt integration tests and UI work. It does not validate a mainnet payment or anchor.
+
+## Prerequisites
+
+- Git
+- Docker with Compose
+- `curl`
+
+## Start the stack
+
+```bash
+git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
+cd middleware-ISO-v2.2-and-x402
+git checkout agentic
+cp .env.example .env
+```
+
+Set explicit development values:
+
+```env
+API_KEYS=dev-admin-CHANGE_ME
+X402_MOCK_PAYMENTS=true
+RATE_LIMIT_ENABLED=false
+AUTO_CREATE_DB=true
+```
+
+```bash
+docker compose up --build
+```
+
+Check the API:
+
+```bash
+curl --fail http://localhost:8000/v1/health
+```
+
+OpenAPI is available at `http://localhost:8000/docs`.
+
+## Why the worker matters
+
+Receipt creation queues artifact generation and anchoring work through Redis. Running only `uvicorn` does not exercise the complete receipt pipeline. Use the Compose services or start the API, Redis, database and worker explicitly.
+
+## Mock boundary
+
+`X402_MOCK_PAYMENTS=true` skips real payment verification. A mock 200 response is development behavior, not settlement evidence. Never enable mock payment mode on a public deployment.
+
+## Stop and remove local data
+
+```bash
+docker compose down
+```
+
+Add `--volumes` only when you intentionally want to delete local database and Redis volumes.

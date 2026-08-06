@@ -1,0 +1,22 @@
+{
+  "name": "flare-usdt0-x402-agent",
+  "version": "1.0.0",
+  "description": "Example autonomous agent: pay with USDT0 on Flare via EIP-3009 x402",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-vm-modules dist/index.js",
+    "build": "tsc",
+    "dev": "ts-node --esm src/index.ts"
+  },
+  "dependencies": {
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.0",
+    "ethers": "^6.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0"
+  }
+}

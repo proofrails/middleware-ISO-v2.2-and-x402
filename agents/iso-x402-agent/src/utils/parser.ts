@@ -59,9 +59,9 @@ async function parseWithAI(
     throw new Error('AI parsing request failed');
   }
 
-  const data = await response.json();
+  const data = await response.json() as any;
   if (data.success && data.parsed_command) {
-    return data.parsed_command;
+    return data.parsed_command as ParsedCommand;
   }
 
   return null;
@@ -125,6 +125,37 @@ export function parseSimpleCommand(message: string): ParsedCommand | null {
         receiptId: parts[0],
         reason: parts.slice(1).join(' ') || 'Customer request',
       },
+    };
+  }
+
+  // Status command
+  if (trimmed.startsWith('status ')) {
+    return {
+      action: 'status',
+      args: { receiptId: trimmed.substring(7).trim() },
+    };
+  }
+
+  // Anchor command — rest of text is raw JSON to hash
+  if (trimmed.startsWith('anchor ')) {
+    const raw = message.trim().substring(7).trim(); // preserve original case
+    return {
+      action: 'anchor',
+      args: { data: raw },
+    };
+  }
+
+  // List anchors command
+  if (trimmed === 'list anchors' || trimmed.startsWith('list anchors ')) {
+    const days = parseInt(trimmed.split(' ')[2] ?? '7', 10) || 7;
+    return { action: 'list-anchors', args: { days } };
+  }
+
+  // Verify anchor command
+  if (trimmed.startsWith('verify anchor ')) {
+    return {
+      action: 'verify-anchor',
+      args: { hash: trimmed.substring(14).trim() },
     };
   }
 

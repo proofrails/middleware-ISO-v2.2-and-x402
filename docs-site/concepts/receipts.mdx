@@ -1,0 +1,50 @@
+---
+title: Receipt data model
+description: Understand receipt identity, payment fields, lifecycle and deduplication.
+---
+
+# Receipt data model
+
+A ProofRails receipt is the stable record that connects a payment to its evidence.
+
+## Identity and scope
+
+Each receipt has a UUID and belongs to the project that created it. The project boundary controls receipt listings and write operations. Public lookup uses the receipt ID so a recipient can inspect a shared record without receiving the project's API key.
+
+## Payment and business fields
+
+The stored record includes:
+
+- chain and settlement transaction hash;
+- amount and currency label;
+- payer and recipient wallet addresses;
+- external business reference;
+- optional resource hash;
+- creation and anchor timestamps;
+- evidence bundle path and hash;
+- anchor transaction;
+- lifecycle status.
+
+The public `ReceiptResponse` is deliberately smaller. It returns the fields needed to retrieve and verify the evidence:
+
+```json
+{
+  "id": "<uuid>",
+  "status": "anchored",
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "xml_url": "https://app.proofrails.com/files/<uuid>/pain001.xml",
+  "bundle_url": "https://app.proofrails.com/files/<uuid>/evidence.zip",
+  "resource_hash": "0x...",
+  "created_at": "2026-07-29T10:13:22Z",
+  "anchored_at": "2026-07-29T10:13:26Z"
+}
+```
+
+## Lifecycle
+
+The deployed schema exposes four states: `pending`, `awaiting_anchor`, `anchored` and `failed`. The hosted completion state is `anchored`.
+
+## Deduplication
+
+Receipt creation checks both the chain/transaction pair and the external reference. A duplicate returns the existing receipt ID and current status. Integrations should keep the first receipt ID and reuse the original reference when retrying a network request.

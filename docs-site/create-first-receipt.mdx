@@ -1,0 +1,66 @@
+---
+title: Create a receipt
+description: Send a payment record to ProofRails and handle the complete receipt lifecycle.
+---
+
+# Create a receipt
+
+`POST /v1/iso/record-tip` records a payment that already occurred. The endpoint requires a project API key with write access.
+
+## Request
+
+```http
+POST /v1/iso/record-tip
+X-API-Key: <server-side-key>
+Content-Type: application/json
+```
+
+```json
+{
+  "tip_tx_hash": "0x...",
+  "chain": "flare",
+  "amount": "12.50",
+  "currency": "USD₮0",
+  "sender_wallet": "0x...",
+  "receiver_wallet": "0x...",
+  "reference": "order-1842",
+  "resource_hash": "0x...",
+  "callback_url": "https://merchant.example/proofrails/callback"
+}
+```
+
+| Field | Required | Description |
+|---|---:|---|
+| `tip_tx_hash` | Yes | Settlement transaction hash. |
+| `chain` | Yes | Chain name used by your integration. |
+| `amount` | Yes | Decimal string. Do not use floating-point arithmetic to create it. |
+| `currency` | Yes | Asset or currency label stored with the receipt. |
+| `sender_wallet` | Yes | Payer address. |
+| `receiver_wallet` | Yes | Recipient address. |
+| `reference` | Yes | Stable business identifier such as an order or invoice ID. |
+| `resource_hash` | No | `0x`-prefixed SHA-256 of delivered bytes. |
+| `callback_url` | No | Endpoint notified by the receipt worker when configured. |
+
+## Response
+
+```json
+{
+  "receipt_id": "dec5a106-3216-4543-bfb6-e669dc83f4d7",
+  "status": "pending"
+}
+```
+
+## Deduplication
+
+ProofRails returns the existing receipt when either of these matches an earlier record:
+
+- the same `chain` and `tip_tx_hash`;
+- the same `reference`.
+
+Choose references that are unique within your business workflow. A retry should reuse the original values.
+
+## Completion
+
+Poll `GET /v1/iso/receipts/{receipt_id}`. A hosted receipt is complete at `anchored`, when its current `bundle_hash` matches the EvidenceAnchor transaction in `flare_txid`.
+
+The receipt response intentionally contains links and integrity fields rather than every business input. Use project receipt listings and the evidence bundle for the broader record.

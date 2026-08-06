@@ -1,0 +1,31 @@
+---
+title: Networks and environments
+description: Hosted network identity and the boundary between validated and experimental payment paths.
+---
+
+# Networks and environments
+
+## Hosted Flare path
+
+| Property | Value |
+|---|---|
+| Network | Flare mainnet |
+| Chain ID | `14` |
+| CAIP-2 | `eip155:14` |
+| RPC | `https://flare-api.flare.network/ext/C/rpc` |
+| Explorer | `https://flare-explorer.flare.network` |
+| EvidenceAnchor | `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` |
+| X402Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| USD₮0 | `0xe7cd86e13AC4309349F30B3435a9d337750fC82D`, 6 decimals |
+| Hosted recipient | `0x0A617D605a1010a74B8dA756E48D75bCef110ef4` |
+| Validated minimum | `1000` raw units |
+
+Use [Flare contracts](/contracts/flare) for functions and events. Use `/contracts.json` for machine-readable identity tuples.
+
+## Experimental adapters
+
+Base USDC and native FLR payment adapters remain experimental. Do not enable them unless the intended deployment advertises the exact tuple and your own end-to-end validation covers payment, delivery, receipt, bundle and anchor.
+
+## Local development
+
+Mock mode performs no onchain verification. Local addresses, mock tokens and Coston2 examples are development fixtures and must not be presented as the hosted payment path.

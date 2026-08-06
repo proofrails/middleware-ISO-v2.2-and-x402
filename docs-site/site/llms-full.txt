@@ -1,0 +1,2111 @@
+# ProofRails full documentation
+
+Generated deterministically from the public navigation. Runtime routes remain authoritative in https://app.proofrails.com/openapi.json.
+
+---
+
+# Overview
+
+Canonical URL: https://docs.proofrails.com/
+Description: Understand what ProofRails does, what it produces and where x402 fits.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# ProofRails turns a payment into a usable business record
+
+A blockchain transaction proves that value moved. It does not explain the purchase, identify the delivered API result, or produce the records that finance and operations teams need.
+
+ProofRails accepts a settlement reference and business context, then creates a receipt with linked evidence. The same engine can process a payment submitted through the Receipt API or a paid API call completed through x402.
+
+[Diagram: Payment sources enter the ProofRails evidence engine and produce receipts, financial artifacts, signed evidence and an onchain commitment]
+
+## What ProofRails produces
+
+| Output | Purpose | Where to access it |
+|---|---|---|
+| Receipt | Connects the payment, parties, amount, chain, business reference and processing state. | Hosted app, public receipt page or Receipts API. |
+| Delivery evidence | Binds a purchased file or API response to the receipt with a SHA-256 resource hash when one is supplied or generated. | Receipt and evidence bundle. |
+| ISO 20022-style artifacts | Maps receipt data into finance-readable payment and reporting files. | Artifact API and evidence files. |
+| Signed evidence bundle | Packages the receipt, manifest, file hashes, signature and public key into a portable ZIP. | Receipt `bundle_url`. |
+| Onchain commitment | Commits the current bundle hash through EvidenceAnchor on Flare. | Receipt anchor transaction and public verifier. |
+| Verification result | Recomputes the bundle hash and compares it with the committed value. | Public verifier or Verification API. |
+
+## The engine and the hosted service
+
+The ProofRails engine performs normalization, artifact generation, hashing, signing, anchoring and verification. The hosted service runs that engine for you and adds API authentication, storage, background workers, receipt pages and a public verifier.
+
+You can also run the source yourself and configure your own storage, projects, keys and contracts.
+
+## Where x402 fits
+
+x402 is a payment protocol for HTTP resources. A server returns HTTP 402 with payment requirements, an x402 client authorizes the payment, and the client retries the request.
+
+ProofRails uses x402 as one way to trigger the evidence engine. After a paid request succeeds, ProofRails records the settlement, hashes the returned resource, creates the receipt and evidence bundle, and anchors the bundle hash. x402 handles the payment exchange. ProofRails handles the business record that remains afterward.
+
+The current hosted x402 path uses real USD₮0 on Flare mainnet. Read [x402 and ProofRails](/x402/overview) before sending a paid request.
+
+## Choose a starting point
+
+| If you want to... | Start here |
+|---|---|
+| Record an existing onchain payment | [Create a receipt](/create-first-receipt) |
+| Add receipts to an application | [Hosted API quickstart](/quickstart) |
+| Verify a receipt without credentials | [Verify a receipt](/verify-receipt) |
+| Build an agent that pays for an API | [x402 client integration](/x402/client-integration) |
+| Understand the processing engine | [Evidence engine](/product/engine) |
+| Inspect contracts and events | [Flare contracts](/contracts/flare) |
+| Give an AI coding agent complete context | [Machine-readable documentation](/agents/machine-readable-docs) |
+
+ProofRails uses the term **ISO 20022-style artifacts**. It does not claim that generated files are certified for a particular institution or market practice.
+
+---
+
+# How ProofRails works
+
+Canonical URL: https://docs.proofrails.com/product/how-it-works
+Description: Follow a payment from settlement reference to anchored receipt.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# How ProofRails works
+
+ProofRails builds a record around a payment. It does not replace the payment rail or take custody of funds.
+
+## Inputs
+
+A receipt starts with:
+
+- a transaction hash and chain;
+- amount, asset and payer/recipient addresses;
+- a business reference such as an order, invoice or API request ID;
+- an optional SHA-256 hash of the delivered file or API result;
+- project settings that control storage and anchoring.
+
+## Processing sequence
+
+1. **Accept the payment record.** The API validates the required fields and assigns the receipt to the authenticated project.
+2. **Deduplicate it.** The same chain and transaction hash, or the same business reference, returns the existing receipt instead of creating another one.
+3. **Normalize the receipt.** ProofRails stores a consistent record for later lookup and reconciliation.
+4. **Generate artifacts.** The worker creates the applicable ISO 20022-style files and receipt evidence.
+5. **Build and sign the bundle.** The service writes a manifest of file names, byte sizes and SHA-256 hashes, then signs the manifest with Ed25519.
+6. **Hash the ZIP.** The SHA-256 of `evidence.zip` becomes the bundle hash.
+7. **Anchor the current hash.** EvidenceAnchor emits the bundle hash on Flare. A hosted receipt is complete only after this step succeeds.
+8. **Expose verification.** The receipt page and API return the bundle URL, bundle hash, anchor transaction and timestamps.
+
+## What each user gets
+
+A developer gets stable identifiers, JSON responses, downloadable artifacts and verification endpoints. A finance or operations user gets a receipt page that connects the payment to its business reference and generated files. A third party can use the public verifier without receiving the project's API key.
+
+## What the anchor establishes
+
+The anchor establishes that the committed bundle hash existed no later than the block timestamp and that a later bundle can be compared with it. It does not establish the truth, completeness, authorization or legal effect of the offchain information inside the bundle.
+
+---
+
+# Choose an integration
+
+Canonical URL: https://docs.proofrails.com/product/integration-options
+Description: Select the ProofRails path that matches your payment and user workflow.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Choose an integration
+
+ProofRails supports several entry points into the same receipt and evidence engine.
+
+| Integration | Use it when | Payment behavior | Main result |
+|---|---|---|---|
+| Hosted application | Finance or operations users create, inspect and share receipts. | Records an existing payment reference. | Receipt page and downloadable evidence. |
+| Receipt API | Your backend already knows the settlement transaction and business context. | Does not move payment funds. | Receipt ID, artifacts, bundle and anchor. |
+| x402 paid API | An application or agent must pay before an HTTP action runs. | The x402 exchange authorizes and settles the payment. | Protected response plus receipt reference. |
+| Public verifier | A recipient needs to check a receipt or bundle. | No payment required. | Hash, signature and anchor comparison. |
+| Self-hosted service | You need your own infrastructure, keys, storage or contracts. | Determined by your deployment. | The same processing model under your operation. |
+
+## Receipt API
+
+Use the Receipt API for payments from wallets, payment processors or other rails when your system can supply a transaction hash and context. The API is the simplest way to add ProofRails to an existing checkout, treasury or reconciliation workflow.
+
+## x402
+
+Use x402 when payment is part of the HTTP request itself. The official client handles the 402 challenge and signed retry. ProofRails then records the settlement and delivered API response through its normal evidence pipeline.
+
+x402 is optional. A receipt created through the Receipt API has the same core evidence model as a receipt created after an x402 payment.
+
+## Hosted and self-hosted
+
+The hosted service is the shortest path because ProofRails runs the database, workers, storage, receipt pages and verifier. Self-hosting gives you control over those components but also makes you responsible for key custody, contract configuration, backups, monitoring and upgrades.
+
+---
+
+# Evidence engine
+
+Canonical URL: https://docs.proofrails.com/product/engine
+Description: Understand the processing stages that turn payment data into an anchored evidence record.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Evidence engine
+
+The ProofRails engine is the processing layer behind the API and hosted application. It converts payment data into a consistent receipt and builds the evidence required to inspect that receipt later.
+
+## Pipeline
+
+| Stage | Engine action | Persisted result |
+|---|---|---|
+| Ingest | Validate the project, transaction reference and required payment fields. | Receipt with `pending` status. |
+| Normalize | Store chain, transaction, parties, amount, asset, reference and optional resource hash. | Project-scoped receipt record. |
+| Translate | Generate the applicable finance-readable files. | ISO 20022-style artifacts with individual hashes. |
+| Package | Create receipt evidence and a canonical manifest. | `evidence.zip`. |
+| Sign | Sign the manifest with Ed25519 and include the public key. | `manifest.sig` and `public_key.pem`. |
+| Commit | Calculate the ZIP SHA-256 and submit it to EvidenceAnchor. | Bundle hash and anchor transaction. |
+| Verify | Recompute files and compare the bundle hash with the onchain event. | Machine-readable verification result. |
+
+## Receipt states
+
+| State | Meaning | Client action |
+|---|---|---|
+| `pending` | The receipt exists and background processing has started. | Poll the receipt or wait for an event. |
+| `awaiting_anchor` | The bundle exists but the current hash has not been confirmed onchain. | Wait, or submit and confirm the anchor in tenant mode. |
+| `anchored` | The current bundle hash matches a confirmed anchor transaction. | Treat the hosted receipt as complete. |
+| `failed` | Processing or anchoring did not complete. | Inspect the error through your operational channel and retry only through a supported workflow. |
+
+## Resource binding
+
+A `resource_hash` binds delivered bytes to the receipt. In the hosted x402 flow, ProofRails hashes the protected JSON response body. For Receipt API integrations, the caller can provide a `0x`-prefixed SHA-256 hash of a file or result.
+
+This proves byte equality when the original resource is available for recomputation. It does not judge whether the resource was correct or useful.
+
+---
+
+# Hosted service
+
+Canonical URL: https://docs.proofrails.com/product/hosted-service
+Description: Understand the managed API, application, workers, storage and public verifier.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Hosted service
+
+The hosted ProofRails service runs the evidence engine and exposes it through five public surfaces.
+
+| Surface | URL | Purpose |
+|---|---|---|
+| Application and API | `https://app.proofrails.com` | Project workflows, receipt records and REST endpoints. |
+| OpenAPI | `https://app.proofrails.com/openapi.json` | Deployed route and schema discovery. |
+| API explorer | `https://app.proofrails.com/docs` | Interactive Swagger interface. |
+| Public verifier | `https://app.proofrails.com/verify/{receipt_id}` | Shareable receipt verification. |
+| Documentation | `https://docs.proofrails.com` | Integration and operating guidance. |
+
+## Managed components
+
+The service runs the FastAPI application, PostgreSQL records, Redis queues, background receipt workers, artifact storage, signing and Flare anchoring. Hosted users do not need to deploy the worker or contracts for the standard workflow.
+
+## Access model
+
+Write and project-list operations use `X-API-Key`. Receipt lookup, artifact download and verification have public routes so a receipt can be checked without exposing a project credential. Keep API keys on a server or in a secret manager. Do not put them in browser JavaScript or an AI prompt.
+
+## Availability of routes
+
+Use the hosted OpenAPI document to discover deployed routes. Repository branches can contain work that is not available in the hosted service. These docs mark source-only behavior where it is relevant, but integrations should bind to the schema returned by the service they call.
+
+---
+
+# Product capabilities
+
+Canonical URL: https://docs.proofrails.com/capabilities
+Description: See what the ProofRails engine, hosted service and x402 integration provide.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Product capabilities
+
+## Core receipt workflow
+
+- Record an onchain payment with a project-scoped business reference.
+- Retrieve the receipt by ID and list project receipts.
+- Attach a SHA-256 resource hash to represent delivered bytes.
+- Generate ISO 20022-style payment and reporting artifacts.
+- Build a signed evidence ZIP with a manifest and file hashes.
+- Anchor the current bundle hash on Flare.
+- Verify a bundle URL, expected hash or supported content-addressed reference.
+- Share a public receipt page.
+
+## Hosted operations
+
+- Project and API-key management.
+- Background receipt processing through Redis-backed workers.
+- Hosted artifact storage and public downloads.
+- Receipt lifecycle events and anchor lookup.
+- Public OpenAPI and verification surfaces.
+
+## x402 paid actions
+
+The hosted API can return a standard x402 V2 challenge for selected paid endpoints. The validated Flare path accepts USD₮0 authorization, settles through the integrated X402Facilitator, executes the protected endpoint, hashes the response and returns a receipt reference in `PAYMENT-RESPONSE`.
+
+The source also contains Base USDC and native FLR paths. They are not documented as equivalent hosted paths because they have not completed the same published end-to-end validation.
+
+## Agent support
+
+Agents can use the same REST endpoints as other clients. The useful automation pattern is to store a business reference before payment, capture `receiptId` after an x402 response, poll until `anchored`, download the bundle and retain the verification result with the task log.
+
+The API also exposes agent-record and agent-anchoring routes. Those are management features; an agent does not need an on-platform agent record to call the Receipt API or use x402.
+
+## Boundaries
+
+ProofRails does not establish wallet ownership, legal authority, tax treatment, sanctions status or the truth of supplied metadata. ISO 20022-style output is a structured artifact, not certification for a specific institution.
+
+---
+
+# Hosted service status
+
+Canonical URL: https://docs.proofrails.com/platform-status
+Description: Deployed public surfaces and validated integration scope.
+Evidence status: live-verified
+Last verified: 2026-07-29
+
+# Hosted service status
+
+Last checked: 29 July 2026.
+
+| Surface | Status | Public reference |
+|---|---|---|
+| Hosted API | Available | `https://app.proofrails.com/v1/health` |
+| OpenAPI | Available | `https://app.proofrails.com/openapi.json` |
+| Public receipt verifier | Available | `https://app.proofrails.com/verify/{receipt_id}` |
+| Standard x402 Flare USD₮0 path | Validated for the documented FX lookup example | [Mainnet example](/x402/mainnet-proof) |
+| EvidenceAnchor | Validated for the current hosted receipt hash | [Flare contracts](/contracts/flare) |
+| Base USDC and native FLR adapters | Experimental | [Networks and environments](/deployments) |
+
+The live OpenAPI defines deployed routes. It does not currently describe API-key security or standard x402 402 response headers completely, so generated clients must also follow this documentation.
+
+Service availability can change after this dated check. Integrations should monitor health, handle transient failures and reconcile any x402 authorization that may have been signed before a timeout.
+
+---
+
+# Hosted API quickstart
+
+Canonical URL: https://docs.proofrails.com/quickstart
+Description: Create an anchored receipt through the hosted REST API and retrieve its evidence.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Hosted API quickstart
+
+This guide records an existing onchain payment. Calling the Receipt API does not transfer the payment funds. The hosted service may submit an EvidenceAnchor transaction as part of receipt processing.
+
+## Before you start
+
+You need a ProofRails project API key and the details of a completed payment:
+
+```bash
+export PROOFRAILS_API_KEY='your_server_side_key'
+export PROOFRAILS_API='https://app.proofrails.com'
+```
+
+Keep the key outside source control and client-side code.
+
+## 1. Create the receipt
+
+```bash
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/record-tip"   --header "X-API-Key: $PROOFRAILS_API_KEY"   --header 'Content-Type: application/json'   --data '{
+    "tip_tx_hash": "0xYOUR_SETTLEMENT_TRANSACTION",
+    "chain": "flare",
+    "amount": "12.50",
+    "currency": "USD₮0",
+    "sender_wallet": "0xPAYER",
+    "receiver_wallet": "0xRECIPIENT",
+    "reference": "order-1842",
+    "resource_hash": "0xOPTIONAL_SHA256_OF_DELIVERED_BYTES"
+  }'
+```
+
+The response contains the stable receipt ID:
+
+```json
+{
+  "receipt_id": "5f2c...",
+  "status": "pending"
+}
+```
+
+## 2. Poll the receipt
+
+```bash
+curl --fail "$PROOFRAILS_API/v1/iso/receipts/5f2c..."
+```
+
+Stop when `status` is `anchored`. Treat `failed` as an operational failure. Do not present `pending` or `awaiting_anchor` as complete.
+
+## 3. Retrieve artifacts
+
+```bash
+curl --fail "$PROOFRAILS_API/v1/iso/messages/5f2c..."
+curl --fail --output evidence.zip   "$PROOFRAILS_API/files/5f2c.../evidence.zip"
+```
+
+## 4. Verify the bundle
+
+```bash
+curl --fail-with-body --request POST "$PROOFRAILS_API/v1/iso/verify"   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/5f2c.../evidence.zip"
+  }'
+```
+
+Require `matches_onchain: true`, then compare the returned `bundle_hash` and `flare_txid` with the receipt. See [Verification API](/api-reference/verification) for failure handling.
+
+---
+
+# Create a receipt
+
+Canonical URL: https://docs.proofrails.com/create-first-receipt
+Description: Send a payment record to ProofRails and handle the complete receipt lifecycle.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Create a receipt
+
+`POST /v1/iso/record-tip` records a payment that already occurred. The endpoint requires a project API key with write access.
+
+## Request
+
+```http
+POST /v1/iso/record-tip
+X-API-Key: <server-side-key>
+Content-Type: application/json
+```
+
+```json
+{
+  "tip_tx_hash": "0x...",
+  "chain": "flare",
+  "amount": "12.50",
+  "currency": "USD₮0",
+  "sender_wallet": "0x...",
+  "receiver_wallet": "0x...",
+  "reference": "order-1842",
+  "resource_hash": "0x...",
+  "callback_url": "https://merchant.example/proofrails/callback"
+}
+```
+
+| Field | Required | Description |
+|---|---:|---|
+| `tip_tx_hash` | Yes | Settlement transaction hash. |
+| `chain` | Yes | Chain name used by your integration. |
+| `amount` | Yes | Decimal string. Do not use floating-point arithmetic to create it. |
+| `currency` | Yes | Asset or currency label stored with the receipt. |
+| `sender_wallet` | Yes | Payer address. |
+| `receiver_wallet` | Yes | Recipient address. |
+| `reference` | Yes | Stable business identifier such as an order or invoice ID. |
+| `resource_hash` | No | `0x`-prefixed SHA-256 of delivered bytes. |
+| `callback_url` | No | Endpoint notified by the receipt worker when configured. |
+
+## Response
+
+```json
+{
+  "receipt_id": "dec5a106-3216-4543-bfb6-e669dc83f4d7",
+  "status": "pending"
+}
+```
+
+## Deduplication
+
+ProofRails returns the existing receipt when either of these matches an earlier record:
+
+- the same `chain` and `tip_tx_hash`;
+- the same `reference`.
+
+Choose references that are unique within your business workflow. A retry should reuse the original values.
+
+## Completion
+
+Poll `GET /v1/iso/receipts/{receipt_id}`. A hosted receipt is complete at `anchored`, when its current `bundle_hash` matches the EvidenceAnchor transaction in `flare_txid`.
+
+The receipt response intentionally contains links and integrity fields rather than every business input. Use project receipt listings and the evidence bundle for the broader record.
+
+---
+
+# Verify a receipt
+
+Canonical URL: https://docs.proofrails.com/verify-receipt
+Description: Check a public receipt, evidence ZIP, manifest signature and onchain bundle commitment.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Verify a receipt
+
+Verification answers whether the available evidence matches the hash committed onchain. It does not decide whether the underlying commercial statements are true.
+
+## Public receipt
+
+Open:
+
+```text
+https://app.proofrails.com/verify/{receipt_id}
+```
+
+A completed hosted receipt should display `anchored`, the bundle hash, the anchor transaction and the evidence download.
+
+## Verification API
+
+```bash
+curl --fail-with-body --request POST   https://app.proofrails.com/v1/iso/verify   --header 'Content-Type: application/json'   --data '{
+    "bundle_url": "https://app.proofrails.com/files/{receipt_id}/evidence.zip",
+    "bundle_hash": "0xEXPECTED_SHA256"
+  }'
+```
+
+You may provide `bundle_url`, `bundle_hash`, or both. When a URL is supplied, ProofRails downloads the ZIP and computes its SHA-256.
+
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-29T10:13:26Z",
+  "errors": []
+}
+```
+
+## Independent checks
+
+For higher assurance:
+
+1. Download `evidence.zip` yourself.
+2. Compute `sha256(evidence.zip)` and add the `0x` prefix.
+3. Read `manifest.json` and recompute every listed file hash and byte size.
+4. Verify `manifest.sig` against `public_key.pem` using Ed25519.
+5. Fetch the Flare transaction receipt for `flare_txid`.
+6. Decode `EvidenceAnchored(bytes32,address,uint256)` from the configured EvidenceAnchor contract.
+7. Require exact equality between the event `bundleHash`, the downloaded ZIP hash and the receipt `bundle_hash`.
+
+A signature only shows that the manifest was signed by the included key. Trust in the signer still depends on how your project obtained and protected that key.
+
+---
+
+# AI agent quickstart
+
+Canonical URL: https://docs.proofrails.com/agent-quickstart
+Description: Give an autonomous client a safe, deterministic ProofRails workflow.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# AI agent quickstart
+
+An agent should treat ProofRails as a stateful evidence service. It must persist identifiers, bound retries and distinguish a payment from a completed receipt.
+
+## Choose the workflow
+
+| Goal | Interface | Can move value? |
+|---|---|---:|
+| Inspect a public receipt | Receipt and Verification APIs | No |
+| Record an existing payment | Receipt API with `X-API-Key` | No payment movement; hosted anchoring can submit a platform transaction |
+| Buy a protected API result | x402 paid endpoint | Yes, real USD₮0 on the hosted Flare path |
+| Develop without hosted credentials | Local Docker deployment | No when mock mode is enabled |
+
+## Discover capabilities
+
+Fetch `https://app.proofrails.com/openapi.json` and require the intended operation to exist. Do not infer hosted availability from a repository route or an old example.
+
+Machine indexes:
+
+```text
+https://docs.proofrails.com/llms.txt
+https://docs.proofrails.com/llms-full.txt
+https://docs.proofrails.com/.well-known/proofrails.json
+https://docs.proofrails.com/contracts.json
+https://docs.proofrails.com/capabilities.json
+https://docs.proofrails.com/sitemap.json
+```
+
+## Receipt state machine
+
+Persist `receipt_id`, transaction hash and business reference. Poll `GET /v1/iso/receipts/{rid}` with bounded exponential backoff.
+
+```text
+pending          continue polling
+awaiting_anchor  continue polling
+anchored         completed
+failed           stop and escalate
+```
+
+Do not invent a `/status` route and do not treat a polling timeout as failure of the receipt itself.
+
+## x402 state machine
+
+Before signing, allowlist chain ID, token contract, recipient, facilitator, amount and validity window. After signing, persist the authorization nonce. If the response is lost, reconcile nonce and settlement state before any new action.
+
+A 409 `nonce_already_used` must never cause an automatic second payment.
+
+## Verification
+
+After `anchored`, download the current bundle URL, recompute SHA-256, verify the manifest inventory and signature, then compare the ZIP hash with the expected EvidenceAnchor event on chain ID 14.
+
+An agent should record the exact checks that passed. It should not summarize a hash match as proof that every offchain statement is true.
+
+---
+
+# Run locally
+
+Canonical URL: https://docs.proofrails.com/guides/local-development
+Description: Start the API, database, Redis and worker without using real payment value.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Run locally
+
+Local development is appropriate for receipt integration tests and UI work. It does not validate a mainnet payment or anchor.
+
+## Prerequisites
+
+- Git
+- Docker with Compose
+- `curl`
+
+## Start the stack
+
+```bash
+git clone https://github.com/proofrails/middleware-ISO-v2.2-and-x402.git
+cd middleware-ISO-v2.2-and-x402
+git checkout agentic
+cp .env.example .env
+```
+
+Set explicit development values:
+
+```env
+API_KEYS=dev-admin-CHANGE_ME
+X402_MOCK_PAYMENTS=true
+RATE_LIMIT_ENABLED=false
+AUTO_CREATE_DB=true
+```
+
+```bash
+docker compose up --build
+```
+
+Check the API:
+
+```bash
+curl --fail http://localhost:8000/v1/health
+```
+
+OpenAPI is available at `http://localhost:8000/docs`.
+
+## Why the worker matters
+
+Receipt creation queues artifact generation and anchoring work through Redis. Running only `uvicorn` does not exercise the complete receipt pipeline. Use the Compose services or start the API, Redis, database and worker explicitly.
+
+## Mock boundary
+
+`X402_MOCK_PAYMENTS=true` skips real payment verification. A mock 200 response is development behavior, not settlement evidence. Never enable mock payment mode on a public deployment.
+
+## Stop and remove local data
+
+```bash
+docker compose down
+```
+
+Add `--volumes` only when you intentionally want to delete local database and Redis volumes.
+
+---
+
+# Receipt data model
+
+Canonical URL: https://docs.proofrails.com/concepts/receipts
+Description: Understand receipt identity, payment fields, lifecycle and deduplication.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Receipt data model
+
+A ProofRails receipt is the stable record that connects a payment to its evidence.
+
+## Identity and scope
+
+Each receipt has a UUID and belongs to the project that created it. The project boundary controls receipt listings and write operations. Public lookup uses the receipt ID so a recipient can inspect a shared record without receiving the project's API key.
+
+## Payment and business fields
+
+The stored record includes:
+
+- chain and settlement transaction hash;
+- amount and currency label;
+- payer and recipient wallet addresses;
+- external business reference;
+- optional resource hash;
+- creation and anchor timestamps;
+- evidence bundle path and hash;
+- anchor transaction;
+- lifecycle status.
+
+The public `ReceiptResponse` is deliberately smaller. It returns the fields needed to retrieve and verify the evidence:
+
+```json
+{
+  "id": "<uuid>",
+  "status": "anchored",
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "xml_url": "https://app.proofrails.com/files/<uuid>/pain001.xml",
+  "bundle_url": "https://app.proofrails.com/files/<uuid>/evidence.zip",
+  "resource_hash": "0x...",
+  "created_at": "2026-07-29T10:13:22Z",
+  "anchored_at": "2026-07-29T10:13:26Z"
+}
+```
+
+## Lifecycle
+
+The deployed schema exposes four states: `pending`, `awaiting_anchor`, `anchored` and `failed`. The hosted completion state is `anchored`.
+
+## Deduplication
+
+Receipt creation checks both the chain/transaction pair and the external reference. A duplicate returns the existing receipt ID and current status. Integrations should keep the first receipt ID and reuse the original reference when retrying a network request.
+
+---
+
+# Evidence bundles
+
+Canonical URL: https://docs.proofrails.com/concepts/evidence-bundles
+Description: Inspect the portable ZIP, manifest, file hashes and Ed25519 signature.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Evidence bundles
+
+`evidence.zip` is the portable evidence package for a receipt. The bundle can be downloaded, archived and checked without access to the ProofRails database.
+
+## Core files
+
+The exact file set depends on the receipt path. A completed hosted x402 receipt inspected on 29 July 2026 contained:
+
+```text
+delivery.json
+manifest.json
+manifest.sig
+pain001.xml
+public_key.pem
+receipt.json
+tip.json
+```
+
+Other receipt paths can add applicable artifacts. Clients must read `manifest.json` rather than assume that a named file is always present. A verifiable credential is optional; the presence of `vc.json` must not be assumed.
+
+## Manifest
+
+The manifest records each covered file's name, SHA-256 hash and byte size. Verification fails if a file is missing, its bytes change, or its declared size does not match.
+
+## Signature
+
+`manifest.sig` is an Ed25519 signature over the canonical manifest bytes. `public_key.pem` contains the public key required to verify that signature.
+
+The signature proves that the holder of the corresponding private key signed the manifest. It does not, by itself, establish who controlled the key or whether the source data was accurate.
+
+## Bundle hash
+
+ProofRails calculates SHA-256 over the final ZIP bytes and stores it as a `0x`-prefixed bundle hash. EvidenceAnchor commits that 32-byte value on Flare.
+
+Do not calculate the anchor value from an extracted directory or from `manifest.json`. The committed value is the SHA-256 of the served `evidence.zip` for the current receipt.
+
+## Resource hash
+
+`delivery.json` can carry the SHA-256 of delivered content or a protected API response. Verify it against the original bytes separately from the ZIP hash. The resource hash binds delivery bytes; the bundle hash binds the complete evidence package.
+
+---
+
+# Onchain anchoring
+
+Canonical URL: https://docs.proofrails.com/concepts/anchoring
+Description: Understand the EvidenceAnchor contract, receipt completion rule and independent event check.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Onchain anchoring
+
+ProofRails commits the SHA-256 of `evidence.zip` to an `EvidenceAnchor` contract on Flare.
+
+## Contract operation
+
+The contract exposes one write function:
+
+```solidity
+function anchorEvidence(bytes32 bundleHash) external;
+```
+
+A successful call emits:
+
+```solidity
+event EvidenceAnchored(
+    bytes32 bundleHash,
+    address indexed sender,
+    uint256 ts
+);
+```
+
+The event stores the committed hash, the account that submitted it and the block timestamp.
+
+## Hosted completion rule
+
+A hosted receipt is complete only when all of these values agree:
+
+1. SHA-256 of the current `evidence.zip`;
+2. `bundle_hash` returned by the receipt API;
+3. `bundleHash` decoded from the `EvidenceAnchored` event in `flare_txid`.
+
+Until that equality is confirmed, the receipt remains `pending`, `awaiting_anchor` or `failed`. An application must not display it as complete.
+
+## Platform and tenant modes
+
+In platform mode, the ProofRails worker submits the anchor. In tenant mode, the project submits the transaction and calls `POST /v1/iso/confirm-anchor` with the receipt ID and transaction hash. The API verifies the event against the project's configured chain and contract before changing the receipt to `anchored`.
+
+## Trust boundary
+
+The anchor proves integrity and timing of the committed hash. It does not prove that offchain metadata is true, that the payer was legally authorized, or that the receipt satisfies an accounting, tax or regulatory requirement.
+
+---
+
+# ISO 20022-style artifacts
+
+Canonical URL: https://docs.proofrails.com/concepts/iso-20022-artifacts
+Description: Understand the financial-message files produced from receipt data and their validation boundary.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# ISO 20022-style artifacts
+
+ProofRails maps receipt data into XML shaped around ISO 20022 payment and cash-management message families. These files help finance systems consume onchain payment records in a familiar structure.
+
+## Typical receipt artifacts
+
+| Artifact | Use in ProofRails |
+|---|---|
+| `pain.001` | Payment-initiation-style representation of the recorded payment. |
+| `pain.002` | Processing-status-style representation. |
+| `camt.054` | Credit/debit-notification-style record. |
+
+The engine also contains generation paths for cancellation, investigation, reversal, interbank transfer, refund and statement-style messages. Route availability and the artifacts generated for a specific receipt depend on the deployed API and workflow.
+
+## Retrieve receipt artifacts
+
+```http
+GET /v1/iso/messages/{receipt_id}
+```
+
+Each list item includes the message type, URL, optional SHA-256 and creation timestamp.
+
+## Generate additional messages
+
+The hosted OpenAPI currently exposes:
+
+```http
+POST /v1/iso/camt029/{receipt_id}
+POST /v1/iso/camt056/{receipt_id}
+POST /v1/iso/pacs007/{receipt_id}
+POST /v1/iso/pacs009/{receipt_id}
+POST /v1/iso/refund
+```
+
+These operations have workflow-specific request bodies and authorization rules. Use the live OpenAPI schema when implementing them.
+
+## Validation boundary
+
+The artifacts are **ISO 20022-style**. Generating XML or using an ISO message family name does not establish conformance with a bank, clearing system, market-practice profile or certification program. Validate the target institution's schema version, usage rules, identifiers and transport requirements before sending a file outside your organization.
+
+---
+
+# Verification model
+
+Canonical URL: https://docs.proofrails.com/concepts/verification-model
+Description: Read verification results correctly and distinguish integrity from truth.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Verification model
+
+A ProofRails verification result is a set of explicit comparisons, not a general approval of the transaction.
+
+## Successful result
+
+`matches_onchain: true` means the supplied or calculated bundle hash matches an `EvidenceAnchored` record found by the verifier. When a bundle URL is supplied, the verifier also reports bundle-processing errors.
+
+## Failed or incomplete result
+
+Treat any of these as incomplete verification:
+
+- `matches_onchain` is `false`;
+- `errors` is non-empty;
+- the receipt is not `anchored`;
+- the returned transaction is missing;
+- the downloaded ZIP hash differs from the receipt;
+- the manifest signature or a listed file hash fails independently.
+
+## Result scope
+
+A successful integrity check does not verify legal identity, authority, business performance, accounting classification or regulatory compliance. Applications should describe the exact passed checks rather than collapse them into a generic `verified` claim.
+
+---
+
+# x402 and ProofRails
+
+Canonical URL: https://docs.proofrails.com/x402/overview
+Description: Understand x402's payment role and the evidence ProofRails adds after a paid HTTP request.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# x402 and ProofRails
+
+x402 lets an HTTP server require payment before it returns a resource. ProofRails uses that exchange as an input to its receipt and evidence engine.
+
+[Diagram: x402 handles the HTTP payment exchange, then the ProofRails engine creates receipt and delivery evidence]
+
+## Division of responsibility
+
+| Layer | Responsibility |
+|---|---|
+| x402 client | Reads the 402 challenge, selects an accepted payment option, signs an authorization and retries the request. |
+| ProofRails paid endpoint | Publishes payment requirements and runs the protected action after settlement succeeds. |
+| X402Facilitator | Settles the accepted USD₮0 EIP-3009 authorization on Flare. |
+| ProofRails engine | Records payment and delivery, hashes the response, creates artifacts, signs the evidence bundle and anchors its hash. |
+| Verifier | Checks the bundle and onchain commitment later. |
+
+x402 answers, "How does this HTTP request pay?" ProofRails answers, "What was paid for, what did the endpoint return, and which evidence can both sides retain?"
+
+## Hosted Flare flow
+
+1. The client sends the API request without a payment header.
+2. ProofRails returns HTTP 402 and a base64 `PAYMENT-REQUIRED` header.
+3. The client validates the offered network, token, recipient, amount and facilitator.
+4. The client signs the selected EIP-3009 authorization.
+5. It retries the same method, URL and body with `PAYMENT-SIGNATURE`.
+6. ProofRails settles the authorization through X402Facilitator.
+7. The protected handler returns its normal HTTP response.
+8. ProofRails hashes that response and persists the payment and receipt.
+9. The HTTP 200 response includes `PAYMENT-RESPONSE` with the transaction and receipt reference.
+10. The receipt worker produces and anchors the evidence bundle.
+
+## Hosted payment tuple
+
+| Field | Value |
+|---|---|
+| Network | Flare mainnet, CAIP-2 `eip155:14` |
+| Asset | USD₮0, 6 decimals |
+| Validated amount | `1000` base units, equal to `0.001 USD₮0` |
+| Scheme | `exact` with EIP-3009 authorization |
+| Paid example | `POST /v1/x402/premium/fx-lookup` |
+
+**REAL-VALUE WARNING:** A successful hosted x402 request spends real USD₮0 on Flare mainnet and creates an irreversible settlement transaction. The payer also needs FLR only when its execution path pays gas. Validate every field in the 402 challenge before signing.
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
+
+---
+
+# x402 client integration
+
+Canonical URL: https://docs.proofrails.com/x402/client-integration
+Description: Pay for a ProofRails API with the official x402 V2 client and retain the resulting receipt.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# x402 client integration
+
+The hosted Flare path was exercised with `@x402/fetch` and `@x402/evm` version `2.19.0`.
+
+**REAL-VALUE WARNING:** The code below can spend real USD₮0 on Flare mainnet. Use a dedicated wallet, load its key through a secret manager, inspect the first 402 response, and enforce your own amount and fee limits before enabling the paid retry.
+
+## Install
+
+```bash
+npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
+```
+
+## Expected challenge
+
+Fetch once without a signer and decode `PAYMENT-REQUIRED`. Require the exact tuple you intend to pay:
+
+```js
+const endpoint = 'https://app.proofrails.com/v1/x402/premium/fx-lookup';
+const first = await fetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (first.status !== 402) throw new Error(`Expected 402, got ${first.status}`);
+
+const encoded = first.headers.get('PAYMENT-REQUIRED');
+if (!encoded) throw new Error('Missing PAYMENT-REQUIRED');
+
+const challenge = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+const option = challenge.accepts.find((item) =>
+  item.network === 'eip155:14' &&
+  item.asset.toLowerCase() === '0xe7cd86e13ac4309349f30b3435a9d337750fc82d'.toLowerCase()
+);
+
+if (!option) throw new Error('Expected Flare USD₮0 option is missing');
+if (option.amount !== '1000') throw new Error('Unexpected amount');
+if (option.payTo.toLowerCase() !== '0x0A617D605a1010a74B8dA756E48D75bCef110ef4'.toLowerCase()) {
+  throw new Error('Unexpected recipient');
+}
+if (option.extra?.facilitator?.toLowerCase() !== '0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE'.toLowerCase()) {
+  throw new Error('Unexpected facilitator');
+}
+```
+
+## Paid request
+
+```js
+import { wrapFetchWithPaymentFromConfig, decodePaymentResponseHeader } from '@x402/fetch';
+import { ExactEvmScheme } from '@x402/evm';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const account = privateKeyToAccount(process.env.PAYER_PRIVATE_KEY);
+const paidFetch = wrapFetchWithPaymentFromConfig(fetch, {
+  schemes: [
+    { network: 'eip155:14', client: new ExactEvmScheme(account) },
+  ],
+});
+
+const response = await paidFetch(endpoint, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ base_ccy: 'USD', quote_ccy: 'FLR' }),
+});
+
+if (!response.ok) throw new Error(`${response.status}: ${await response.text()}`);
+
+const paymentHeader = response.headers.get('PAYMENT-RESPONSE');
+if (!paymentHeader) throw new Error('Missing PAYMENT-RESPONSE');
+
+const payment = decodePaymentResponseHeader(paymentHeader);
+const result = await response.json();
+
+console.log({ result, transaction: payment.transaction, receiptId: payment.receiptId });
+```
+
+## Complete the evidence workflow
+
+Store `transaction`, `receiptId`, `receiptUrl` and `verifierUrl` with the agent task. Poll `receiptUrl` until `status` becomes `anchored`, then download `bundle_url` and verify it.
+
+A duplicate authorization nonce is rejected with HTTP 409 and `nonce_already_used`. Do not create a second payment merely because receipt processing or anchoring is still pending.
+
+---
+
+# x402 compatibility
+
+Canonical URL: https://docs.proofrails.com/x402/status-and-compatibility
+Description: Protocol versions, headers, settlement mode and hosted-path boundaries.
+Evidence status: live-verified
+Last verified: 2026-07-29
+
+# x402 compatibility
+
+## Hosted supported path
+
+| Property | Value |
+|---|---|
+| x402 protocol | V2 challenge and signed retry |
+| Client packages exercised | `@x402/fetch@2.19.0`, `@x402/evm@2.19.0` |
+| Scheme | `exact` |
+| Network | `eip155:14` |
+| Asset | USD₮0 |
+| Authorization | EIP-3009 `TransferWithAuthorization` |
+| Settlement | Integrated server-submitted settlement through X402Facilitator |
+| Result | Protected HTTP response plus `PAYMENT-RESPONSE` |
+
+## Headers
+
+| Header | Direction | Content |
+|---|---|---|
+| `PAYMENT-REQUIRED` | Server to client on HTTP 402 | Base64 JSON containing `x402Version`, resource and accepted payment options. |
+| `PAYMENT-SIGNATURE` | Client to server on retry | Base64 JSON containing the accepted option, authorization and signature. |
+| `PAYMENT-RESPONSE` | Server to client after settlement | Base64 JSON containing success, network, transaction, payer and receipt links when available. |
+
+The server also emits legacy compatibility headers on some paths. New integrations should use the V2 headers above.
+
+## Response contract
+
+A successful paid request must satisfy all of these conditions:
+
+- the protected response is HTTP 2xx;
+- `PAYMENT-RESPONSE` decodes with `success: true`;
+- `transaction` is present;
+- `network` is `eip155:14` for the hosted Flare path;
+- `receiptId` is present before the integration declares its evidence record complete.
+
+The receipt itself can still be `pending` while background packaging and anchoring run.
+
+## Other source paths
+
+Base USDC and native FLR adapters remain experimental. Read the live 402 challenge and accept only payment tuples your application explicitly allows.
+
+---
+
+# Mainnet example
+
+Canonical URL: https://docs.proofrails.com/x402/mainnet-proof
+Description: Trace one paid request through settlement, protected response, receipt, evidence bundle and Flare anchor.
+Evidence status: live-verified
+Last verified: 2026-07-29
+
+# Mainnet example
+
+This read-only example shows the identifiers from one completed hosted request on 29 July 2026. Do not replay its authorization or nonce.
+
+## Request and result
+
+| Item | Value |
+|---|---|
+| Endpoint | `POST https://app.proofrails.com/v1/x402/premium/fx-lookup` |
+| Client | Official x402 V2 packages `2.19.0` |
+| Payment | `0.001 USD₮0` on Flare mainnet |
+| HTTP result | `200` |
+| Response body | `{"rate":"0.00628055","source":"coingecko"}` |
+| Request ID | `b50f446e-f420-4afa-b196-5821bf0b5a92` |
+
+## Settlement
+
+[Open the settlement transaction](https://flare-explorer.flare.network/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340)
+
+```text
+0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340
+```
+
+The successful transaction emitted one `X402PaymentSettled` event with the expected USD₮0 token, payer, recipient, amount of `1000` base units, nonce and deterministic payment ID.
+
+## Receipt and delivered resource
+
+[Open the public receipt](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7)
+
+```text
+Receipt ID: dec5a106-3216-4543-bfb6-e669dc83f4d7
+Resource hash: 0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
+```
+
+The resource hash is the SHA-256 of the exact protected JSON response bytes.
+
+## Evidence and anchor
+
+```text
+Bundle hash: 0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+Anchor tx:    0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28
+```
+
+[Open the anchor transaction](https://flare-explorer.flare.network/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28)
+
+The ZIP hash, receipt `bundle_hash` and decoded `EvidenceAnchored.bundleHash` were equal. The manifest signature and every listed file hash and size also passed independent recomputation.
+
+## What this example demonstrates
+
+This example connects one paid HTTP request to a settlement, returned resource, receipt, signed evidence bundle and onchain commitment. It does not establish that every route, token or deployment mode has completed the same test.
+
+---
+
+# Flare contracts
+
+Canonical URL: https://docs.proofrails.com/contracts/flare
+Description: Contract addresses, functions, events and independent read checks for the hosted Flare path.
+Evidence status: live-verified
+Last verified: 2026-07-29
+
+# Flare contracts
+
+Always confirm chain ID `14`, runtime bytecode and the exact address before signing or sending value.
+
+## Addresses
+
+| Contract | Address |
+|---|---|
+| EvidenceAnchor | `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` |
+| X402Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| USD₮0 | `0xe7cd86e13AC4309349F30B3435a9d337750fC82D` |
+
+RPC: `https://flare-api.flare.network/ext/C/rpc`
+
+Explorer: `https://flare-explorer.flare.network`
+
+## EvidenceAnchor
+
+```solidity
+function anchorEvidence(bytes32 bundleHash) external;
+event EvidenceAnchored(bytes32 bundleHash, address indexed sender, uint256 ts);
+```
+
+The contract stores evidence through events. A verifier reads the transaction receipt and compares `bundleHash` with the ZIP SHA-256.
+
+## X402Facilitator
+
+The facilitator accepts a `PaymentPayload` containing token, payer, recipient, raw amount, authorization window, nonce and signature values.
+
+Main settlement functions:
+
+```solidity
+function settlePayment(PaymentPayload calldata payload) external returns (bytes32 paymentId);
+function settlePaymentAsPayee(PaymentPayload calldata payload) external returns (bytes32 paymentId);
+```
+
+Read functions:
+
+```solidity
+function verifyPayment(PaymentPayload calldata payload) external view returns (bytes32 paymentId, bool valid);
+function getPayment(bytes32 paymentId) external view returns (PaymentRecord memory);
+function isNonceUsed(address token, address authorizer, bytes32 nonce) external view returns (bool);
+function supportedTokens(address token) external view returns (bool);
+function minimumAmounts(address token) external view returns (uint256);
+function paused() external view returns (bool);
+```
+
+Successful settlement emits:
+
+```solidity
+event X402PaymentSettled(
+    address indexed token,
+    address indexed payer,
+    address indexed recipient,
+    uint256 amount,
+    bytes32 nonce,
+    bytes32 paymentId
+);
+```
+
+`paymentId` is `keccak256(abi.encode(from, to, token, value, nonce))`. The facilitator and token both reject reuse through the payment record and EIP-3009 authorization state.
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract. These contracts do not imply a generic public `/verify` and `/settle` facilitator service.
+
+---
+
+# Networks and environments
+
+Canonical URL: https://docs.proofrails.com/deployments
+Description: Hosted network identity and the boundary between validated and experimental payment paths.
+Evidence status: live-verified
+Last verified: 2026-07-29
+
+# Networks and environments
+
+## Hosted Flare path
+
+| Property | Value |
+|---|---|
+| Network | Flare mainnet |
+| Chain ID | `14` |
+| CAIP-2 | `eip155:14` |
+| RPC | `https://flare-api.flare.network/ext/C/rpc` |
+| Explorer | `https://flare-explorer.flare.network` |
+| EvidenceAnchor | `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` |
+| X402Facilitator | `0xa78F15ee5a1Ff1D89F6AD782a5f9b81f7C2aA4aE` |
+| USD₮0 | `0xe7cd86e13AC4309349F30B3435a9d337750fC82D`, 6 decimals |
+| Hosted recipient | `0x0A617D605a1010a74B8dA756E48D75bCef110ef4` |
+| Validated minimum | `1000` raw units |
+
+Use [Flare contracts](/contracts/flare) for functions and events. Use `/contracts.json` for machine-readable identity tuples.
+
+## Experimental adapters
+
+Base USDC and native FLR payment adapters remain experimental. Do not enable them unless the intended deployment advertises the exact tuple and your own end-to-end validation covers payment, delivery, receipt, bundle and anchor.
+
+## Local development
+
+Mock mode performs no onchain verification. Local addresses, mock tokens and Coston2 examples are development fixtures and must not be presented as the hosted payment path.
+
+---
+
+# API overview
+
+Canonical URL: https://docs.proofrails.com/api-reference/overview
+Description: Base URL, runtime schema, authentication classes and response conventions.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# API overview
+
+The hosted ProofRails API is available at:
+
+```text
+https://app.proofrails.com
+```
+
+## Runtime discovery
+
+Use these endpoints before generating a client:
+
+- OpenAPI JSON: `https://app.proofrails.com/openapi.json`
+- Swagger UI: `https://app.proofrails.com/docs`
+- ReDoc: `https://app.proofrails.com/redoc`
+- Health: `https://app.proofrails.com/v1/health`
+
+The live OpenAPI document is the route and schema authority for the hosted service. It currently omits security declarations and does not model the x402 402 headers, so use the authentication table and x402 reference in these docs as well.
+
+## Authentication classes
+
+| Class | How it is authorized | Examples |
+|---|---|---|
+| Public | No credential | Receipt lookup, artifact lookup, anchor lookup, bundle verification. |
+| Project | `X-API-Key` | Receipt creation and project-scoped listings. |
+| Project admin | `X-API-Key` with `project_admin` role | Project configuration and API-key management. |
+| Service admin | Admin API key | Pricing configuration, facilitator configuration and revenue operations. |
+| x402 | `PAYMENT-SIGNATURE` produced from the server challenge | Payment-gated premium endpoints. |
+| SIWE | EIP-4361 message and wallet signature | Project registration and wallet-based key recovery. |
+
+## Request conventions
+
+Send JSON with `Content-Type: application/json`. Amounts are decimal strings in receipt requests and raw integer strings in x402 requirements. Never use floating-point arithmetic for token values.
+
+Route parameter names in generated clients follow OpenAPI. For example, hosted receipt lookup is declared as `/v1/iso/receipts/{rid}` even though this documentation uses `receipt_id` descriptively.
+
+## Errors and request IDs
+
+FastAPI validation errors use HTTP 422. Authentication and authorization failures use 401 and 403. x402 challenges use 402 and nonce replay can return 409. Error bodies are not yet one universal schema. Preserve status, response body and `X-Request-ID` when present.
+
+See [Errors, retries and reconciliation](/api-reference/errors-retries) before implementing automatic retries.
+
+---
+
+# Authentication and API keys
+
+Canonical URL: https://docs.proofrails.com/api-reference/authentication
+Description: Register a project with SIWE and protect project-scoped API credentials.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Authentication and API keys
+
+Use API keys for server-to-server access. Use Sign-In with Ethereum only for project registration or wallet-based key recovery.
+
+## Register a project
+
+1. Request a one-time nonce:
+
+```http
+GET /v1/auth/nonce
+```
+
+```json
+{"nonce":"<uuid>","domain":"app.proofrails.com"}
+```
+
+2. Build an EIP-4361 message for the returned domain and nonce. Include the wallet address, URI, version `1`, chain ID and issued-at time. Sign the complete message with the wallet that will own the project.
+
+3. Submit the message and signature:
+
+```http
+POST /v1/projects/register
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Acme payments",
+  "message": "<complete EIP-4361 message>",
+  "signature": "0x..."
+}
+```
+
+The response returns project information and the initial raw API key. Store that key immediately in a secret manager. ProofRails stores its hash and cannot return the same raw value later.
+
+## Use the key
+
+```http
+X-API-Key: <project-key>
+```
+
+Never put an API key in browser code, a mobile bundle, a repository, documentation, analytics or an AI prompt.
+
+## Inspect the principal
+
+```http
+GET /v1/auth/me
+X-API-Key: <project-key>
+```
+
+The response identifies `role`, `project_id` and `is_admin`.
+
+## Manage keys
+
+```http
+POST   /v1/auth/api-keys
+GET    /v1/auth/api-keys
+DELETE /v1/auth/api-keys/{id}
+```
+
+API-key management requires an authenticated principal with the relevant project role.
+
+## Wallet-based recovery
+
+`POST /v1/auth/siwe-mint-key` verifies a fresh EIP-4361 message from the project owner wallet. The new raw key is returned once in the `X-API-Key` response header. The JSON body contains only key metadata. Capture the header through a trusted server process and prevent HTTP logging from recording it.
+
+Rotate a key by creating and testing the replacement, changing dependent services, then deleting the old key. Do not use wallet-based recovery as routine authentication for every API call.
+
+---
+
+# Receipts API
+
+Canonical URL: https://docs.proofrails.com/api-reference/receipts
+Description: Create, list and retrieve project receipt records using the hosted schema.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Receipts API
+
+## Create a receipt
+
+```http
+POST /v1/iso/record-tip
+X-API-Key: <project-key>
+Content-Type: application/json
+```
+
+The deployed OpenAPI names this body `TipRecordRequest`. Accepted request fields:
+
+| Field | Type | Required |
+|---|---|---:|
+| `tip_tx_hash` | string | Yes |
+| `chain` | string | Yes |
+| `amount` | decimal string | Yes |
+| `currency` | string | Yes |
+| `sender_wallet` | string | Yes |
+| `receiver_wallet` | string | Yes |
+| `reference` | string | Yes |
+| `resource_hash` | string or null | No |
+| `callback_url` | URL string or null | No |
+
+The deployed request does not accept arbitrary `metadata` or `tags`.
+
+Response:
+
+```json
+{"receipt_id":"<uuid>","status":"pending"}
+```
+
+The route deduplicates by chain plus transaction hash and by business reference. A duplicate returns the existing receipt.
+
+## Retrieve one receipt
+
+```http
+GET /v1/iso/receipts/{rid}
+```
+
+This route is public and returns:
+
+```json
+{
+  "id": "<uuid>",
+  "status": "anchored",
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "xml_url": "https://app.proofrails.com/files/<uuid>/pain001.xml",
+  "bundle_url": "https://app.proofrails.com/files/<uuid>/evidence.zip",
+  "resource_hash": "0x...",
+  "created_at": "2026-07-29T10:13:22Z",
+  "anchored_at": "2026-07-29T10:13:26Z"
+}
+```
+
+Only `anchored` is the completed hosted state.
+
+## List project receipts
+
+```http
+GET /v1/receipts?page=1&page_size=50
+X-API-Key: <project-key>
+```
+
+Supported filters in the hosted schema include `status`, `chain`, `reference`, `since`, `until`, `project_id`, `page`, `page_size` and `scope`. Project keys normally use `scope=mine`; broader access requires an admin principal.
+
+The managed endpoint uses page-based pagination. Cursor and tag filters are not part of this API contract.
+
+## Related public routes
+
+```http
+GET /v1/iso/messages/{rid}
+GET /v1/iso/events/{rid}
+GET /v1/anchors/{rid}
+GET /v1/receipts/{receipt_id}/compliance-checks
+```
+
+Artifact presence and a receipt lifecycle state are separate. Read `bundle_url` and `bundle_hash` from the current receipt rather than constructing artifact URLs from assumptions.
+
+---
+
+# Verification API
+
+Canonical URL: https://docs.proofrails.com/api-reference/verification
+Description: Verify a bundle URL, expected hash, CID or confirmed tenant anchor.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Verification API
+
+Verification routes are public unless stated otherwise.
+
+## Verify a bundle
+
+```http
+POST /v1/iso/verify
+Content-Type: application/json
+```
+
+```json
+{
+  "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip",
+  "bundle_hash": "0xOPTIONAL_EXPECTED_HASH",
+  "txid": "0xOPTIONAL_ANCHOR_TRANSACTION"
+}
+```
+
+At least one supported locator must be supplied. The response includes:
+
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-29T10:13:26Z",
+  "errors": []
+}
+```
+
+Treat a non-empty `errors` array as incomplete verification even if another field is truthy.
+
+## Verify a content-addressed bundle
+
+```http
+POST /v1/iso/verify-cid
+```
+
+This route resolves the supplied content identifier through configured storage and applies the verifier. Availability depends on the hosted storage configuration.
+
+## Confirm a tenant-submitted anchor
+
+```http
+POST /v1/iso/confirm-anchor
+X-API-Key: <project-admin-key>
+```
+
+This route is for projects configured for tenant anchoring. It checks the transaction against the project's chain and EvidenceAnchor address before marking the receipt `anchored`.
+
+## Independent authority
+
+The service response is convenient, but a high-assurance verifier should independently download the current ZIP, check its SHA-256 and manifest signature, fetch the Flare transaction receipt, require successful execution, require the expected EvidenceAnchor address and compare the decoded event hash.
+
+If an anchor lookup is unavailable, do not interpret that operational condition as a successful onchain match.
+
+---
+
+# Financial artifact API
+
+Canonical URL: https://docs.proofrails.com/api-reference/iso-artifacts
+Description: Retrieve and generate ISO 20022-style receipt artifacts.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Financial artifact API
+
+## List artifacts for a receipt
+
+```http
+GET /v1/iso/messages/{rid}
+```
+
+This public route returns artifact records with message type, URL, optional hash and creation time.
+
+## Workflow-specific generators
+
+The hosted OpenAPI exposes:
+
+```http
+POST /v1/iso/camt029/{receipt_id}
+POST /v1/iso/camt056/{receipt_id}
+POST /v1/iso/pacs007/{receipt_id}
+POST /v1/iso/pacs009/{receipt_id}
+POST /v1/iso/refund
+```
+
+The operation bodies and authentication requirements differ. Generate a client from the live OpenAPI or inspect the corresponding schema before calling one.
+
+These endpoints create records and files. They do not cancel, reverse, refund or transfer blockchain funds merely because the message name represents such a financial workflow. Any actual value movement requires a separate authorized payment or contract action.
+
+## Integrity handling
+
+When an artifact record provides `sha256`, recompute it over the downloaded bytes. Do not assume every artifact returned by this route is inside the anchored evidence ZIP. In the validated x402 receipt, `pain.002` and `camt.054` were served after anchoring and were outside the ZIP committed by the anchor.
+
+All files are ISO 20022-style artifacts. Institutional conformance requires separate validation against the target schema and usage rules.
+
+---
+
+# Projects API
+
+Canonical URL: https://docs.proofrails.com/api-reference/projects
+Description: Project registration, access boundaries and anchoring configuration.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Projects API
+
+A project is the tenant boundary for API keys, receipts, agents and configuration.
+
+## Register
+
+```http
+POST /v1/projects/register
+```
+
+Registration uses a fresh SIWE nonce, complete EIP-4361 message and wallet signature. It returns the project plus one raw API key. See [Authentication and API keys](/api-reference/authentication).
+
+## List accessible projects
+
+```http
+GET /v1/projects
+X-API-Key: <project-key>
+```
+
+A project principal sees its own project. A service administrator can see broader scope.
+
+## Read configuration
+
+```http
+GET /v1/projects/{project_id}/config
+X-API-Key: <project-key>
+```
+
+## Update configuration
+
+```http
+PUT /v1/projects/{project_id}/config
+X-API-Key: <project-admin-key>
+Content-Type: application/json
+```
+
+Project configuration controls anchoring mode and chain-specific settings. `platform` mode delegates anchoring to the ProofRails worker. `tenant` mode requires the project to submit and confirm its own anchor transaction.
+
+Never copy the hosted ProofRails contract addresses into a different deployment without verifying that the deployment is intentionally authorized to use them.
+
+---
+
+# x402 API reference
+
+Canonical URL: https://docs.proofrails.com/api-reference/x402
+Description: Standard paid-request behavior and the related hosted management routes.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# x402 API reference
+
+## Standard paid endpoint
+
+```http
+POST /v1/x402/premium/fx-lookup
+```
+
+Without payment, the endpoint returns HTTP 402 and `PAYMENT-REQUIRED`. With a valid `PAYMENT-SIGNATURE`, it settles the accepted authorization, executes the handler and returns HTTP 200 with `PAYMENT-RESPONSE`.
+
+See [x402 client integration](/x402/client-integration) for the complete exchange and real-value warning.
+
+## Other premium routes
+
+The live OpenAPI currently lists:
+
+```http
+POST /v1/x402/premium/verify-bundle
+POST /v1/x402/premium/generate-statement
+GET  /v1/x402/premium/iso-message/{receipt_id}/{type}
+POST /v1/x402/premium/bulk-verify
+POST /v1/x402/premium/refund
+```
+
+Do not assume every premium route has completed the same end-to-end validation as FX lookup. Inspect each 402 response and allow only expected payment tuples.
+
+## Payment records
+
+Project-authenticated routes:
+
+```http
+GET  /v1/x402/payments
+GET  /v1/x402/payments/{payment_id}
+POST /v1/x402/payments/{payment_id}/receipt
+GET  /v1/x402/payments/{payment_id}/compliance-checks
+```
+
+## Configuration and diagnostics
+
+```http
+GET  /v1/x402/pricing
+POST /v1/x402/pricing
+GET  /v1/x402/revenue
+GET  /v1/x402/facilitator-config
+POST /v1/x402/verify-payment
+```
+
+Pricing writes, revenue and facilitator configuration require elevated access. `verify-payment` is an application diagnostic route. It is not a generic public x402 facilitator `/verify` service.
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
+
+---
+
+# Agent management API
+
+Canonical URL: https://docs.proofrails.com/api-reference/agents
+Description: Optional project records for agent identities, settings, usage and anchoring.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Agent management API
+
+Agent records are optional management objects. An automated client does not need to register an agent before using the Receipt API or an x402 paid endpoint.
+
+## Core records
+
+```http
+POST   /v1/agents
+GET    /v1/agents
+GET    /v1/agents/{agent_id}
+PUT    /v1/agents/{agent_id}
+DELETE /v1/agents/{agent_id}
+GET    /v1/agents/{agent_id}/stats
+```
+
+Registration requires `name` and `wallet_address`; it can also include `xmtp_address` and `pricing_rules`. Every operation requires a project API key and enforces project ownership unless the principal is a service administrator.
+
+## Tests and configuration
+
+```http
+POST /v1/agents/{agent_id}/test
+POST /v1/agents/{agent_id}/test-ai
+PUT  /v1/agents/{agent_id}/ai-config
+POST /v1/agents/{agent_id}/download-template
+PUT  /v1/agents/{agent_id}/anchoring-config
+```
+
+## Agent anchor records
+
+```http
+POST /v1/agents/{agent_id}/anchor
+GET  /v1/agents/{agent_id}/anchors
+GET  /v1/agents/{agent_id}/activity-unified
+```
+
+These routes manage project data around an agent. They do not authorize the service to use an agent's payment wallet or private key.
+
+Treat AI-provider credentials as secrets outside ProofRails. Do not use the agent-record API as a substitute for a dedicated secret manager.
+
+---
+
+# Errors, retries and reconciliation
+
+Canonical URL: https://docs.proofrails.com/api-reference/errors-retries
+Description: Handle API failures, receipt polling and x402 timeouts without duplicate payments.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Errors, retries and reconciliation
+
+The API does not yet use one universal error envelope. Always preserve the HTTP status, safe response body and `X-Request-ID` when available.
+
+| Condition | Client behavior |
+|---|---|
+| `400` | Fix the request. Do not retry unchanged data. |
+| `401` or `403` | Fix the credential, project or role. Do not retry automatically. |
+| `402` | Decode requirements and validate the complete payment tuple before signing. |
+| `404` | Check the route and identifier. Treat a missing receipt separately from a pending receipt. |
+| `409 nonce_already_used` | Reconcile the existing payment. Never authorize a second payment automatically. |
+| `422` | Fix schema validation errors. Do not retry unchanged data. |
+| `429` | Honor `Retry-After` when supplied and use bounded backoff. |
+| `5xx` before signing | Retry only with bounded exponential backoff and jitter. |
+| Timeout or `5xx` after signing | Reconcile the nonce, payment ID, transaction and receipt before any further action. |
+
+## Receipt writes
+
+Receipt creation is deduplicated by the chain/transaction pair and by `reference`. Reuse both values when the response to a write is lost. The hosted contract does not currently define a separate `Idempotency-Key` retention guarantee.
+
+## Receipt polling
+
+Poll `GET /v1/iso/receipts/{rid}` with a bounded interval. Stop at `anchored` or `failed`. A timeout in your poller does not change the receipt state and does not justify resubmitting a payment.
+
+## x402 recovery rule
+
+Once a signed authorization may have reached the server, do not create another authorization merely because the HTTP response was lost. Check the EIP-3009 nonce, facilitator payment record, settlement transaction, x402 payment listings and receipt records first.
+
+A 409 replay response is evidence that the nonce is already consumed, not an instruction to generate a replacement payment.
+
+---
+
+# System architecture
+
+Canonical URL: https://docs.proofrails.com/architecture/system-overview
+Description: See how API requests, workers, storage, signing and Flare contracts fit together.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# System architecture
+
+[Diagram: ProofRails hosted architecture showing API, worker, database, artifact storage and Flare contracts]
+
+## Request layer
+
+The FastAPI service exposes receipt, verification, project, agent and x402 routes. It authenticates project writes, stores the initial receipt and queues background work.
+
+## Processing layer
+
+An RQ worker consumes receipt jobs from Redis. It generates artifacts, writes the manifest, signs it, creates `evidence.zip`, computes the bundle hash and submits or waits for the anchor depending on project mode.
+
+## Data layer
+
+PostgreSQL stores projects, API keys, receipts, ISO artifacts, chain anchors, x402 payments and operational records. Artifact storage holds XML, JSON, signatures and evidence ZIPs. Public URLs expose the files required for receipt verification.
+
+## Onchain layer
+
+EvidenceAnchor records bundle-hash commitments. The integrated X402Facilitator settles supported USD₮0 authorizations for ProofRails payment-gated endpoints on Flare.
+
+## User surfaces
+
+The hosted application provides project and receipt workflows. The public verifier reads receipt and evidence data. API clients and AI agents use the same REST and x402 interfaces.
+
+## Self-hosted boundary
+
+A self-hosted deployment must configure its own database, Redis, workers, public base URL, artifact storage, signing key, RPC endpoints and contract addresses. The public ProofRails addresses are not defaults for an unrelated deployment.
+
+---
+
+# Evidence and trust model
+
+Canonical URL: https://docs.proofrails.com/architecture/evidence-model
+Description: Identify each proof layer, what it checks and what remains an external assumption.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Evidence and trust model
+
+ProofRails uses separate integrity checks because each one answers a different question.
+
+[Diagram: Receipt files are hashed into a signed manifest, packaged into an evidence ZIP and committed on Flare]
+
+| Layer | Check | What it establishes |
+|---|---|---|
+| Payment reference | Compare chain, transaction, token, amount and parties with chain data. | The cited settlement facts match the network record. |
+| Resource hash | SHA-256 the delivered bytes. | The available resource matches the bytes bound to the receipt. |
+| File hashes | Recompute entries in `manifest.json`. | Individual evidence files have not changed. |
+| Manifest signature | Verify Ed25519 signature with `public_key.pem`. | The manifest was signed by the corresponding private key. |
+| Bundle hash | SHA-256 the final ZIP bytes. | The downloaded bundle has a stable digest. |
+| Onchain anchor | Decode `EvidenceAnchored` and compare `bundleHash`. | The same digest was committed by the event timestamp. |
+
+## External assumptions
+
+ProofRails cannot derive these facts from hashes:
+
+- legal identity behind a wallet;
+- authority to pay or sell;
+- accuracy of supplied descriptions or references;
+- whether delivered content met a contract;
+- tax, accounting or regulatory treatment;
+- institutional acceptance of an ISO 20022-style artifact.
+
+Integrations should preserve the original source data and record how it was obtained. Evidence integrity is strongest when a verifier can recompute payment, resource, file, signature, bundle and anchor checks independently.
+
+---
+
+# Verify a Flare anchor
+
+Canonical URL: https://docs.proofrails.com/guides/flare-anchoring
+Description: Decode EvidenceAnchored and compare it with the current evidence ZIP.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Verify a Flare anchor
+
+The hosted EvidenceAnchor is `0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA` on Flare mainnet, chain ID `14`.
+
+## Read-only viem check
+
+```js
+import { createPublicClient, defineChain, http, keccak256, toBytes } from 'viem';
+
+const flare = defineChain({
+  id: 14,
+  name: 'Flare',
+  nativeCurrency: { name: 'Flare', symbol: 'FLR', decimals: 18 },
+  rpcUrls: { default: { http: ['https://flare-api.flare.network/ext/C/rpc'] } },
+});
+
+const client = createPublicClient({ chain: flare, transport: http() });
+const receipt = await client.getTransactionReceipt({ hash: process.env.ANCHOR_TX });
+if (receipt.status !== 'success') throw new Error('Anchor transaction failed');
+
+const expected = '0x235f83a74fc9D759D648eC533d2c06712F3Ca5EA'.toLowerCase();
+const topic0 = keccak256(toBytes('EvidenceAnchored(bytes32,address,uint256)'));
+const log = receipt.logs.find((item) =>
+  item.address.toLowerCase() === expected && item.topics[0] === topic0
+);
+if (!log) throw new Error('Expected EvidenceAnchored event not found');
+
+const eventBundleHash = `0x${log.data.slice(2, 66)}`;
+if (eventBundleHash.toLowerCase() !== process.env.BUNDLE_HASH.toLowerCase()) {
+  throw new Error('Bundle hash mismatch');
+}
+```
+
+Also require the transaction's chain, contract address and block confirmation policy. Compare the event value with a locally computed SHA-256 of the current ZIP, not only with a value copied from the receipt API.
+
+`anchorEvidence` is a state-changing contract call. The example above performs only JSON-RPC reads. Submitting an anchor requires the deployment's signer authorization and gas policy.
+
+---
+
+# Operated deployment
+
+Canonical URL: https://docs.proofrails.com/guides/production-deployment
+Description: Components, configuration and acceptance checks for a self-hosted ProofRails service.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Operated deployment
+
+The API process alone is insufficient for a self-hosted ProofRails service.
+
+## Required components
+
+- FastAPI service behind TLS;
+- PostgreSQL with migrations and backups;
+- Redis and RQ workers;
+- durable artifact storage with a correct public base URL;
+- Ed25519 bundle-signing key;
+- Flare RPC and configured EvidenceAnchor contract;
+- anchor signer and gas policy when platform anchoring is enabled;
+- secret storage for API, signer and infrastructure credentials;
+- health checks, structured logs, metrics and alerting.
+
+## Configuration boundaries
+
+Keep chain ID, token address, contract address, recipient and minimum amount in environment-specific configuration. Validate the complete tuple at startup and expose a safe read-only configuration summary without secrets.
+
+Do not copy the hosted ProofRails signer or contract ownership model into another deployment. A self-hosted operator is responsible for its own keys, contracts, funds and recovery procedures.
+
+## Acceptance checks
+
+Before traffic:
+
+1. Apply database migrations and verify rollback instructions.
+2. Start API and worker processes and confirm Redis connectivity.
+3. Create a non-value receipt and observe worker completion.
+4. Download the current bundle and verify every manifest entry and signature.
+5. Confirm the configured EvidenceAnchor event on the intended chain.
+6. Require exact equality between current ZIP hash, receipt hash and event hash.
+7. Confirm public URLs do not resolve to localhost or a private hostname.
+8. Test backup restoration and artifact retention.
+9. Verify rate limits, authorization boundaries and log redaction.
+10. Exercise a rollback without deleting receipt or anchor evidence.
+
+A health endpoint alone does not demonstrate the complete evidence path.
+
+---
+
+# Key management
+
+Canonical URL: https://docs.proofrails.com/security/key-management
+Description: Separate API, wallet, signing, anchoring and contract-owner credentials.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Key management
+
+ProofRails uses several unrelated credential classes. Do not reuse one key across them.
+
+| Credential | Purpose | Owner |
+|---|---|---|
+| Project API key | Authenticate project API operations. | Project operator. |
+| SIWE wallet | Register a project and recover API access. | Project owner. |
+| Bundle Ed25519 key | Sign canonical evidence manifests. | Hosted service or self-hosted operator. |
+| Anchor signer | Submit EvidenceAnchor transactions. | Platform or tenant, according to project mode. |
+| x402 payer wallet | Sign EIP-3009 payment authorizations. | Paying client. |
+| x402 server settler | Submit accepted authorizations and pay gas in server-submitted mode. | ProofRails hosted operator. |
+| Contract owner | Manage supported tokens, minimums and pause state. | Contract operator or multisig. |
+
+## Handling rules
+
+- Store secrets in a dedicated secret manager.
+- Keep API and private keys out of repositories, browser code, logs and AI prompts.
+- Use separate development and live credentials.
+- Restrict signing processes to the smallest required operation.
+- Rotate API keys with overlap, then revoke the old key.
+- Maintain documented recovery for anchor and contract-owner keys.
+- Monitor unexpected contract-owner and settlement activity.
+
+Contract addresses, recipients and token addresses are public configuration, not secrets. They still require integrity checks because changing one can redirect value or verification.
+
+The public key inside an evidence ZIP proves signature self-consistency. A relying party needs a separately trusted fingerprint or distribution channel to bind that key to a particular operator.
+
+---
+
+# Security and limitations
+
+Canonical URL: https://docs.proofrails.com/security/limitations
+Description: Operational risks and the exact boundaries of ProofRails evidence.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Security and limitations
+
+## Evidence boundaries
+
+- A settlement proves the chain recorded a value transfer under its consensus rules.
+- A resource hash proves equality with available bytes, not their quality or correctness.
+- A manifest signature proves control of the corresponding private key, not external identity unless the public key is trusted separately.
+- An anchor proves integrity and timing of a committed hash, not offchain truth or legal sufficiency.
+- ISO 20022-style artifacts are not certification for an institution or market practice.
+
+## x402 risks
+
+The public `settlePayment` contract function can be called by anyone who obtains a valid signed authorization. The recipient is cryptographically bound, but early submission can create timing or griefing risk. Keep authorizations short-lived and transmit them only to the intended service.
+
+A timeout after signing can occur after settlement. Reconcile the EIP-3009 nonce, facilitator payment record and transaction before any retry. Never create a replacement payment automatically.
+
+The hosted x402 path spends real USD₮0 on Flare mainnet. Verify chain ID, token address, recipient, amount, facilitator and validity window before signing.
+
+## API and deployment limits
+
+The current OpenAPI omits security schemes and does not model every runtime error or x402 header. Use the documented authorization matrix and test generated clients.
+
+Public receipt and artifact URLs are intentionally shareable. Do not place confidential business data in fields or files intended for public verification.
+
+Self-hosted operators are responsible for database access, artifact retention, signing keys, anchor keys, contract ownership, rate limits, monitoring, backup restoration and incident response.
+
+## Unsupported conclusions
+
+ProofRails does not establish legal identity, authority to transact, contractual performance, tax treatment, sanctions status, accounting classification or regulatory compliance.
+
+---
+
+# Agent workflows
+
+Canonical URL: https://docs.proofrails.com/guides/agent-workflows
+Description: Reliable patterns for agents that create receipts or buy x402 resources.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Agent workflows
+
+## Record a completed payment
+
+1. Create a stable business reference before calling ProofRails.
+2. Submit only the deployed `TipRecordRequest` fields.
+3. Persist `receipt_id`, transaction hash and reference atomically.
+4. Poll the public receipt route until `anchored` or `failed`.
+5. Download and verify the current bundle.
+6. Store the verification result with the task log.
+
+If the write response is lost, retry with the same chain, transaction hash and reference. ProofRails returns the existing receipt for those duplicate identities.
+
+## Buy an x402 resource
+
+1. Send an unsigned request to obtain the 402 challenge.
+2. Validate network, asset contract, amount, recipient, facilitator and deadline against policy.
+3. Require explicit value authorization.
+4. Sign once and retry the same request.
+5. Persist the authorization nonce before transmission.
+6. Parse `PAYMENT-RESPONSE` and store its transaction and `receiptId`.
+7. If the HTTP response is lost, reconcile onchain state before doing anything else.
+8. Poll the receipt until `anchored`.
+
+The hosted x402 path uses real USD₮0 on Flare mainnet. Automatic repayment after a timeout is unsafe.
+
+## Data model for an agent run
+
+At minimum, retain:
+
+```json
+{
+  "task_id": "task-1842",
+  "business_reference": "order-1842",
+  "payment_transaction": "0x...",
+  "payment_nonce": "0x...",
+  "receipt_id": "<uuid>",
+  "resource_hash": "0x...",
+  "bundle_hash": "0x...",
+  "anchor_transaction": "0x...",
+  "verification_status": "anchored-and-matched"
+}
+```
+
+Do not store private keys, API keys or raw reusable signatures in the task record.
+
+---
+
+# Machine-readable documentation
+
+Canonical URL: https://docs.proofrails.com/agents/machine-readable-docs
+Description: Discovery endpoints and deterministic artifacts for AI and generated clients.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Machine-readable documentation
+
+ProofRails publishes compact discovery files alongside the human documentation.
+
+| Artifact | Purpose |
+|---|---|
+| `/llms.txt` | Curated product, API, safety and starting-point index. |
+| `/llms-full.txt` | Documentation corpus in navigation order without HTML chrome. |
+| `/.well-known/proofrails.json` | Service, authentication, registry and safety manifest. |
+| `/contracts.json` | Exact chain, contract and token identity tuples. |
+| `/capabilities.json` | Hosted capability and limitation registry. |
+| `/sitemap.json` | Structured page index with titles, descriptions and document classes. |
+| `/sitemap.xml` | Standard search-engine sitemap. |
+
+## Canonical runtime schema
+
+The hosted OpenAPI document remains the source for deployed routes and JSON schemas:
+
+```text
+https://app.proofrails.com/openapi.json
+```
+
+It currently omits some authentication declarations and x402 response headers. Agents must combine it with the API authentication and x402 reference pages rather than guessing.
+
+## Consumption rules
+
+1. Read `/.well-known/proofrails.json` first.
+2. Fetch `openapi.json` and require the target operation.
+3. Read `capabilities.json` for hosted scope and known limitations.
+4. Read `contracts.json` before any chain or token action.
+5. Use `llms-full.txt` for semantic retrieval, not as an authorization source.
+6. Require a human or policy gate before any value-bearing x402 call.
+
+Machine-readable files never contain API keys, private keys, funded-wallet defaults or reusable payment authorizations.
+
+---
+
+# Client libraries
+
+Canonical URL: https://docs.proofrails.com/guides/sdks
+Description: Choose raw HTTP, generated OpenAPI clients or the official x402 packages.
+Evidence status: code-verified
+Last verified: 2026-07-29
+
+# Client libraries
+
+## REST API
+
+Raw HTTP is the canonical ProofRails integration because it follows the deployed OpenAPI directly. Generate a client from:
+
+```text
+https://app.proofrails.com/openapi.json
+```
+
+Review the generated client because the current document does not declare `X-API-Key` security and does not model x402 402 headers.
+
+## Official x402 client
+
+Use the pinned packages for the validated Flare paid-request path:
+
+```bash
+npm install @x402/fetch@2.19.0 @x402/evm@2.19.0 viem
+```
+
+These packages perform the standard 402 challenge and signed retry. They do not verify the resulting ProofRails evidence bundle for you.
+
+See [x402 client integration](/x402/client-integration).
+
+## Repository SDKs
+
+The source repository contains TypeScript and Python SDK implementations. Public package-registry publication and version parity with the hosted API are not asserted here. If you use them from source, pin the exact commit, inspect the methods against the live OpenAPI and run your own compatibility tests.
+
+Do not use placeholder API keys in executable examples. Load `PROOFRAILS_API_KEY` from a server-side secret manager.

@@ -1,0 +1,60 @@
+---
+title: Verification API
+description: Verify a bundle URL, expected hash, CID or confirmed tenant anchor.
+---
+
+# Verification API
+
+Verification routes are public unless stated otherwise.
+
+## Verify a bundle
+
+```http
+POST /v1/iso/verify
+Content-Type: application/json
+```
+
+```json
+{
+  "bundle_url": "https://app.proofrails.com/files/<receipt_id>/evidence.zip",
+  "bundle_hash": "0xOPTIONAL_EXPECTED_HASH",
+  "txid": "0xOPTIONAL_ANCHOR_TRANSACTION"
+}
+```
+
+At least one supported locator must be supplied. The response includes:
+
+```json
+{
+  "matches_onchain": true,
+  "bundle_hash": "0x...",
+  "flare_txid": "0x...",
+  "anchored_at": "2026-07-29T10:13:26Z",
+  "errors": []
+}
+```
+
+Treat a non-empty `errors` array as incomplete verification even if another field is truthy.
+
+## Verify a content-addressed bundle
+
+```http
+POST /v1/iso/verify-cid
+```
+
+This route resolves the supplied content identifier through configured storage and applies the verifier. Availability depends on the hosted storage configuration.
+
+## Confirm a tenant-submitted anchor
+
+```http
+POST /v1/iso/confirm-anchor
+X-API-Key: <project-admin-key>
+```
+
+This route is for projects configured for tenant anchoring. It checks the transaction against the project's chain and EvidenceAnchor address before marking the receipt `anchored`.
+
+## Independent authority
+
+The service response is convenient, but a high-assurance verifier should independently download the current ZIP, check its SHA-256 and manifest signature, fetch the Flare transaction receipt, require successful execution, require the expected EvidenceAnchor address and compare the decoded event hash.
+
+If an anchor lookup is unavailable, do not interpret that operational condition as a successful onchain match.

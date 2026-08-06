@@ -1,0 +1,55 @@
+---
+title: x402 API reference
+description: Standard paid-request behavior and the related hosted management routes.
+---
+
+# x402 API reference
+
+## Standard paid endpoint
+
+```http
+POST /v1/x402/premium/fx-lookup
+```
+
+Without payment, the endpoint returns HTTP 402 and `PAYMENT-REQUIRED`. With a valid `PAYMENT-SIGNATURE`, it settles the accepted authorization, executes the handler and returns HTTP 200 with `PAYMENT-RESPONSE`.
+
+See [x402 client integration](/x402/client-integration) for the complete exchange and real-value warning.
+
+## Other premium routes
+
+The live OpenAPI currently lists:
+
+```http
+POST /v1/x402/premium/verify-bundle
+POST /v1/x402/premium/generate-statement
+GET  /v1/x402/premium/iso-message/{receipt_id}/{type}
+POST /v1/x402/premium/bulk-verify
+POST /v1/x402/premium/refund
+```
+
+Do not assume every premium route has completed the same end-to-end validation as FX lookup. Inspect each 402 response and allow only expected payment tuples.
+
+## Payment records
+
+Project-authenticated routes:
+
+```http
+GET  /v1/x402/payments
+GET  /v1/x402/payments/{payment_id}
+POST /v1/x402/payments/{payment_id}/receipt
+GET  /v1/x402/payments/{payment_id}/compliance-checks
+```
+
+## Configuration and diagnostics
+
+```http
+GET  /v1/x402/pricing
+POST /v1/x402/pricing
+GET  /v1/x402/revenue
+GET  /v1/x402/facilitator-config
+POST /v1/x402/verify-payment
+```
+
+Pricing writes, revenue and facilitator configuration require elevated access. `verify-payment` is an application diagnostic route. It is not a generic public x402 facilitator `/verify` service.
+
+ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.

@@ -1,25 +1,6 @@
 # iso-middleware-sdk (TypeScript)
 
-> **📊 Implementation Status**: See project root [docs/FEATURE_STATUS.md](../../docs/FEATURE_STATUS.md) for comprehensive tracking.
-
-This is a minimal TypeScript client used by `web-alt/`.
-
-It is intentionally lightweight and **calls the backend via a baseUrl** (in `web-alt`, baseUrl is `/api/proxy` so auth cookies never enter browser JS).
-
-## Feature Support
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| List Receipts | ✅ | With scope (mine/all) |
-| Get Receipt | ✅ | Full receipt details |
-| Verify Bundle | ✅ | URL and hash-based |
-| Verify CID | ✅ | IPFS/Arweave support |
-| Confirm Anchor | ✅ | Tenant-mode anchoring |
-| Get Anchors | ✅ | Multi-chain anchor list |
-| Project Config | ✅ | Get/put per-project |
-| Statements | ⚠️ | Not exposed (backend ✅) |
-| Refund | 🔜 | Being implemented |
-| Contract ABIs | ✅ | EvidenceAnchor & Factory |
+TypeScript client for the ProofRails API. Used by `web-alt/` with `baseUrl: "/api/proxy"` so API keys stay server-side.
 
 ## Build
 
@@ -27,126 +8,171 @@ It is intentionally lightweight and **calls the backend via a baseUrl** (in `web
 npm --prefix packages/sdk run build
 ```
 
-## Usage
+## Install
+
+This package is consumed as a workspace dependency. In `web-alt/package.json`:
+```json
+{ "iso-middleware-sdk": "*" }
+```
+
+## Quick start
 
 ```ts
 import IsoMiddlewareClient from "iso-middleware-sdk";
 
-const api = new IsoMiddlewareClient({ baseUrl: "http://127.0.0.1:8000", apiKey: "..." });
+const api = new IsoMiddlewareClient({
+  baseUrl: "http://localhost:8000",
+  apiKey: process.env.API_KEY,
+});
+
 const page = await api.listReceipts({ page: 1, page_size: 10, scope: "mine" });
+console.log(page.items);
 ```
 
-## API Methods
+## API methods
 
 ### Receipts
+
 ```ts
-// List receipts with pagination and scope
-await api.listReceipts({ page: 1, page_size: 10, scope: "mine" | "all" });
+// List receipts (paginated)
+const page = await api.listReceipts({ page: 1, page_size: 20, scope: "mine" });
+// page: { items, total, page, page_size }
 
-// Get specific receipt
-await api.getReceipt(receiptId);
+// Get one receipt
+const receipt = await api.getReceipt("receipt-uuid");
 
-// Get per-chain anchors
-await api.getAnchors(receiptId);
+// Lightweight status poll (no ISO XML blobs)
+const status = await api.getReceiptStatus("receipt-uuid");
+
+// Per-chain anchor txids
+const anchors = await api.getAnchors("receipt-uuid");
 ```
 
 ### Verification
+
 ```ts
-// Verify bundle by URL
 await api.verifyBundle({ bundle_url: "https://..." });
-
-// Verify bundle by hash
 await api.verifyBundle({ bundle_hash: "0x..." });
-
-// Verify CID (IPFS/Arweave)
 await api.verifyCid({ cid: "Qm...", store: "ipfs", receipt_id: "..." });
 ```
 
-### Tenant Anchoring
-```ts
-// Confirm anchor after manual on-chain submission
-await api.confirmAnchor({ receipt_id: "...", chain: "flare", flare_txid: "0x..." });
-```
-
-### Project Configuration
-```ts
-// Get project configuration
-const config = await api.getProjectConfig(projectId);
-
-// Update project configuration
-await api.putProjectConfig(projectId, updatedConfig);
-```
-
-### Refunds
-```ts
-// Initiate a refund for an anchored receipt
-const result = await api.refund({
-  original_receipt_id: "receipt-uuid",
-  reason_code: "CUST"  // Optional: CUST, DUPL, TECH, FRAD
-});
-
-console.log(`Refund receipt ID: ${result.refund_receipt_id}`);
-console.log(`Status: ${result.status}`);
-```
-
 ### Statements
-```ts
-// Generate daily statement
-const daily = await api.camt053("2026-01-19");
 
-// Generate intraday statement  
+```ts
+const daily = await api.camt053("2026-01-19");
 const intraday = await api.camt052("2026-01-19", "09:00-17:00");
 ```
 
-## Self-hosted Anchoring (Tenant Mode) ✅
-
-In tenant mode, the middleware **does not** broadcast on-chain transactions. Instead it:
-1) generates the evidence bundle → receipt becomes `awaiting_anchor`
-2) you (tenant) anchor the `bundle_hash` on an EVM chain using your own contract
-3) you call `POST /v1/iso/confirm-anchor` so the middleware can trustlessly validate the tx log and mark the receipt anchored.
-
-The SDK exports minimal ABIs so you can use `ethers`/`web3`:
+### Refunds
 
 ```ts
-import IsoMiddlewareClient, { EvidenceAnchorAbi, EvidenceAnchorFactoryAbi } from "iso-middleware-sdk";
-
-// Use ethers in your app (not bundled into this SDK)
-import { BrowserProvider, Contract } from "ethers";
-
-const api = new IsoMiddlewareClient({ baseUrl: "http://127.0.0.1:8000", apiKey: process.env.API_KEY });
-
-// 1) Deploy (optional) via factory:
-const provider = new BrowserProvider((window as any).ethereum);
-const signer = await provider.getSigner();
-const factory = new Contract("0x<factory>", EvidenceAnchorFactoryAbi, signer);
-const deployTx = await factory.deploy();
-const deployRcpt = await deployTx.wait();
-
-// 2) Anchor evidence on your deployed EvidenceAnchor:
-const anchor = new Contract("0x<anchor>", EvidenceAnchorAbi, signer);
-const tx = await anchor.anchorEvidence("0x<bundle_hash>");
-await tx.wait();
-
-// 3) Confirm back to middleware (per configured chain name):
-await api.confirmAnchor({ receipt_id: "<rid>", chain: "polygon", flare_txid: tx.hash });
+const result = await api.refund({
+  original_receipt_id: "receipt-uuid",
+  reason_code: "CUST",  // CUST | DUPL | TECH | FRAD
+});
+// result: { refund_receipt_id, status }
 ```
 
-Multi-chain is supported: configure `project.config.anchoring.chains[]` with multiple EVM contracts and submit a confirm for each.
+### Tenant anchoring (self-hosted mode)
 
-## Integration with web-alt UI
+```ts
+// Confirm an on-chain anchor you submitted yourself
+await api.confirmAnchor({
+  receipt_id: "receipt-uuid",
+  chain: "flare",
+  flare_txid: "0x...",
+});
+```
 
-The `web-alt` Next.js application uses this SDK internally with `baseUrl: "/api/proxy"` to ensure API keys remain secure in httpOnly cookies and never enter browser JavaScript.
+### Project configuration
 
-See [web-alt/README-web-alt.md](../../web-alt/README-web-alt.md) for UI integration details.
+```ts
+const config = await api.getProjectConfig("project-uuid");
+await api.putProjectConfig("project-uuid", {
+  anchoring: {
+    execution_mode: "platform",  // or "tenant"
+    chains: [{ name: "flare", contract: "0x...", rpc_url: "..." }],
+  },
+});
+```
 
-## Contributing
+### Agent CRUD
 
-When adding new features:
-1. Add the method to `src/index.ts`
-2. Export types from `src/contracts.ts` if needed
-3. Update this README with examples
-4. Update [docs/FEATURE_STATUS.md](../../docs/FEATURE_STATUS.md)
-5. Test in web-alt application
+```ts
+const agent = await api.createAgent({
+  name: "My Agent",
+  wallet_address: "0x...",
+  xmtp_address: "0x...",
+});
+
+const agents = await api.listAgents();
+const agent = await api.getAgent("agent-uuid");
+await api.updateAgent("agent-uuid", { name: "Renamed" });
+await api.deleteAgent("agent-uuid");
+```
+
+### Agent anchoring config
+
+```ts
+const config = await api.getAgentAnchoringConfig("agent-uuid");
+
+await api.updateAgentAnchoringConfig("agent-uuid", {
+  auto_anchor_enabled: true,
+  anchor_on_payment: false,
+  anchor_wallet_address: "0x...",
+  // anchor_private_key: "0x..."  — stored encrypted server-side
+});
+```
+
+### Agent anchor data
+
+```ts
+// Hash arbitrary JSON and optionally submit on-chain
+const result = await api.anchorAgentData("agent-uuid", {
+  data: { invoice_id: "INV-001", amount: "100.00" },
+  description: "Invoice proof",
+  chain: "flare",           // flare | coston2 | base | sepolia
+  submit_onchain: true,
+});
+// result: { id, agent_id, anchor_hash, chain, status, submit_onchain }
+
+// List recent anchor records
+const records = await api.listAgentAnchors("agent-uuid", 7);  // last 7 days
+```
+
+### x402 analytics
+
+```ts
+const payments = await api.listX402Payments(50);   // last N payments
+const revenue = await api.getX402Revenue(7);        // last 7 days
+// revenue: { total_revenue, payment_count, days, by_endpoint }
+```
+
+## Tenant anchoring — full example
+
+```ts
+import IsoMiddlewareClient, { EvidenceAnchorAbi } from "iso-middleware-sdk";
+import { BrowserProvider, Contract } from "ethers";
+
+const api = new IsoMiddlewareClient({ baseUrl: "http://localhost:8000", apiKey: "..." });
+
+// 1. Get the bundle hash from a receipt
+const receipt = await api.getReceipt("receipt-uuid");
+
+// 2. Anchor on-chain yourself
+const provider = new BrowserProvider((window as any).ethereum);
+const signer = await provider.getSigner();
+const contract = new Contract("0x<anchor-contract>", EvidenceAnchorAbi, signer);
+const tx = await contract.anchorEvidence(receipt.bundle_hash);
+await tx.wait();
+
+// 3. Confirm back to the middleware
+await api.confirmAnchor({
+  receipt_id: receipt.id,
+  chain: "flare",
+  flare_txid: tx.hash,
+});
+```
 
 ## License
 

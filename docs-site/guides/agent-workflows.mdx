@@ -1,0 +1,50 @@
+---
+title: Agent workflows
+description: Reliable patterns for agents that create receipts or buy x402 resources.
+---
+
+# Agent workflows
+
+## Record a completed payment
+
+1. Create a stable business reference before calling ProofRails.
+2. Submit only the deployed `TipRecordRequest` fields.
+3. Persist `receipt_id`, transaction hash and reference atomically.
+4. Poll the public receipt route until `anchored` or `failed`.
+5. Download and verify the current bundle.
+6. Store the verification result with the task log.
+
+If the write response is lost, retry with the same chain, transaction hash and reference. ProofRails returns the existing receipt for those duplicate identities.
+
+## Buy an x402 resource
+
+1. Send an unsigned request to obtain the 402 challenge.
+2. Validate network, asset contract, amount, recipient, facilitator and deadline against policy.
+3. Require explicit value authorization.
+4. Sign once and retry the same request.
+5. Persist the authorization nonce before transmission.
+6. Parse `PAYMENT-RESPONSE` and store its transaction and `receiptId`.
+7. If the HTTP response is lost, reconcile onchain state before doing anything else.
+8. Poll the receipt until `anchored`.
+
+The hosted x402 path uses real USD₮0 on Flare mainnet. Automatic repayment after a timeout is unsafe.
+
+## Data model for an agent run
+
+At minimum, retain:
+
+```json
+{
+  "task_id": "task-1842",
+  "business_reference": "order-1842",
+  "payment_transaction": "0x...",
+  "payment_nonce": "0x...",
+  "receipt_id": "<uuid>",
+  "resource_hash": "0x...",
+  "bundle_hash": "0x...",
+  "anchor_transaction": "0x...",
+  "verification_status": "anchored-and-matched"
+}
+```
+
+Do not store private keys, API keys or raw reusable signatures in the task record.

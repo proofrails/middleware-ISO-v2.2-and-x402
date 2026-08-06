@@ -1,0 +1,34 @@
+# ProofRails
+
+> ProofRails turns onchain payments and paid API calls into receipts, delivery evidence, ISO 20022-style artifacts, signed evidence bundles and onchain hash commitments.
+
+## Canonical machine interfaces
+- API base: https://app.proofrails.com
+- OpenAPI: https://app.proofrails.com/openapi.json
+- Full documentation: https://docs.proofrails.com/llms-full.txt
+- Service manifest: https://docs.proofrails.com/.well-known/proofrails.json
+- Contract registry: https://docs.proofrails.com/contracts.json
+- Capability registry: https://docs.proofrails.com/capabilities.json
+- Structured sitemap: https://docs.proofrails.com/sitemap.json
+
+## Start here
+- Product model: https://docs.proofrails.com/product/how-it-works
+- Choose an integration: https://docs.proofrails.com/product/integration-options
+- Receipt API quickstart: https://docs.proofrails.com/quickstart
+- AI agent quickstart: https://docs.proofrails.com/agent-quickstart
+- x402 role: https://docs.proofrails.com/x402/overview
+- x402 client: https://docs.proofrails.com/x402/client-integration
+- Receipts API: https://docs.proofrails.com/api-reference/receipts
+- Errors and reconciliation: https://docs.proofrails.com/api-reference/errors-retries
+- Contracts: https://docs.proofrails.com/contracts/flare
+- Security: https://docs.proofrails.com/security/limitations
+
+## Critical boundaries
+- ProofRails operates an integrated x402 facilitator for its own payment-gated APIs; on Flare, USDT0 settlement uses the ProofRails X402Facilitator contract.
+- ProofRails does not expose a generic public facilitator for unrelated merchant APIs.
+- The hosted x402 path uses real USD₮0 on Flare mainnet, chain ID 14.
+- A hosted receipt is complete only when its current evidence-bundle hash is anchored.
+- Anchoring proves integrity and timing of the committed hash, not offchain truth or legal sufficiency.
+- Outputs are ISO 20022-style artifacts, not a compliance certification.
+- Base USDC and native FLR paths are experimental.
+- Never retry a payment automatically after signing or an uncertain settlement outcome.

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Onchain anchoring | ProofRails Docs</title><meta name="description" content="Understand the EvidenceAnchor contract, receipt completion rule and independent event check.">
+<link rel="canonical" href="https://docs.proofrails.com/concepts/anchoring"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a class="active" href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="onchain-anchoring">Onchain anchoring</h1>
+<p>ProofRails commits the SHA-256 of <code>evidence.zip</code> to an <code>EvidenceAnchor</code> contract on Flare.</p>
+<h2 id="contract-operation">Contract operation</h2>
+<p>The contract exposes one write function:</p>
+<pre><code class="language-solidity">function anchorEvidence(bytes32 bundleHash) external;
+</code></pre>
+<p>A successful call emits:</p>
+<pre><code class="language-solidity">event EvidenceAnchored(
+    bytes32 bundleHash,
+    address indexed sender,
+    uint256 ts
+);
+</code></pre>
+<p>The event stores the committed hash, the account that submitted it and the block timestamp.</p>
+<h2 id="hosted-completion-rule">Hosted completion rule</h2>
+<p>A hosted receipt is complete only when all of these values agree:</p>
+<ol>
+<li>SHA-256 of the current <code>evidence.zip</code>;</li>
+<li><code>bundle_hash</code> returned by the receipt API;</li>
+<li><code>bundleHash</code> decoded from the <code>EvidenceAnchored</code> event in <code>flare_txid</code>.</li>
+</ol>
+<p>Until that equality is confirmed, the receipt remains <code>pending</code>, <code>awaiting_anchor</code> or <code>failed</code>. An application must not display it as complete.</p>
+<h2 id="platform-and-tenant-modes">Platform and tenant modes</h2>
+<p>In platform mode, the ProofRails worker submits the anchor. In tenant mode, the project submits the transaction and calls <code>POST /v1/iso/confirm-anchor</code> with the receipt ID and transaction hash. The API verifies the event against the project's configured chain and contract before changing the receipt to <code>anchored</code>.</p>
+<h2 id="trust-boundary">Trust boundary</h2>
+<p>The anchor proves integrity and timing of the committed hash. It does not prove that offchain metadata is true, that the payer was legally authorized, or that the receipt satisfies an accounting, tax or regulatory requirement.</p></article><nav class="page-nav"><a href="/concepts/evidence-bundles"><span>Previous</span><strong>Evidence bundles</strong></a><a class="next" href="/concepts/iso-20022-artifacts"><span>Next</span><strong>ISO 20022-style artifacts</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

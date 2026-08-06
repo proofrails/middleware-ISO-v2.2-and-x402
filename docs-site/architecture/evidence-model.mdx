@@ -1,0 +1,32 @@
+---
+title: Evidence and trust model
+description: Identify each proof layer, what it checks and what remains an external assumption.
+---
+
+# Evidence and trust model
+
+ProofRails uses separate integrity checks because each one answers a different question.
+
+<img src="/assets/evidence-model.svg" alt="Receipt files are hashed into a signed manifest, packaged into an evidence ZIP and committed on Flare" />
+
+| Layer | Check | What it establishes |
+|---|---|---|
+| Payment reference | Compare chain, transaction, token, amount and parties with chain data. | The cited settlement facts match the network record. |
+| Resource hash | SHA-256 the delivered bytes. | The available resource matches the bytes bound to the receipt. |
+| File hashes | Recompute entries in `manifest.json`. | Individual evidence files have not changed. |
+| Manifest signature | Verify Ed25519 signature with `public_key.pem`. | The manifest was signed by the corresponding private key. |
+| Bundle hash | SHA-256 the final ZIP bytes. | The downloaded bundle has a stable digest. |
+| Onchain anchor | Decode `EvidenceAnchored` and compare `bundleHash`. | The same digest was committed by the event timestamp. |
+
+## External assumptions
+
+ProofRails cannot derive these facts from hashes:
+
+- legal identity behind a wallet;
+- authority to pay or sell;
+- accuracy of supplied descriptions or references;
+- whether delivered content met a contract;
+- tax, accounting or regulatory treatment;
+- institutional acceptance of an ISO 20022-style artifact.
+
+Integrations should preserve the original source data and record how it was obtained. Evidence integrity is strongest when a verifier can recompute payment, resource, file, signature, bundle and anchor checks independently.

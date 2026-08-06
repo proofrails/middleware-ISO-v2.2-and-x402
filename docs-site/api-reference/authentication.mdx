@@ -1,0 +1,72 @@
+---
+title: Authentication and API keys
+description: Register a project with SIWE and protect project-scoped API credentials.
+---
+
+# Authentication and API keys
+
+Use API keys for server-to-server access. Use Sign-In with Ethereum only for project registration or wallet-based key recovery.
+
+## Register a project
+
+1. Request a one-time nonce:
+
+```http
+GET /v1/auth/nonce
+```
+
+```json
+{"nonce":"<uuid>","domain":"app.proofrails.com"}
+```
+
+2. Build an EIP-4361 message for the returned domain and nonce. Include the wallet address, URI, version `1`, chain ID and issued-at time. Sign the complete message with the wallet that will own the project.
+
+3. Submit the message and signature:
+
+```http
+POST /v1/projects/register
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Acme payments",
+  "message": "<complete EIP-4361 message>",
+  "signature": "0x..."
+}
+```
+
+The response returns project information and the initial raw API key. Store that key immediately in a secret manager. ProofRails stores its hash and cannot return the same raw value later.
+
+## Use the key
+
+```http
+X-API-Key: <project-key>
+```
+
+Never put an API key in browser code, a mobile bundle, a repository, documentation, analytics or an AI prompt.
+
+## Inspect the principal
+
+```http
+GET /v1/auth/me
+X-API-Key: <project-key>
+```
+
+The response identifies `role`, `project_id` and `is_admin`.
+
+## Manage keys
+
+```http
+POST   /v1/auth/api-keys
+GET    /v1/auth/api-keys
+DELETE /v1/auth/api-keys/{id}
+```
+
+API-key management requires an authenticated principal with the relevant project role.
+
+## Wallet-based recovery
+
+`POST /v1/auth/siwe-mint-key` verifies a fresh EIP-4361 message from the project owner wallet. The new raw key is returned once in the `X-API-Key` response header. The JSON body contains only key metadata. Capture the header through a trusted server process and prevent HTTP logging from recording it.
+
+Rotate a key by creating and testing the replacement, changing dependent services, then deleting the old key. Do not use wallet-based recovery as routine authentication for every API call.

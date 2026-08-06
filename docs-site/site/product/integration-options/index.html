@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Choose an integration | ProofRails Docs</title><meta name="description" content="Select the ProofRails path that matches your payment and user workflow.">
+<link rel="canonical" href="https://docs.proofrails.com/product/integration-options"><link rel="alternate" type="text/plain" href="https://docs.proofrails.com/llms-full.txt" title="ProofRails documentation for language models">
+<link rel="service-desc" type="application/vnd.oai.openapi+json" href="https://app.proofrails.com/openapi.json">
+<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/style.css"></head>
+<body><header class="topbar"><a class="mobile-brand" href="/">ProofRails</a><nav><a href="https://app.proofrails.com">Open app</a><a href="/api-reference/overview">API reference</a><a href="/agents/machine-readable-docs">AI agent docs</a><a href="https://github.com/proofrails/middleware-ISO-v2.2-and-x402">GitHub</a></nav></header><div class="shell"><aside class="sidebar"><a class="brand" href="/"><img src="/proofrails-logo.svg" alt="ProofRails"><div><strong>ProofRails</strong><span>Documentation</span></div></a><div class="nav-group"><div class="nav-title">Understand ProofRails</div><a href="/">Overview</a><a href="/product/how-it-works">How ProofRails works</a><a class="active" href="/product/integration-options">Choose an integration</a><a href="/product/engine">Evidence engine</a><a href="/product/hosted-service">Hosted service</a><a href="/capabilities">Product capabilities</a><a href="/platform-status">Hosted service status</a></div><div class="nav-group"><div class="nav-title">Get started</div><a href="/quickstart">Hosted API quickstart</a><a href="/create-first-receipt">Create a receipt</a><a href="/verify-receipt">Verify a receipt</a><a href="/agent-quickstart">AI agent quickstart</a><a href="/guides/local-development">Run locally</a></div><div class="nav-group"><div class="nav-title">Receipts and evidence</div><a href="/concepts/receipts">Receipt data model</a><a href="/concepts/evidence-bundles">Evidence bundles</a><a href="/concepts/anchoring">Onchain anchoring</a><a href="/concepts/iso-20022-artifacts">ISO 20022-style artifacts</a><a href="/concepts/verification-model">Verification model</a></div><div class="nav-group"><div class="nav-title">x402 and Flare</div><a href="/x402/overview">x402 and ProofRails</a><a href="/x402/client-integration">x402 client integration</a><a href="/x402/status-and-compatibility">x402 compatibility</a><a href="/x402/mainnet-proof">Mainnet example</a><a href="/contracts/flare">Flare contracts</a><a href="/deployments">Networks and environments</a></div><div class="nav-group"><div class="nav-title">API reference</div><a href="/api-reference/overview">API overview</a><a href="/api-reference/authentication">Authentication and API keys</a><a href="/api-reference/receipts">Receipts API</a><a href="/api-reference/verification">Verification API</a><a href="/api-reference/iso-artifacts">Financial artifact API</a><a href="/api-reference/projects">Projects API</a><a href="/api-reference/x402">x402 API reference</a><a href="/api-reference/agents">Agent management API</a><a href="/api-reference/errors-retries">Errors, retries and reconciliation</a></div><div class="nav-group"><div class="nav-title">Architecture and operations</div><a href="/architecture/system-overview">System architecture</a><a href="/architecture/evidence-model">Evidence and trust model</a><a href="/guides/flare-anchoring">Verify a Flare anchor</a><a href="/guides/production-deployment">Operated deployment</a><a href="/security/key-management">Key management</a><a href="/security/limitations">Security and limitations</a></div><div class="nav-group"><div class="nav-title">Agents and clients</div><a href="/guides/agent-workflows">Agent workflows</a><a href="/agents/machine-readable-docs">Machine-readable documentation</a><a href="/guides/sdks">Client libraries</a></div></aside>
+<main class="main"><article class="content"><h1 id="choose-an-integration">Choose an integration</h1>
+<p>ProofRails supports several entry points into the same receipt and evidence engine.</p>
+<table>
+<thead>
+<tr>
+<th>Integration</th>
+<th>Use it when</th>
+<th>Payment behavior</th>
+<th>Main result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hosted application</td>
+<td>Finance or operations users create, inspect and share receipts.</td>
+<td>Records an existing payment reference.</td>
+<td>Receipt page and downloadable evidence.</td>
+</tr>
+<tr>
+<td>Receipt API</td>
+<td>Your backend already knows the settlement transaction and business context.</td>
+<td>Does not move payment funds.</td>
+<td>Receipt ID, artifacts, bundle and anchor.</td>
+</tr>
+<tr>
+<td>x402 paid API</td>
+<td>An application or agent must pay before an HTTP action runs.</td>
+<td>The x402 exchange authorizes and settles the payment.</td>
+<td>Protected response plus receipt reference.</td>
+</tr>
+<tr>
+<td>Public verifier</td>
+<td>A recipient needs to check a receipt or bundle.</td>
+<td>No payment required.</td>
+<td>Hash, signature and anchor comparison.</td>
+</tr>
+<tr>
+<td>Self-hosted service</td>
+<td>You need your own infrastructure, keys, storage or contracts.</td>
+<td>Determined by your deployment.</td>
+<td>The same processing model under your operation.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="receipt-api">Receipt API</h2>
+<p>Use the Receipt API for payments from wallets, payment processors or other rails when your system can supply a transaction hash and context. The API is the simplest way to add ProofRails to an existing checkout, treasury or reconciliation workflow.</p>
+<h2 id="x402">x402</h2>
+<p>Use x402 when payment is part of the HTTP request itself. The official client handles the 402 challenge and signed retry. ProofRails then records the settlement and delivered API response through its normal evidence pipeline.</p>
+<p>x402 is optional. A receipt created through the Receipt API has the same core evidence model as a receipt created after an x402 payment.</p>
+<h2 id="hosted-and-self-hosted">Hosted and self-hosted</h2>
+<p>The hosted service is the shortest path because ProofRails runs the database, workers, storage, receipt pages and verifier. Self-hosting gives you control over those components but also makes you responsible for key custody, contract configuration, backups, monitoring and upgrades.</p></article><nav class="page-nav"><a href="/product/how-it-works"><span>Previous</span><strong>How ProofRails works</strong></a><a class="next" href="/product/engine"><span>Next</span><strong>Evidence engine</strong></a></nav><footer>ProofRails · Receipts and evidence for onchain payments</footer></main></div></body></html>

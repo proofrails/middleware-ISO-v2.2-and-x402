@@ -1,0 +1,43 @@
+---
+title: Agent management API
+description: Optional project records for agent identities, settings, usage and anchoring.
+---
+
+# Agent management API
+
+Agent records are optional management objects. An automated client does not need to register an agent before using the Receipt API or an x402 paid endpoint.
+
+## Core records
+
+```http
+POST   /v1/agents
+GET    /v1/agents
+GET    /v1/agents/{agent_id}
+PUT    /v1/agents/{agent_id}
+DELETE /v1/agents/{agent_id}
+GET    /v1/agents/{agent_id}/stats
+```
+
+Registration requires `name` and `wallet_address`; it can also include `xmtp_address` and `pricing_rules`. Every operation requires a project API key and enforces project ownership unless the principal is a service administrator.
+
+## Tests and configuration
+
+```http
+POST /v1/agents/{agent_id}/test
+POST /v1/agents/{agent_id}/test-ai
+PUT  /v1/agents/{agent_id}/ai-config
+POST /v1/agents/{agent_id}/download-template
+PUT  /v1/agents/{agent_id}/anchoring-config
+```
+
+## Agent anchor records
+
+```http
+POST /v1/agents/{agent_id}/anchor
+GET  /v1/agents/{agent_id}/anchors
+GET  /v1/agents/{agent_id}/activity-unified
+```
+
+These routes manage project data around an agent. They do not authorize the service to use an agent's payment wallet or private key.
+
+Treat AI-provider credentials as secrets outside ProofRails. Do not use the agent-record API as a substitute for a dedicated secret manager.

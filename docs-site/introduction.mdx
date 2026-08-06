@@ -1,0 +1,51 @@
+---
+title: Overview
+description: Understand what ProofRails does, what it produces and where x402 fits.
+---
+
+# ProofRails turns a payment into a usable business record
+
+A blockchain transaction proves that value moved. It does not explain the purchase, identify the delivered API result, or produce the records that finance and operations teams need.
+
+ProofRails accepts a settlement reference and business context, then creates a receipt with linked evidence. The same engine can process a payment submitted through the Receipt API or a paid API call completed through x402.
+
+<img src="/assets/product-map.svg" alt="Payment sources enter the ProofRails evidence engine and produce receipts, financial artifacts, signed evidence and an onchain commitment" />
+
+## What ProofRails produces
+
+| Output | Purpose | Where to access it |
+|---|---|---|
+| Receipt | Connects the payment, parties, amount, chain, business reference and processing state. | Hosted app, public receipt page or Receipts API. |
+| Delivery evidence | Binds a purchased file or API response to the receipt with a SHA-256 resource hash when one is supplied or generated. | Receipt and evidence bundle. |
+| ISO 20022-style artifacts | Maps receipt data into finance-readable payment and reporting files. | Artifact API and evidence files. |
+| Signed evidence bundle | Packages the receipt, manifest, file hashes, signature and public key into a portable ZIP. | Receipt `bundle_url`. |
+| Onchain commitment | Commits the current bundle hash through EvidenceAnchor on Flare. | Receipt anchor transaction and public verifier. |
+| Verification result | Recomputes the bundle hash and compares it with the committed value. | Public verifier or Verification API. |
+
+## The engine and the hosted service
+
+The ProofRails engine performs normalization, artifact generation, hashing, signing, anchoring and verification. The hosted service runs that engine for you and adds API authentication, storage, background workers, receipt pages and a public verifier.
+
+You can also run the source yourself and configure your own storage, projects, keys and contracts.
+
+## Where x402 fits
+
+x402 is a payment protocol for HTTP resources. A server returns HTTP 402 with payment requirements, an x402 client authorizes the payment, and the client retries the request.
+
+ProofRails uses x402 as one way to trigger the evidence engine. After a paid request succeeds, ProofRails records the settlement, hashes the returned resource, creates the receipt and evidence bundle, and anchors the bundle hash. x402 handles the payment exchange. ProofRails handles the business record that remains afterward.
+
+The current hosted x402 path uses real USD₮0 on Flare mainnet. Read [x402 and ProofRails](/x402/overview) before sending a paid request.
+
+## Choose a starting point
+
+| If you want to... | Start here |
+|---|---|
+| Record an existing onchain payment | [Create a receipt](/create-first-receipt) |
+| Add receipts to an application | [Hosted API quickstart](/quickstart) |
+| Verify a receipt without credentials | [Verify a receipt](/verify-receipt) |
+| Build an agent that pays for an API | [x402 client integration](/x402/client-integration) |
+| Understand the processing engine | [Evidence engine](/product/engine) |
+| Inspect contracts and events | [Flare contracts](/contracts/flare) |
+| Give an AI coding agent complete context | [Machine-readable documentation](/agents/machine-readable-docs) |
+
+ProofRails uses the term **ISO 20022-style artifacts**. It does not claim that generated files are certified for a particular institution or market practice.

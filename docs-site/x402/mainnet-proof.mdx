@@ -1,0 +1,55 @@
+---
+title: Mainnet example
+description: Trace one paid request through settlement, protected response, receipt, evidence bundle and Flare anchor.
+---
+
+# Mainnet example
+
+This read-only example shows the identifiers from one completed hosted request on 29 July 2026. Do not replay its authorization or nonce.
+
+## Request and result
+
+| Item | Value |
+|---|---|
+| Endpoint | `POST https://app.proofrails.com/v1/x402/premium/fx-lookup` |
+| Client | Official x402 V2 packages `2.19.0` |
+| Payment | `0.001 USD₮0` on Flare mainnet |
+| HTTP result | `200` |
+| Response body | `{"rate":"0.00628055","source":"coingecko"}` |
+| Request ID | `b50f446e-f420-4afa-b196-5821bf0b5a92` |
+
+## Settlement
+
+[Open the settlement transaction](https://flare-explorer.flare.network/tx/0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340)
+
+```text
+0x5e4895837a68210f853f6e087de913b4d2c5ab573fe7b73f302026a8bebb6340
+```
+
+The successful transaction emitted one `X402PaymentSettled` event with the expected USD₮0 token, payer, recipient, amount of `1000` base units, nonce and deterministic payment ID.
+
+## Receipt and delivered resource
+
+[Open the public receipt](https://app.proofrails.com/verify/dec5a106-3216-4543-bfb6-e669dc83f4d7)
+
+```text
+Receipt ID: dec5a106-3216-4543-bfb6-e669dc83f4d7
+Resource hash: 0xc73f1a900c736d04ec5253a324241fbb5d3d5fbdcd39d656d8a77c007c2fdca1
+```
+
+The resource hash is the SHA-256 of the exact protected JSON response bytes.
+
+## Evidence and anchor
+
+```text
+Bundle hash: 0xe700ed53d6aafad638d8c9b7cb55dc44862a2eee422f3903cdc38c561a3bd4c1
+Anchor tx:    0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28
+```
+
+[Open the anchor transaction](https://flare-explorer.flare.network/tx/0x6d546e35afa88b1dbb067e2cc0c726cbbd757765baa2c799fcb66cca9a292a28)
+
+The ZIP hash, receipt `bundle_hash` and decoded `EvidenceAnchored.bundleHash` were equal. The manifest signature and every listed file hash and size also passed independent recomputation.
+
+## What this example demonstrates
+
+This example connects one paid HTTP request to a settlement, returned resource, receipt, signed evidence bundle and onchain commitment. It does not establish that every route, token or deployment mode has completed the same test.

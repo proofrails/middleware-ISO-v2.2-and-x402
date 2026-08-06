@@ -1,0 +1,41 @@
+---
+title: Product capabilities
+description: See what the ProofRails engine, hosted service and x402 integration provide.
+---
+
+# Product capabilities
+
+## Core receipt workflow
+
+- Record an onchain payment with a project-scoped business reference.
+- Retrieve the receipt by ID and list project receipts.
+- Attach a SHA-256 resource hash to represent delivered bytes.
+- Generate ISO 20022-style payment and reporting artifacts.
+- Build a signed evidence ZIP with a manifest and file hashes.
+- Anchor the current bundle hash on Flare.
+- Verify a bundle URL, expected hash or supported content-addressed reference.
+- Share a public receipt page.
+
+## Hosted operations
+
+- Project and API-key management.
+- Background receipt processing through Redis-backed workers.
+- Hosted artifact storage and public downloads.
+- Receipt lifecycle events and anchor lookup.
+- Public OpenAPI and verification surfaces.
+
+## x402 paid actions
+
+The hosted API can return a standard x402 V2 challenge for selected paid endpoints. The validated Flare path accepts USD₮0 authorization, settles through the integrated X402Facilitator, executes the protected endpoint, hashes the response and returns a receipt reference in `PAYMENT-RESPONSE`.
+
+The source also contains Base USDC and native FLR paths. They are not documented as equivalent hosted paths because they have not completed the same published end-to-end validation.
+
+## Agent support
+
+Agents can use the same REST endpoints as other clients. The useful automation pattern is to store a business reference before payment, capture `receiptId` after an x402 response, poll until `anchored`, download the bundle and retain the verification result with the task log.
+
+The API also exposes agent-record and agent-anchoring routes. Those are management features; an agent does not need an on-platform agent record to call the Receipt API or use x402.
+
+## Boundaries
+
+ProofRails does not establish wallet ownership, legal authority, tax treatment, sanctions status or the truth of supplied metadata. ISO 20022-style output is a structured artifact, not certification for a specific institution.

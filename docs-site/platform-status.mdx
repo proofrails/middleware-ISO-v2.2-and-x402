@@ -1,0 +1,21 @@
+---
+title: Hosted service status
+description: Deployed public surfaces and validated integration scope.
+---
+
+# Hosted service status
+
+Last checked: 29 July 2026.
+
+| Surface | Status | Public reference |
+|---|---|---|
+| Hosted API | Available | `https://app.proofrails.com/v1/health` |
+| OpenAPI | Available | `https://app.proofrails.com/openapi.json` |
+| Public receipt verifier | Available | `https://app.proofrails.com/verify/{receipt_id}` |
+| Standard x402 Flare USD₮0 path | Validated for the documented FX lookup example | [Mainnet example](/x402/mainnet-proof) |
+| EvidenceAnchor | Validated for the current hosted receipt hash | [Flare contracts](/contracts/flare) |
+| Base USDC and native FLR adapters | Experimental | [Networks and environments](/deployments) |
+
+The live OpenAPI defines deployed routes. It does not currently describe API-key security or standard x402 402 response headers completely, so generated clients must also follow this documentation.
+
+Service availability can change after this dated check. Integrations should monitor health, handle transient failures and reconcile any x402 authorization that may have been signed before a timeout.

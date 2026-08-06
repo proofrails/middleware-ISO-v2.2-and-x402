@@ -1,0 +1,46 @@
+---
+title: Onchain anchoring
+description: Understand the EvidenceAnchor contract, receipt completion rule and independent event check.
+---
+
+# Onchain anchoring
+
+ProofRails commits the SHA-256 of `evidence.zip` to an `EvidenceAnchor` contract on Flare.
+
+## Contract operation
+
+The contract exposes one write function:
+
+```solidity
+function anchorEvidence(bytes32 bundleHash) external;
+```
+
+A successful call emits:
+
+```solidity
+event EvidenceAnchored(
+    bytes32 bundleHash,
+    address indexed sender,
+    uint256 ts
+);
+```
+
+The event stores the committed hash, the account that submitted it and the block timestamp.
+
+## Hosted completion rule
+
+A hosted receipt is complete only when all of these values agree:
+
+1. SHA-256 of the current `evidence.zip`;
+2. `bundle_hash` returned by the receipt API;
+3. `bundleHash` decoded from the `EvidenceAnchored` event in `flare_txid`.
+
+Until that equality is confirmed, the receipt remains `pending`, `awaiting_anchor` or `failed`. An application must not display it as complete.
+
+## Platform and tenant modes
+
+In platform mode, the ProofRails worker submits the anchor. In tenant mode, the project submits the transaction and calls `POST /v1/iso/confirm-anchor` with the receipt ID and transaction hash. The API verifies the event against the project's configured chain and contract before changing the receipt to `anchored`.
+
+## Trust boundary
+
+The anchor proves integrity and timing of the committed hash. It does not prove that offchain metadata is true, that the payer was legally authorized, or that the receipt satisfies an accounting, tax or regulatory requirement.

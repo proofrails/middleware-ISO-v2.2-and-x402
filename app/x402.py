@@ -1,10 +1,17 @@
-"""x402 Payment Protocol Implementation
+"""x402 Payment Protocol — multi-chain implementation.
 
-HTTP 402 Payment Required protocol for autonomous agent payments.
-Based on Coinbase's x402 specification for micro-payments.
+Supports three payment paths:
+  1. USDC on Base (erc20_transfer)
+  2. USDT0 on Flare via EIP-3009 facilitator (eip3009_facilitator)
+  3. Native FLR on Flare (native_transfer)
+
+The 402 response includes all enabled payment options so clients/agents can
+choose. Each path has its own verification flow.
 """
 from __future__ import annotations
 
+import functools
+import inspect
 import json
 import os
 from dataclasses import dataclass
@@ -19,19 +26,11 @@ from web3 import Web3
 from . import models
 
 
-@dataclass
-class PaymentDetails:
-    """Payment requirement details returned in 402 response."""
-    amount: str  # Amount in token units (e.g., "0.001")
-    recipient: str  # Recipient wallet address
-    reference: str  # Unique payment reference
-    currency: str = "USDC"  # Default to USDC
-    chain: str = "base"  # Default to Base network
-
+# ── Legacy PaymentProof (Base USDC) ──────────────────────────────────────────
 
 @dataclass
 class PaymentProof:
-    """Parsed payment proof from X-PAYMENT header."""
+    """Parsed payment proof from X-PAYMENT header (Base USDC path)."""
     tx_hash: str
     amount: str
     recipient: str
@@ -40,23 +39,50 @@ class PaymentProof:
     timestamp: Optional[str] = None
 
 
+# ── Base USDC verifier (unchanged) ───────────────────────────────────────────
+
 class X402PaymentVerifier:
-    """Verifies x402 payments on Base/EVM chains."""
+    """Verifies x402 payments on Base/EVM chains.
+
+    Supports two payment modes:
+    - **USDC** (ERC-20 on Base): checks Transfer event logs for the USDC contract.
+    - **FLR** (native token on Flare): checks the native value of the transaction itself.
+
+    The ``chain`` field on ``PaymentProof`` selects the RPC and verification path:
+    - ``chain="base"`` → USDC on Base mainnet (default)
+    - ``chain="flare"`` → FLR native token on Flare C-Chain
+    """
+
+    # Chain → default RPC URL
+    CHAIN_RPCS: Dict[str, str] = {
+        "base": os.getenv("BASE_RPC_URL", "https://mainnet.base.org"),
+        "flare": os.getenv("X402_FLARE_RPC_URL", "https://flare-api.flare.network/ext/C/rpc"),
+        "coston2": "https://coston2-api.flare.network/ext/C/rpc",
+    }
 
     def __init__(self, rpc_url: Optional[str] = None):
-        self.rpc_url = rpc_url or os.getenv("BASE_RPC_URL", "https://mainnet.base.org")
+        self.rpc_url = rpc_url or os.getenv("X402_BASE_RPC_URL", "https://mainnet.base.org")
         self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
-        
+
         # USDC contract on Base mainnet
         self.usdc_address = os.getenv("X402_USDC_ADDRESS", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913")
-        
-        # ERC20 transfer event signature
+
+        # ERC20 Transfer event topic0
         self.transfer_topic = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+
+    def _w3_for_chain(self, chain: str) -> Any:
+        """Return a Web3 instance connected to the correct chain RPC."""
+        rpc = self.CHAIN_RPCS.get(chain.lower())
+        if rpc:
+            return Web3(Web3.HTTPProvider(rpc, request_kwargs={"timeout": 15}))
+        return self.w3
 
     def parse_payment_header(self, payment_header: str) -> Optional[PaymentProof]:
         """Parse X-PAYMENT header.
-        
-        Expected format: JSON string with tx_hash, amount, recipient, etc.
+
+        Expected format: JSON with tx_hash, amount, recipient, currency, chain.
+        ``currency`` defaults to ``"USDC"``; ``chain`` defaults to ``"base"``.
+        For FLR payments set ``currency="FLR"`` and ``chain="flare"``.
         """
         try:
             data = json.loads(payment_header)
@@ -77,62 +103,97 @@ class X402PaymentVerifier:
         expected_amount: str,
         expected_recipient: str,
     ) -> bool:
-        """Verify that payment transaction exists on-chain.
-        
-        Args:
-            proof: Payment proof from X-PAYMENT header
-            expected_amount: Expected payment amount
-            expected_recipient: Expected recipient address
-            
-        Returns:
-            True if payment is valid
+        """Verify that a payment transaction exists on-chain.
+
+        Dispatches to the correct verification path based on ``proof.currency``:
+        - ``FLR`` → :meth:`_verify_flr_payment` (native token check)
+        - Anything else → :meth:`_verify_erc20_payment` (ERC-20 Transfer log check)
+        """
+        if proof.currency.upper() == "FLR":
+            return await self._verify_flr_payment(proof, expected_amount, expected_recipient)
+        return await self._verify_erc20_payment(proof, expected_amount, expected_recipient)
+
+    async def _verify_flr_payment(
+        self,
+        proof: PaymentProof,
+        expected_amount: str,
+        expected_recipient: str,
+    ) -> bool:
+        """Verify a native FLR transfer on Flare C-Chain.
+
+        Checks:
+        1. Transaction is confirmed (receipt status == 1).
+        2. ``tx.to`` matches ``expected_recipient`` (case-insensitive).
+        3. ``tx.value`` >= expected amount in wei (allows ±0.001 FLR tolerance).
         """
         try:
-            # Get transaction receipt
-            tx_receipt = self.w3.eth.get_transaction_receipt(proof.tx_hash)
-            
+            w3 = self._w3_for_chain(proof.chain)
+            tx_receipt = w3.eth.get_transaction_receipt(proof.tx_hash)
+            if not tx_receipt or int(tx_receipt.get("status", 0)) != 1:
+                return False
+
+            tx = w3.eth.get_transaction(proof.tx_hash)
+            to_addr = (tx.get("to") or "").lower()
+            if to_addr != expected_recipient.lower():
+                return False
+
+            # FLR has 18 decimals (same as ETH wei)
+            value_flr = Decimal(tx.get("value", 0)) / Decimal(10 ** 18)
+            expected_flr = Decimal(expected_amount)
+            tolerance = Decimal("0.001")
+            return value_flr >= expected_flr - tolerance
+
+        except Exception:
+            return False
+
+    async def _verify_erc20_payment(
+        self,
+        proof: PaymentProof,
+        expected_amount: str,
+        expected_recipient: str,
+    ) -> bool:
+        """Verify an ERC-20 (USDC) transfer via Transfer event log."""
+        try:
+            w3 = self._w3_for_chain(proof.chain)
+            tx_receipt = w3.eth.get_transaction_receipt(proof.tx_hash)
             if not tx_receipt or tx_receipt.get("status") != 1:
                 return False
-            
-            # For USDC transfers, check logs for Transfer event
+
             for log in tx_receipt.get("logs", []):
-                # Check if this is a Transfer event to our recipient
                 if (
                     log.get("address", "").lower() == self.usdc_address.lower()
                     and len(log.get("topics", [])) >= 3
                     and log["topics"][0].hex() == self.transfer_topic
                 ):
-                    # topics[1] = from, topics[2] = to
                     to_address = "0x" + log["topics"][2].hex()[-40:]
-                    
                     if to_address.lower() != expected_recipient.lower():
                         continue
-                    
-                    # Decode amount from data (uint256)
+
                     amount_hex = log.get("data", "0x")
                     amount_wei = int(amount_hex, 16)
                     # USDC has 6 decimals
-                    amount_usdc = Decimal(amount_wei) / Decimal(10**6)
+                    amount_usdc = Decimal(amount_wei) / Decimal(10 ** 6)
                     expected = Decimal(expected_amount)
-                    
-                    # Allow small variance for gas/rounding
                     if abs(amount_usdc - expected) < Decimal("0.0001"):
                         return True
-            
+
             return False
-            
+
         except Exception:
             return False
 
     async def record_payment(self, session, proof: PaymentProof, endpoint: str) -> models.X402Payment:
-        """Record verified payment in database."""
         payment = models.X402Payment(
+            payment_type="erc20_transfer",
             tx_hash=proof.tx_hash,
             amount=Decimal(proof.amount),
             currency=proof.currency,
             chain=proof.chain,
+            chain_id="8453",
+            token_address=os.getenv("X402_USDC_ADDRESS", "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"),
             recipient=proof.recipient,
             endpoint=endpoint,
+            status="verified",
             verified_at=datetime.utcnow(),
         )
         session.add(payment)
@@ -141,59 +202,70 @@ class X402PaymentVerifier:
         return payment
 
 
-def require_payment(amount: str, recipient: str, currency: str = "USDC", chain: str = "base"):
+def require_payment(amount: str, recipient: str, currency: str = "USDC", chain: str = "base", flr_amount: Optional[str] = None, flr_recipient: Optional[str] = None):
     """Decorator to make an endpoint x402-gated.
-    
+
     Usage:
         @require_payment("0.001", "0xRecipientAddress")
         @router.get("/premium/data")
         async def get_premium_data():
             return {"data": "..."}
-    
+
     Returns 402 if no payment header, verifies payment if provided.
     """
     def decorator(func: Callable):
-        async def wrapper(request: Request, *args, **kwargs):
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            # FastAPI injects named parameters; request is always present by name or position
+            request: Request = kwargs.get("request") or next(
+                (a for a in args if isinstance(a, Request)), None
+            )
+            from .settings import get_settings
+            settings = get_settings()
+
             payment_header = request.headers.get("X-PAYMENT") or request.headers.get("x-payment")
-            
-            # No payment provided - return 402 with payment details
+
+            # No payment provided - return 402 with payment details (all accepted options)
             if not payment_header:
-                details = PaymentDetails(
-                    amount=amount,
-                    recipient=recipient,
-                    reference=f"x402:{func.__name__}:{datetime.utcnow().timestamp()}",
-                    currency=currency,
-                    chain=chain,
-                )
+                ref = f"x402:{func.__name__}:{datetime.utcnow().timestamp()}"
+                options = [{"amount": amount, "recipient": recipient, "currency": currency, "chain": chain, "reference": ref}]
+                if flr_amount and flr_recipient:
+                    options.append({"amount": flr_amount, "recipient": flr_recipient, "currency": "FLR", "chain": "flare", "reference": ref})
                 return JSONResponse(
                     status_code=402,
                     content={
-                        "amount": details.amount,
-                        "recipient": details.recipient,
-                        "reference": details.reference,
-                        "currency": details.currency,
-                        "chain": details.chain,
+                        # Primary option (USDC / configured currency)
+                        "amount": amount,
+                        "recipient": recipient,
+                        "reference": ref,
+                        "currency": currency,
+                        "chain": chain,
+                        # All accepted payment options
+                        "accepted": options,
                     },
                     headers={
                         "X-Payment-Required": "true",
-                        "X-Payment-Amount": details.amount,
-                        "X-Payment-Currency": details.currency,
+                        "X-Payment-Amount": amount,
+                        "X-Payment-Currency": currency,
                     },
                 )
-            
+
             # Payment provided - verify it
             verifier = X402PaymentVerifier()
             proof = verifier.parse_payment_header(payment_header)
-            
+
             if not proof:
                 raise HTTPException(status_code=400, detail="invalid_payment_header")
-            
-            # Verify payment on-chain
-            is_valid = await verifier.verify_payment(proof, amount, recipient)
-            
+
+            # Route verification to correct currency/recipient pair
+            if proof.currency.upper() == "FLR" and flr_amount and flr_recipient:
+                is_valid = await verifier.verify_payment(proof, flr_amount, flr_recipient)
+            else:
+                is_valid = await verifier.verify_payment(proof, amount, recipient)
+
             if not is_valid:
                 raise HTTPException(status_code=403, detail="payment_verification_failed")
-            
+
             # Record payment (best effort)
             try:
                 from .db import SessionLocal
@@ -202,35 +274,140 @@ def require_payment(amount: str, recipient: str, currency: str = "USDC", chain: 
                 session.close()
             except Exception:
                 pass
-            
-            # Payment verified - execute endpoint
-            result = await func(request, *args, **kwargs)
-            
-            # Add payment confirmation header
-            if isinstance(result, JSONResponse):
-                result.headers["X-Payment-Response"] = json.dumps({
-                    "verified": True,
-                    "tx_hash": proof.tx_hash,
-                    "amount": proof.amount,
-                })
-            
-            return result
-        
+
+            return await func(*args, **kwargs)
+
+        # Preserve the original function's signature so FastAPI injects parameters correctly
+        wrapper.__signature__ = inspect.signature(func)
         return wrapper
     return decorator
 
 
-def generate_payment_payload(tx_hash: str, amount: str, recipient: str, currency: str = "USDC", chain: str = "base") -> str:
-    """Generate X-PAYMENT header value.
-    
-    Used by agents to create payment proof.
-    """
-    payload = {
+# ── generate_payment_payload (agent helper) ───────────────────────────────────
+
+def generate_payment_payload(
+    tx_hash: str,
+    amount: str,
+    recipient: str,
+    currency: str = "USDC",
+    chain: str = "base",
+) -> str:
+    """Generate X-PAYMENT header value for Base USDC path."""
+    return json.dumps({
         "tx_hash": tx_hash,
         "amount": amount,
         "recipient": recipient,
         "currency": currency,
         "chain": chain,
+        "payment_type": "erc20_transfer",
         "timestamp": datetime.utcnow().isoformat(),
-    }
-    return json.dumps(payload)
+    })
+
+
+def generate_usdt0_payment_payload(
+    settlement_tx_hash: str,
+    token: str,
+    facilitator: str,
+    recipient: str,
+    amount: str,
+    chain_id: int = 14,
+) -> str:
+    """Generate X-PAYMENT header value for USDT0 EIP-3009 client-settled path."""
+    return json.dumps({
+        "chain": "flare",
+        "chain_id": chain_id,
+        "currency": "USDT0",
+        "payment_type": "eip3009_facilitator",
+        "token": token,
+        "facilitator": facilitator,
+        "recipient": recipient,
+        "amount": amount,
+        "settlement_tx_hash": settlement_tx_hash,
+    })
+
+
+# ── Flare payment replay protection + persistence ─────────────────────────────
+#
+# These helpers are shared by the x402-premium gating route (app/api/routes/
+# x402_premium.py) for the USDT0 (eip3009_facilitator) and native FLR
+# (native_transfer) paths. The Base USDC path uses X402PaymentVerifier above.
+
+
+async def _check_tx_not_replayed(session, tx_hash: Optional[str]) -> None:
+    """Raise HTTP 409 if a verified payment already exists for ``tx_hash``.
+
+    On-chain settlement / transfer txs are single-use: a client must not be
+    able to unlock multiple paid responses by replaying one payment proof.
+    """
+    if not tx_hash:
+        return
+    existing = (
+        session.query(models.X402Payment)
+        .filter(
+            models.X402Payment.tx_hash == tx_hash,
+            models.X402Payment.status == "verified",
+        )
+        .first()
+    )
+    if existing is not None:
+        raise HTTPException(status_code=409, detail="payment_already_used")
+
+
+async def _record_usdt0_payment(
+    session,
+    payment,
+    facilitator_payment_id: Optional[str],
+    endpoint: str,
+    recipient: str,
+    raw_amount: int,
+) -> "models.X402Payment":
+    """Persist a verified USDT0 EIP-3009 facilitator payment."""
+    row = models.X402Payment(
+        payment_type="eip3009_facilitator",
+        tx_hash=payment.settlement_tx_hash,
+        amount=Decimal(payment.amount) if payment.amount else Decimal(0),
+        raw_amount=str(raw_amount),
+        currency="USDT0",
+        chain="flare",
+        chain_id="14",
+        token_address=payment.token,
+        facilitator_address=payment.facilitator,
+        payer_address=payment.from_address,
+        recipient=recipient,
+        eip3009_nonce=payment.nonce,
+        authorization_type=payment.authorization_type,
+        facilitator_payment_id=facilitator_payment_id,
+        endpoint=endpoint,
+        status="verified",
+        verified_at=datetime.utcnow(),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row
+
+
+async def _record_flr_payment(
+    session,
+    payment,
+    endpoint: str,
+    recipient: str,
+) -> "models.X402Payment":
+    """Persist a verified native FLR transfer payment."""
+    row = models.X402Payment(
+        payment_type="native_transfer",
+        tx_hash=payment.tx_hash,
+        amount=Decimal(payment.amount) if payment.amount else Decimal(0),
+        currency="FLR",
+        chain="flare",
+        chain_id="14",
+        payer_address=payment.from_address,
+        recipient=recipient,
+        endpoint=endpoint,
+        status="verified",
+        verified_at=datetime.utcnow(),
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return row

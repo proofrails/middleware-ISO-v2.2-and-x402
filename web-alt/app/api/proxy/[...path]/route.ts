@@ -2,12 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getActiveProject, loadStore } from "lib/server/auth";
 
-function apiBase(): string {
-  return process.env.NEXT_PUBLIC_API_BASE || "http://127.0.0.1:8000";
+function apiBase(req: NextRequest): string {
+  const configured = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE_URL;
+  if (configured) return configured;
+
+  // In production the API is served from the same origin as the app. Falling
+  // back to localhost makes deployed verification calls fail with a blank 500.
+  const isLocal = req.nextUrl.hostname === "localhost" || req.nextUrl.hostname === "127.0.0.1";
+  return isLocal ? "http://127.0.0.1:8000" : req.nextUrl.origin;
 }
 
 function buildTargetUrl(req: NextRequest, pathParts: string[]): string {
-  const base = apiBase().replace(/\/$/, "");
+  const base = apiBase(req).replace(/\/$/, "");
   const target = new URL(base + "/" + pathParts.join("/"));
 
   // Preserve querystring

@@ -17,6 +17,7 @@ async function main() {
       chainRpcUrl: process.env.CHAIN_RPC_URL || 'https://mainnet.base.org',
       usdcContract: process.env.USDC_CONTRACT || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
       agentName: process.env.AGENT_NAME || 'ISO Middleware Agent',
+      agentId: process.env.AGENT_ID,
     });
 
     await agent.start();

@@ -1,0 +1,44 @@
+---
+title: ISO 20022-style artifacts
+description: Understand the financial-message files produced from receipt data and their validation boundary.
+---
+
+# ISO 20022-style artifacts
+
+ProofRails maps receipt data into XML shaped around ISO 20022 payment and cash-management message families. These files help finance systems consume onchain payment records in a familiar structure.
+
+## Typical receipt artifacts
+
+| Artifact | Use in ProofRails |
+|---|---|
+| `pain.001` | Payment-initiation-style representation of the recorded payment. |
+| `pain.002` | Processing-status-style representation. |
+| `camt.054` | Credit/debit-notification-style record. |
+
+The engine also contains generation paths for cancellation, investigation, reversal, interbank transfer, refund and statement-style messages. Route availability and the artifacts generated for a specific receipt depend on the deployed API and workflow.
+
+## Retrieve receipt artifacts
+
+```http
+GET /v1/iso/messages/{receipt_id}
+```
+
+Each list item includes the message type, URL, optional SHA-256 and creation timestamp.
+
+## Generate additional messages
+
+The hosted OpenAPI currently exposes:
+
+```http
+POST /v1/iso/camt029/{receipt_id}
+POST /v1/iso/camt056/{receipt_id}
+POST /v1/iso/pacs007/{receipt_id}
+POST /v1/iso/pacs009/{receipt_id}
+POST /v1/iso/refund
+```
+
+These operations have workflow-specific request bodies and authorization rules. Use the live OpenAPI schema when implementing them.
+
+## Validation boundary
+
+The artifacts are **ISO 20022-style**. Generating XML or using an ISO message family name does not establish conformance with a bank, clearing system, market-practice profile or certification program. Validate the target institution's schema version, usage rules, identifiers and transport requirements before sending a file outside your organization.
